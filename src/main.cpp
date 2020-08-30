@@ -6,7 +6,8 @@
 
 
 
-#include "Graphics.h"
+#include "Engine.h"
+
 #include "util.h"
 
 #include <winuser.h>
@@ -20,7 +21,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     const long width = 800;
     const long height = 600;
 
-    Graphics graphics(width, height);
+    Engine engine(width, height);
 
     RECT window_rect = { 0, 0, width, height };
     const DWORD window_style = WS_TILEDWINDOW;
@@ -44,10 +45,10 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     int window_height = window_rect.bottom - window_rect.top;
     HWND window = CreateWindow(window_class.lpszClassName, title, window_style, 
         position_x, position_y, window_width, window_height, 
-        parent_window, menu, instance, &graphics);
+        parent_window, menu, instance, &engine);
 
 
-    graphics.init(window);
+    engine.graphics.init(window);
 
     ShowWindow(window, cmd_show);
 
@@ -70,29 +71,49 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
 
 LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM w_param, LPARAM l_param)
 {
-    static Graphics* graphics = nullptr;
+    static Engine* engine = nullptr;
 
     switch (message)
     {
         case WM_CREATE:
         {
             LPCREATESTRUCT create_struct = bit_cast<LPCREATESTRUCT>(l_param);
-            graphics = bit_cast<Graphics*>(create_struct->lpCreateParams);
+            engine = bit_cast<Engine*>(create_struct->lpCreateParams);
             return 0;
         }
 
         case WM_PAINT:
-            if (graphics)
+            if (engine)
             {
-                graphics->update();
-                graphics->render();
+                engine->graphics.update();
+                engine->graphics.render();
             }
             return 0;
 
         case WM_KEYDOWN:
             if (w_param == VK_ESCAPE)
                 PostQuitMessage(0);
+            else
+                if (engine)
+                {
+                    engine->input.key_down(w_param);
+                }
             return 0;
+
+        case WM_KEYUP:
+            if (engine)
+            {
+                engine->input.key_up(w_param);
+            }
+            return 0;
+
+
+        case WM_MOUSEMOVE:
+            if (engine)
+            {
+                engine->input.mouse_move(l_param);
+            }
+            break;
 
         case WM_DESTROY:
             PostQuitMessage(0);

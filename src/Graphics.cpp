@@ -16,14 +16,15 @@
 #include "Graphics.h"
 #include "Graphics_impl.h"
 #include "util.h"
+#include "View_controller.h"
 
 #include <D3DCompiler.h>
 
 
 
-Graphics::Graphics(UINT width, UINT height)
+Graphics::Graphics(UINT width, UINT height, Input& input)
 {
-    static Graphics_impl graphics(width, height);
+    static Graphics_impl graphics(width, height, input);
     impl = &graphics;
 }
 
@@ -48,19 +49,21 @@ void Graphics::render()
 
 
 
-
 using namespace DirectX;
 
 
-Graphics_impl::Graphics_impl(UINT width, UINT height) :
+Graphics_impl::Graphics_impl(UINT width, UINT height, Input& input) :
     m_width(width),
     m_height(height),
     m_view_matrix(XMMatrixIdentity()),
     m_projection_matrix(XMMatrixIdentity()),
+    m_eye_position(XMVectorSet(0.0f, 0.0f, -10.0f, 1.0f)),
+    m_focus_point(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f)),
     m_back_buf_index(0),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
     m_scissor_rect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
     m_rtv_descriptor_size(0),
+    m_view_controller(input),
     m_init_done(false)
 {
     for (UINT i = 0; i < m_swap_chain_buffer_count; ++i)
@@ -89,6 +92,7 @@ void Graphics_impl::init(HWND window)
 {
     init_pipeline(window);
     setup_scene();
+    m_view_controller.set_window(window);
     m_init_done = true;
 }
 
@@ -114,10 +118,11 @@ void fly_around_in_circle(std::shared_ptr<Graphical_object>& object)
 void Graphics_impl::update()
 {
     // Update the view matrix.
-    const XMVECTOR eye_position = XMVectorSet(0.0f, 0.0f, -10.0f, 1.0f);
-    const XMVECTOR focus_point = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+
+    m_view_controller.update(m_eye_position, m_focus_point);
     const XMVECTOR up_direction = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    m_view_matrix = XMMatrixLookAtLH(eye_position, focus_point, up_direction);
+
+    m_view_matrix = XMMatrixLookAtLH(m_eye_position, m_focus_point, up_direction);
 
     // Update the projection matrix.
     const float aspect_ratio = static_cast<float>(m_width) / m_height;
@@ -326,12 +331,19 @@ void Graphics_impl::create_depth_stencil_resources()
 
 void Graphics_impl::create_root_signature()
 {
-    const int root_parameters_count = 2;
+    const int root_parameters_count = 3;
     CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count]{};
-    const int matrices_count = 2;
 
+    const int matrices_count = 2;
+    UINT shader_register = 0;
     root_parameters[m_root_param_index_of_matrices].InitAsConstants(
-        matrices_count * size_in_words_of_XMMATRIX, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+        matrices_count * size_in_words_of_XMMATRIX, shader_register, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+
+    const int vectors_count = 2;
+    ++shader_register;
+    root_parameters[m_root_param_index_of_vectors].InitAsConstants(
+        vectors_count * size_in_words_of_XMVECTOR, shader_register, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+
 
     CD3DX12_DESCRIPTOR_RANGE1 descriptor_range;
     const UINT descriptors_count = 1U;
@@ -544,13 +556,16 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     ID3D12DescriptorHeap* heaps[] = { m_texture_descriptor_heap.Get() };
     m_command_list->SetDescriptorHeaps(_countof(heaps), heaps);
 
+    const int offset = 0;
+    m_command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_vectors,
+        size_in_words_of_XMVECTOR, &m_eye_position, offset);
+
     for (auto& graphical_object : m_graphical_objects)
     {
         XMMATRIX model_view_projection_matrix = XMMatrixMultiply(graphical_object->model_matrix(),
             m_view_matrix);
         model_view_projection_matrix = XMMatrixMultiply(model_view_projection_matrix,
             m_projection_matrix);
-        const int offset = 0;
         m_command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_matrices,
             size_in_words_of_XMMATRIX, &model_view_projection_matrix, offset);
 

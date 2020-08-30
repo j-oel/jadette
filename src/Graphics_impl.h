@@ -16,6 +16,7 @@
 
 #include "dx12min.h"
 #include "Graphical_object.h"
+#include "View_controller.h"
 
 #include <directxmath.h>
 #include <dxgi1_6.h>
@@ -26,12 +27,11 @@
 
 using Microsoft::WRL::ComPtr;
 
-
 class Graphics_impl
 {
 
 public:
-    Graphics_impl(UINT width, UINT height);
+    Graphics_impl(UINT width, UINT height, Input& input);
     ~Graphics_impl();
 
     void init(HWND window);
@@ -81,6 +81,7 @@ private:
 
     const int m_root_param_index_of_matrices = 0;
     const int m_root_param_index_of_textures = 1;
+    const int m_root_param_index_of_vectors = 2;
 
     std::vector<std::shared_ptr<Texture>> m_textures;
     ComPtr<ID3D12DescriptorHeap> m_texture_descriptor_heap;
@@ -91,11 +92,15 @@ private:
     DirectX::XMMATRIX m_view_matrix;
     DirectX::XMMATRIX m_projection_matrix;
 
+    DirectX::XMVECTOR m_eye_position;
+    DirectX::XMVECTOR m_focus_point;
+
     HANDLE m_fence_events[m_swap_chain_buffer_count];
     ComPtr<ID3D12Fence> m_frame_fences[m_swap_chain_buffer_count];
     UINT64 m_frame_fence_values[m_swap_chain_buffer_count];
     UINT m_back_buf_index;
 
+    View_controller m_view_controller;
     bool m_init_done;
 };
 

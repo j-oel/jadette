@@ -13,30 +13,38 @@
 #include <sstream>
 
 
+
+LARGE_INTEGER get_frequency()
+{
+    LARGE_INTEGER ticks_per_second{};
+    QueryPerformanceFrequency(&ticks_per_second);
+    return ticks_per_second;
+}
+
+
+double elapsed_seconds_since(const LARGE_INTEGER& start_ticks, LARGE_INTEGER& current_ticks)
+{
+    static LARGE_INTEGER ticks_per_second = get_frequency();
+
+    QueryPerformanceCounter(&current_ticks);
+
+    LARGE_INTEGER elapsed_ticks;
+    elapsed_ticks.QuadPart = current_ticks.QuadPart - start_ticks.QuadPart;
+
+    double elapsed_seconds = static_cast<double>(elapsed_ticks.QuadPart) /
+        static_cast<double>(ticks_per_second.QuadPart);
+
+    return elapsed_seconds;
+}
+
 double elapsed_time_in_seconds()
 {
     static LARGE_INTEGER start_ticks {};
     if (start_ticks.QuadPart == 0LL)
         QueryPerformanceCounter(&start_ticks);
 
-    auto get_frequency = []() // Used to only do this once.
-    {
-        LARGE_INTEGER ticks_per_second{};
-        QueryPerformanceFrequency(&ticks_per_second);
-        return ticks_per_second;
-    };
-
-    static LARGE_INTEGER ticks_per_second = get_frequency();
-
     LARGE_INTEGER current_ticks;
-    QueryPerformanceCounter(&current_ticks);
-
-    LARGE_INTEGER elapsed_ticks;
-    elapsed_ticks.QuadPart = current_ticks.QuadPart - start_ticks.QuadPart;
-
-    double elapsed_seconds = static_cast<double>(elapsed_ticks.QuadPart) / 
-        static_cast<double>(ticks_per_second.QuadPart);
-    return elapsed_seconds;
+    return elapsed_seconds_since(start_ticks, current_ticks);
 }
 
 void print(const char* message, const char* title/* = ""*/)
@@ -52,3 +60,37 @@ void print(int number, const char* title/* = ""*/)
 }
 
 
+class Time_impl
+{
+public:
+    Time_impl()
+    {
+        QueryPerformanceCounter(&m_start_ticks);
+    }
+
+    double seconds_since_last_call()
+    {
+        LARGE_INTEGER current_ticks;
+        double elapsed_milliseconds = elapsed_seconds_since(m_start_ticks, current_ticks);
+        m_start_ticks = current_ticks;
+        return elapsed_milliseconds;
+    }
+private:
+    LARGE_INTEGER m_start_ticks;
+};
+
+
+Time::Time()
+{
+    impl = new Time_impl();
+}
+
+Time::~Time()
+{
+    delete impl;
+}
+
+double Time::seconds_since_last_call()
+{
+    return impl->seconds_since_last_call();
+}

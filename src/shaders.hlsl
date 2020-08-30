@@ -13,6 +13,14 @@ struct matrices_struct
 
 ConstantBuffer<matrices_struct> matrices : register(b0);
 
+
+struct vectors_struct
+{
+    float4 eye_position;
+};
+
+ConstantBuffer<vectors_struct> vectors : register(b1);
+
 Texture2D<float4> tex : register(t0);
 
 sampler samp : register(s0);
@@ -40,7 +48,7 @@ pixel_shader_input vertex_shader(float4 position : POSITION, float3 normal : NOR
 float4 pixel_shader(pixel_shader_input input) : SV_TARGET
 {
     float3 normal = input.normal;
-    float3 eye = float3(0.0f, 0.0f, -10.0f);
+    float3 eye = vectors.eye_position.xyz;
     const float3 light_unorm = float3(-1.0f, 0.0f, -1.0f);
     const float3 light = normalize(light_unorm);
     float specular = pow(saturate(dot(2 * dot(normal, -light) * normal + light, 

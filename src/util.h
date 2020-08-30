@@ -20,8 +20,21 @@
 #if defined DIRECTX_MATH_VERSION
 const int bytes_per_word = 4;
 const int size_in_words_of_XMMATRIX = sizeof(DirectX::XMMATRIX) / bytes_per_word;
+const int size_in_words_of_XMVECTOR = sizeof(DirectX::XMVECTOR) / bytes_per_word;
 #endif
 
+
+class Time_impl;
+
+class Time
+{
+public:
+    Time();
+    ~Time();
+    double seconds_since_last_call();
+private:
+    Time_impl* impl;
+};
 
 double elapsed_time_in_seconds();
 

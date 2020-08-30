@@ -10,12 +10,13 @@
 #include "windefmin.h"
 
 class Graphics_impl;
+class Input;
 
 class Graphics
 {
 
 public:
-    Graphics(UINT width, UINT height);
+    Graphics(UINT width, UINT height, Input& input);
     ~Graphics();
 
     void init(HWND window);
