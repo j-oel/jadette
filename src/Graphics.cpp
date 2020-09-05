@@ -19,7 +19,7 @@
 #include "View_controller.h"
 
 #include <D3DCompiler.h>
-
+#include <sstream>
 
 
 Graphics::Graphics(UINT width, UINT height, Input& input)
@@ -91,6 +91,9 @@ Graphics_impl::~Graphics_impl()
 void Graphics_impl::init(HWND window)
 {
     init_pipeline(window);
+#ifndef NO_TEXT
+    m_text.init(window, m_device, m_command_queue, m_render_targets, m_swap_chain_buffer_count);
+#endif
     setup_scene();
     m_view_controller.set_window(window);
     m_init_done = true;
@@ -162,6 +165,15 @@ void Graphics_impl::render()
 
     ID3D12CommandList* command_lists[] = { m_command_list.Get() };
     m_command_queue->ExecuteCommandLists(_countof(command_lists), command_lists);
+
+
+#ifndef NO_TEXT
+    std::wstringstream ss;
+    ss << "Number of objects: " << m_graphical_objects.size();
+    float x_position = 5.0f;
+    float y_position = 5.0f;
+    m_text.draw(ss.str().c_str(), x_position, y_position, m_back_buf_index);
+#endif
 
     const UINT sync_interval = 1;
     const UINT flags = 0;
@@ -475,7 +487,7 @@ void Graphics_impl::setup_scene()
         XMVectorSet(0.0f, 0.0f, 10.0f, 0.0f), command_list,
         std::make_shared<Texture>(m_device, command_list, m_texture_descriptor_heap,
         L"../resources/spaceship_diff.jpg", texture_index)),
-     };
+    };
 
 
     m_textures.push_back(std::make_shared<Texture>(m_device, command_list, m_texture_descriptor_heap,
@@ -485,11 +497,11 @@ void Graphics_impl::setup_scene()
     float offset = 2.0f;
 
     for (int x = 0; x < 5; ++x)
-            for (int y = 0; y < 5; ++y)
-                for (int z = 0; z < 5; ++z)
-                    m_graphical_objects.push_back(std::make_shared<Graphical_object>(m_device,
-                        Primitive_type::Cube, XMVectorSet(-x*offset, y*offset, z*offset, 0.0f),
-                        command_list, m_textures[0]));
+        for (int y = 0; y < 5; ++y)
+            for (int z = 0; z < 5; ++z)
+                m_graphical_objects.push_back(std::make_shared<Graphical_object>(m_device,
+                    Primitive_type::Cube, XMVectorSet(-x * offset, y * offset, z * offset, 0.0f),
+                    command_list, m_textures[0]));
 
     offset = 3.0f;
 
@@ -497,8 +509,9 @@ void Graphics_impl::setup_scene()
         for (int y = 0; y < 3; ++y)
             for (int z = 0; z < 3; ++z)
                 m_graphical_objects.push_back(std::make_shared<Graphical_object>(m_device,
-                "../resources/cube.obj", XMVectorSet(offset * x, offset * y, offset * z, 0.0f),
+                    "../resources/cube.obj", XMVectorSet(offset * x, offset * y, offset * z, 0.0f),
                     command_list, m_textures[0]));
+
 
     upload_resources_to_gpu(command_list);
 }
@@ -573,9 +586,13 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
             m_root_param_index_of_textures);
     }
 
+
+    // If text is enabled, the text object takes care of the render target state transition.
+#ifdef NO_TEXT
     m_command_list->ResourceBarrier(1,
         &CD3DX12_RESOURCE_BARRIER::Transition(m_render_targets[m_back_buf_index].Get(),
             D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+#endif
 
     throw_if_failed(m_command_list->Close());
 }

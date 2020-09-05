@@ -17,6 +17,9 @@
 #include "dx12min.h"
 #include "Graphical_object.h"
 #include "View_controller.h"
+#ifndef NO_TEXT
+#include "Text.h"
+#endif
 
 #include <directxmath.h>
 #include <dxgi1_6.h>
@@ -101,6 +104,9 @@ private:
     UINT m_back_buf_index;
 
     View_controller m_view_controller;
+#ifndef NO_TEXT
+    Text m_text;
+#endif
     bool m_init_done;
 };
 
