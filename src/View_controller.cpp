@@ -63,7 +63,7 @@ void View_controller::mouse_look(DirectX::XMVECTOR& eye_position,
     if (delta.x != 0 || delta.y != 0)
     {
         const XMVECTOR up_direction = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-        const float sensitivity = 0.005f;
+        const float sensitivity = 0.0005f;
         XMMATRIX rotation_x = XMMatrixRotationAxis(up_direction, -static_cast<float>(delta.x) * sensitivity);
 
         XMVECTOR eye_to_look_at = eye_position - focus_point;

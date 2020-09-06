@@ -65,7 +65,9 @@ Graphics_impl::Graphics_impl(UINT width, UINT height, Input& input) :
     m_scissor_rect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
     m_rtv_descriptor_size(0),
     m_view_controller(input),
-    m_init_done(false)
+    m_init_done(false),
+    m_vsync(false),
+    m_variable_refresh_rate_displays_support(false)
 {
     for (UINT i = 0; i < m_swap_chain_buffer_count; ++i)
     {
@@ -169,8 +171,9 @@ void Graphics_impl::render()
 
     render_2d_text();
 
-    const UINT sync_interval = 1;
-    const UINT flags = 0;
+    const UINT sync_interval = m_vsync? 1 : 0;
+    const UINT flags = m_variable_refresh_rate_displays_support && !m_vsync?
+        DXGI_PRESENT_ALLOW_TEARING : 0;
     throw_if_failed(m_swap_chain->Present(sync_interval, flags));
 
     signal_frame_done();
@@ -204,11 +207,12 @@ void Graphics_impl::render_2d_text()
     record_frame_time(frame_time, fps);
 
     using namespace std;
-
     wstringstream ss;
-    ss << "Number of objects: " << m_graphical_objects.size() << endl
-        << "Frame time: " << setprecision(4) << frame_time << " ms" << endl
-        << "Frames per second: " << fixed << setprecision(0) << fps;
+    ss << "Frames per second: " << fixed << setprecision(0) << fps << endl;
+    ss.unsetf(ios::ios_base::floatfield); // To get default floating point format
+    ss << "Frame time: " << setprecision(4) << frame_time << " ms" << endl
+       << "Number of objects: " << m_graphical_objects.size();
+
     float x_position = 5.0f;
     float y_position = 5.0f;
     m_text.draw(ss.str().c_str(), x_position, y_position, m_back_buf_index);
@@ -286,10 +290,16 @@ void Graphics_impl::create_device_and_swap_chain(HWND window)
 
     create_command_queue();
 
+    BOOL allow_tearing = FALSE;
+    HRESULT hr = dxgi_factory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, 
+        &allow_tearing, sizeof(allow_tearing));
+    m_variable_refresh_rate_displays_support = SUCCEEDED(hr) && allow_tearing;
+
     DXGI_SWAP_CHAIN_DESC1 s {};
     s.BufferCount = m_swap_chain_buffer_count;
     s.Width = m_width;
     s.Height = m_height;
+    s.Flags = m_variable_refresh_rate_displays_support ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
     s.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     s.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     s.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;

@@ -110,6 +110,8 @@ private:
     Text m_text;
 #endif
     bool m_init_done;
+    bool m_vsync;
+    bool m_variable_refresh_rate_displays_support;
 };
 
 
