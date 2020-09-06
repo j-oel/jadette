@@ -61,6 +61,8 @@ private:
     void create_root_signature();
     void create_main_command_list();
 
+    void render_2d_text();
+
     CD3DX12_VIEWPORT m_viewport;
     CD3DX12_RECT m_scissor_rect;
 

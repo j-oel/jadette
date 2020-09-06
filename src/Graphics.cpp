@@ -20,6 +20,7 @@
 
 #include <D3DCompiler.h>
 #include <sstream>
+#include <iomanip>
 
 
 Graphics::Graphics(UINT width, UINT height, Input& input)
@@ -166,20 +167,53 @@ void Graphics_impl::render()
     ID3D12CommandList* command_lists[] = { m_command_list.Get() };
     m_command_queue->ExecuteCommandLists(_countof(command_lists), command_lists);
 
-
-#ifndef NO_TEXT
-    std::wstringstream ss;
-    ss << "Number of objects: " << m_graphical_objects.size();
-    float x_position = 5.0f;
-    float y_position = 5.0f;
-    m_text.draw(ss.str().c_str(), x_position, y_position, m_back_buf_index);
-#endif
+    render_2d_text();
 
     const UINT sync_interval = 1;
     const UINT flags = 0;
     throw_if_failed(m_swap_chain->Present(sync_interval, flags));
 
     signal_frame_done();
+}
+
+
+void record_frame_time(double& frame_time, double& fps)
+{
+    static Time time;
+    const double milliseconds_per_second = 1000.0;
+    double delta_time_ms = time.seconds_since_last_call() * milliseconds_per_second;
+    static int frames_count = 0;
+    ++frames_count;
+    static double accumulated_time = 0.0;
+    accumulated_time += delta_time_ms;
+    if (accumulated_time > 1000.0)
+    {
+        frame_time = accumulated_time / frames_count;
+        fps = 1000.0 * frames_count / accumulated_time;
+        accumulated_time = 0.0;
+        frames_count = 0;
+    }
+}
+
+void Graphics_impl::render_2d_text()
+{
+#ifndef NO_TEXT
+
+    static double frame_time = 0.0;
+    static double fps = 0.0;
+    record_frame_time(frame_time, fps);
+
+    using namespace std;
+
+    wstringstream ss;
+    ss << "Number of objects: " << m_graphical_objects.size() << endl
+        << "Frame time: " << setprecision(4) << frame_time << " ms" << endl
+        << "Frames per second: " << fixed << setprecision(0) << fps;
+    float x_position = 5.0f;
+    float y_position = 5.0f;
+    m_text.draw(ss.str().c_str(), x_position, y_position, m_back_buf_index);
+
+#endif
 }
 
 
