@@ -54,7 +54,7 @@ POINT operator-(POINT& p1, POINT& p2)
 }
 
 void View_controller::mouse_look(DirectX::XMVECTOR& eye_position,
-    DirectX::XMVECTOR& focus_point)
+    DirectX::XMVECTOR& focus_point, double delta_time)
 {
     POINT mouse_current = m_input.mouse_position();
 
@@ -63,12 +63,14 @@ void View_controller::mouse_look(DirectX::XMVECTOR& eye_position,
     if (delta.x != 0 || delta.y != 0)
     {
         const XMVECTOR up_direction = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-        const float sensitivity = 0.0005f;
-        XMMATRIX rotation_x = XMMatrixRotationAxis(up_direction, -static_cast<float>(delta.x) * sensitivity);
+        const float sensitivity = 0.2f;
+        XMMATRIX rotation_x = XMMatrixRotationAxis(up_direction, -static_cast<float>(delta.x) * 
+            sensitivity * delta_time);
 
         XMVECTOR eye_to_look_at = eye_position - focus_point;
         XMVECTOR x_axis = XMVector3Cross(eye_to_look_at, up_direction);
-        XMMATRIX rotation_y = XMMatrixRotationAxis(x_axis, -static_cast<float>(delta.y) * sensitivity);
+        XMMATRIX rotation_y = XMMatrixRotationAxis(x_axis, -static_cast<float>(delta.y) * 
+            sensitivity * delta_time);
 
         XMMATRIX rotation_matrix = rotation_x * rotation_y;
 
@@ -176,5 +178,5 @@ void View_controller::first_person_view_update(DirectX::XMVECTOR& eye_position,
     eye_position += delta_pos;
     focus_point += delta_pos;
 
-    mouse_look(eye_position, focus_point);
+    mouse_look(eye_position, focus_point, delta_time);
 }

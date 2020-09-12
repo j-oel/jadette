@@ -22,7 +22,7 @@ public:
 private:
     void first_person_view_update(DirectX::XMVECTOR& eye_position, DirectX::XMVECTOR& focus_point);
     void mouse_look(DirectX::XMVECTOR& eye_position,
-        DirectX::XMVECTOR& focus_point);
+        DirectX::XMVECTOR& focus_point, double delta_time);
     void move_mouse_pointer_to_center();
     Input& m_input;
 
