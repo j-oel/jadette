@@ -17,7 +17,7 @@
 
 using Microsoft::WRL::ComPtr;
 
-enum class Primitive_type { Cube };
+enum class Primitive_type { Plane, Cube };
 
 class Graphical_object
 {
@@ -32,7 +32,8 @@ public:
 
 
     ~Graphical_object();
-    void draw(ComPtr<ID3D12GraphicsCommandList> commandList,
+    void draw(ComPtr<ID3D12GraphicsCommandList> command_list, int root_param_index_of_matrices);
+    void draw_textured(ComPtr<ID3D12GraphicsCommandList> command_list,
         int root_param_index_of_matrices, int root_param_index_of_textures);
     DirectX::XMMATRIX model_matrix() const { return *m_model_matrix; }
     void set_model_matrix(const DirectX::XMMATRIX& matrix) { *m_model_matrix = matrix; }

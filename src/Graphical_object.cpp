@@ -25,7 +25,14 @@ Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, const std::strin
 Mesh* new_primitive(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
     Primitive_type primitive_type)
 {
-    return new Cube(device, command_list);
+    switch (primitive_type)
+    {
+        case Primitive_type::Cube:
+            return new Cube(device, command_list);
+        case Primitive_type::Plane:
+        default:
+            return new Plane(device, command_list);
+    }
 }
 
 Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, Primitive_type primitive_type, 
@@ -44,14 +51,20 @@ Graphical_object::~Graphical_object()
     _mm_free(m_translation);
 }
 
-void Graphical_object::draw(ComPtr<ID3D12GraphicsCommandList> command_list,
-    int root_param_index_of_matrices, int root_param_index_of_textures)
+void Graphical_object::draw(ComPtr<ID3D12GraphicsCommandList> command_list, 
+    int root_param_index_of_matrices)
 {
     const int offset = size_in_words_of_XMMATRIX;
-    command_list->SetGraphicsRoot32BitConstants(root_param_index_of_matrices, 
+    command_list->SetGraphicsRoot32BitConstants(root_param_index_of_matrices,
         size_in_words_of_XMMATRIX, m_model_matrix, offset);
-    m_texture->set_texture_for_shader(command_list, root_param_index_of_textures);
     m_mesh->draw(command_list);
+}
+
+void Graphical_object::draw_textured(ComPtr<ID3D12GraphicsCommandList> command_list,
+    int root_param_index_of_matrices, int root_param_index_of_textures)
+{
+    m_texture->set_texture_for_shader(command_list, root_param_index_of_textures);
+    draw(command_list, root_param_index_of_matrices);
 }
 
 void Graphical_object::release_temp_resources()

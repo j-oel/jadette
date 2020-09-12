@@ -60,6 +60,7 @@ Graphics_impl::Graphics_impl(UINT width, UINT height, Input& input) :
     m_projection_matrix(XMMatrixIdentity()),
     m_eye_position(XMVectorSet(0.0f, 0.0f, -10.0f, 1.0f)),
     m_focus_point(XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f)),
+    m_light_position(XMVectorSet(0.0f, 20.0f, 5.0f, 1.0f)),
     m_back_buf_index(0),
     m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
     m_scissor_rect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
@@ -153,6 +154,14 @@ void Graphics_impl::update()
         graphical_object->set_model_matrix(new_model_matrix);
     }
 
+    if (m_graphical_objects.size() >= 2)
+    {
+        // Do not rotate the plane
+        auto& plane = m_graphical_objects[1];
+        XMMATRIX model_translation_matrix = XMMatrixTranslationFromVector(plane->translation());
+        plane->set_model_matrix(model_translation_matrix);
+    }
+
     if (!m_graphical_objects.empty())
     {
         auto& ship = m_graphical_objects[0];
@@ -226,6 +235,8 @@ void Graphics_impl::init_pipeline(HWND window)
     create_device_and_swap_chain(window);
     create_render_target_views();
     create_depth_stencil_resources();
+    create_texture_descriptor_heap();
+    create_shadow_map();
     create_root_signature();
     create_pipeline_state_object();
     create_main_command_list();
@@ -384,13 +395,31 @@ void Graphics_impl::create_depth_stencil_resources()
         m_dsv_heap->GetCPUDescriptorHandleForHeapStart());
 }
 
+void Graphics_impl::create_texture_descriptor_heap()
+{
+    const int textures_count = 200;
+    D3D12_DESCRIPTOR_HEAP_DESC srv_heap_desc{};
+    srv_heap_desc.NumDescriptors = textures_count;
+    srv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    srv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    throw_if_failed(m_device->CreateDescriptorHeap(&srv_heap_desc, IID_PPV_ARGS(&m_texture_descriptor_heap)));
+}
+
+
+void Graphics_impl::create_shadow_map()
+{
+    UINT texture_position_in_descriptor_heap_for_shadow_map = 0;
+    m_shadow_map = std::make_shared<Shadow_map>(m_device, m_texture_descriptor_heap, 
+        texture_position_in_descriptor_heap_for_shadow_map, m_root_param_index_of_matrices);
+}
+
 
 void Graphics_impl::create_root_signature()
 {
-    const int root_parameters_count = 3;
-    CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count]{};
+    const int root_parameters_count = 4;
+    CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count] {};
 
-    const int matrices_count = 2;
+    const int matrices_count = 3;
     UINT shader_register = 0;
     root_parameters[m_root_param_index_of_matrices].InitAsConstants(
         matrices_count * size_in_words_of_XMMATRIX, shader_register, 0, D3D12_SHADER_VISIBILITY_VERTEX);
@@ -403,13 +432,22 @@ void Graphics_impl::create_root_signature()
 
     CD3DX12_DESCRIPTOR_RANGE1 descriptor_range;
     const UINT descriptors_count = 1U;
-    const UINT base_register = 0U;
+    UINT base_register = 0U;
     descriptor_range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, descriptors_count, base_register);
     root_parameters[m_root_param_index_of_textures].InitAsDescriptorTable(
         1, &descriptor_range, D3D12_SHADER_VISIBILITY_PIXEL);
 
+    base_register = 1U;
+    CD3DX12_DESCRIPTOR_RANGE1 descriptor_range2;
+    descriptor_range2.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, descriptors_count, base_register);
+    root_parameters[m_root_param_index_of_shadow_map].InitAsDescriptorTable(
+        1, &descriptor_range2, D3D12_SHADER_VISIBILITY_PIXEL);
+
     CD3DX12_STATIC_SAMPLER_DESC sampler_description;
     sampler_description.Init(0);
+    sampler_description.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    sampler_description.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    sampler_description.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
 
     D3D12_ROOT_SIGNATURE_FLAGS root_signature_flags =
         D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
@@ -431,16 +469,23 @@ void Graphics_impl::create_root_signature()
 
 void Graphics_impl::create_pipeline_state_object()
 {
-    ComPtr<ID3DBlob> vertex_shader;
-    ComPtr<ID3DBlob> pixel_shader;
+    UINT render_targets_count = 1;
+    create_pipeline_state(m_device, m_pipeline_state, m_root_signature, "vertex_shader", "pixel_shader", 
+        DXGI_FORMAT_D32_FLOAT, render_targets_count);
+    SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object");
+}
+
+void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineState>& pipeline_state,
+    ComPtr<ID3D12RootSignature> root_signature, 
+    const char* vertex_shader_entry_function, const char* pixel_shader_entry_function,
+    DXGI_FORMAT dsv_format, UINT render_targets_count)
+{
 
 #if defined(_DEBUG)
     UINT compile_flags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #else
     UINT compile_flags = 0;
 #endif
-
-    const wchar_t shader_path[] = L"../src/shaders.hlsl";
 
     ID3DBlob* error_messages = nullptr;
 
@@ -455,13 +500,17 @@ void Graphics_impl::create_pipeline_state_object()
         }
     };
 
+    const wchar_t shader_path[] = L"../src/shaders.hlsl";
+
+    ComPtr<ID3DBlob> vertex_shader;
     HRESULT hr = D3DCompileFromFile(shader_path, nullptr, nullptr,
-        "vertex_shader", "vs_5_1", compile_flags, 0, &vertex_shader, &error_messages);
+        vertex_shader_entry_function, "vs_5_1", compile_flags, 0, &vertex_shader, &error_messages);
 
     handle_shader_errors(hr);
 
+    ComPtr<ID3DBlob> pixel_shader;
     hr = D3DCompileFromFile(shader_path, nullptr, nullptr,
-        "pixel_shader", "ps_5_1", compile_flags, 0, &pixel_shader, &error_messages);
+        pixel_shader_entry_function, "ps_5_1", compile_flags, 0, &pixel_shader, &error_messages);
 
     handle_shader_errors(hr);
 
@@ -473,9 +522,9 @@ void Graphics_impl::create_pipeline_state_object()
         { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
     };
 
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC s {};
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC s{};
     s.InputLayout = { input_element_descriptions, _countof(input_element_descriptions) };
-    s.pRootSignature = m_root_signature.Get();
+    s.pRootSignature = root_signature.Get();
     s.VS = CD3DX12_SHADER_BYTECODE(vertex_shader.Get());
     s.PS = CD3DX12_SHADER_BYTECODE(pixel_shader.Get());
     s.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
@@ -483,15 +532,15 @@ void Graphics_impl::create_pipeline_state_object()
     s.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
     s.SampleMask = UINT_MAX;
     s.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    s.NumRenderTargets = 1;
-    s.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-    s.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+    s.NumRenderTargets = render_targets_count;
+    s.DSVFormat = dsv_format;
     s.SampleDesc.Count = 1;
 
+    if (render_targets_count > 0)
+        s.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+
     auto& ps_desc = s;
-    throw_if_failed(m_device->CreateGraphicsPipelineState(&ps_desc,
-        IID_PPV_ARGS(&m_pipeline_state)));
-    SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object");
+    throw_if_failed(device->CreateGraphicsPipelineState(&ps_desc, IID_PPV_ARGS(&pipeline_state)));
 }
 
 
@@ -517,14 +566,8 @@ void Graphics_impl::setup_scene()
         command_allocator.Get(), m_pipeline_state.Get(), IID_PPV_ARGS(&command_list)));
 
 
-    const int textures_count = 200;
-    D3D12_DESCRIPTOR_HEAP_DESC srv_heap_desc {};
-    srv_heap_desc.NumDescriptors = textures_count;
-    srv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-    srv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-    throw_if_failed(m_device->CreateDescriptorHeap(&srv_heap_desc, IID_PPV_ARGS(&m_texture_descriptor_heap)));
-
-    int texture_index = 0;
+   
+    int texture_index = 1; // The shadow map has index number 0
 
     m_graphical_objects = {
         std::make_shared<Graphical_object>(m_device, "../resources/spaceship.obj",
@@ -536,7 +579,11 @@ void Graphics_impl::setup_scene()
 
     m_textures.push_back(std::make_shared<Texture>(m_device, command_list, m_texture_descriptor_heap,
         L"../resources/pattern.jpg", ++texture_index));
+    auto& pattern_texture = m_textures[0];
 
+    m_graphical_objects.push_back(std::make_shared<Graphical_object>(m_device,
+        Primitive_type::Plane, XMVectorSet(0.0f, -10.0f, 0.0f, 0.0f),
+        command_list, pattern_texture));
 
     float offset = 2.0f;
 
@@ -545,7 +592,7 @@ void Graphics_impl::setup_scene()
             for (int z = 0; z < 5; ++z)
                 m_graphical_objects.push_back(std::make_shared<Graphical_object>(m_device,
                     Primitive_type::Cube, XMVectorSet(-x * offset, y * offset, z * offset, 0.0f),
-                    command_list, m_textures[0]));
+                    command_list, pattern_texture));
 
     offset = 3.0f;
 
@@ -554,7 +601,7 @@ void Graphics_impl::setup_scene()
             for (int z = 0; z < 3; ++z)
                 m_graphical_objects.push_back(std::make_shared<Graphical_object>(m_device,
                     "../resources/cube.obj", XMVectorSet(offset * x, offset * y, offset * z, 0.0f),
-                    command_list, m_textures[0]));
+                    command_list, pattern_texture));
 
 
     upload_resources_to_gpu(command_list);
@@ -583,6 +630,34 @@ void Graphics_impl::upload_resources_to_gpu(ComPtr<ID3D12GraphicsCommandList>& c
         g->release_temp_resources();
 }
 
+void Graphics_impl::draw_objects(DirectX::XMMATRIX view_projection_matrix,
+    Texture_mapping texture_mapping, Set_shadow_transform set_shadow_transform)
+{
+    const int mvp_offset = 0;
+    const int shadow_transform_offset = 2 * size_in_words_of_XMMATRIX;
+    for (auto& graphical_object : m_graphical_objects)
+    {
+        XMMATRIX model_view_projection_matrix = XMMatrixMultiply(graphical_object->model_matrix(),
+            view_projection_matrix);
+        m_command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_matrices,
+            size_in_words_of_XMMATRIX, &model_view_projection_matrix, mvp_offset);
+
+        if (set_shadow_transform == Set_shadow_transform::yes)
+        {
+            XMMATRIX transform_to_shadow_map_space = 
+                XMMatrixMultiply(graphical_object->model_matrix(), m_shadow_map->shadow_transform());
+            m_command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_matrices,
+                size_in_words_of_XMMATRIX, &transform_to_shadow_map_space, shadow_transform_offset);
+        }
+
+        if (texture_mapping == Texture_mapping::enabled)
+            graphical_object->draw_textured(m_command_list, m_root_param_index_of_matrices,
+                m_root_param_index_of_textures);
+        else
+            graphical_object->draw(m_command_list, m_root_param_index_of_matrices);
+    }
+}
+
 
 void Graphics_impl::record_frame_rendering_commands_in_command_list()
 {
@@ -590,13 +665,17 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     throw_if_failed(m_command_list->Reset(m_command_allocators[m_back_buf_index].Get(), 
         m_pipeline_state.Get()));
 
+    m_shadow_map->record_shadow_map_generation_commands_in_command_list(this, m_command_list, 
+        m_light_position);
+
+    m_command_list->ResourceBarrier(1,
+        &CD3DX12_RESOURCE_BARRIER::Transition(m_render_targets[m_back_buf_index].Get(),
+            D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+    m_command_list->SetPipelineState(m_pipeline_state.Get());
     m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
     m_command_list->RSSetViewports(1, &m_viewport);
     m_command_list->RSSetScissorRects(1, &m_scissor_rect);
-
-    m_command_list->ResourceBarrier(1,
-            &CD3DX12_RESOURCE_BARRIER::Transition(m_render_targets[m_back_buf_index].Get(),
-            D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(m_rtv_heap->GetCPUDescriptorHandleForHeapStart(),
                                              m_back_buf_index, m_rtv_descriptor_size);
@@ -613,23 +692,17 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     ID3D12DescriptorHeap* heaps[] = { m_texture_descriptor_heap.Get() };
     m_command_list->SetDescriptorHeaps(_countof(heaps), heaps);
 
-    const int offset = 0;
+    int offset = 0;
     m_command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_vectors,
         size_in_words_of_XMVECTOR, &m_eye_position, offset);
+    offset += size_in_words_of_XMVECTOR;
+    m_command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_vectors,
+        size_in_words_of_XMVECTOR, &m_light_position, offset);
 
-    for (auto& graphical_object : m_graphical_objects)
-    {
-        XMMATRIX model_view_projection_matrix = XMMatrixMultiply(graphical_object->model_matrix(),
-            m_view_matrix);
-        model_view_projection_matrix = XMMatrixMultiply(model_view_projection_matrix,
-            m_projection_matrix);
-        m_command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_matrices,
-            size_in_words_of_XMMATRIX, &model_view_projection_matrix, offset);
+    m_shadow_map->set_shadow_map_for_shader(m_command_list, m_root_param_index_of_shadow_map);
 
-        graphical_object->draw(m_command_list, m_root_param_index_of_matrices, 
-            m_root_param_index_of_textures);
-    }
-
+    XMMATRIX view_projection_matrix = XMMatrixMultiply(m_view_matrix, m_projection_matrix);
+    draw_objects(view_projection_matrix, Texture_mapping::enabled, Set_shadow_transform::yes);
 
     // If text is enabled, the text object takes care of the render target state transition.
 #ifdef NO_TEXT

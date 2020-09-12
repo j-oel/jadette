@@ -16,6 +16,7 @@
 
 #include "dx12min.h"
 #include "Graphical_object.h"
+#include "Shadow_map.h"
 #include "View_controller.h"
 #ifndef NO_TEXT
 #include "Text.h"
@@ -27,6 +28,9 @@
 #include <memory>
 #include <vector>
 
+
+enum class Texture_mapping { enabled, disabled };
+enum class Set_shadow_transform { yes, no };
 
 using Microsoft::WRL::ComPtr;
 
@@ -40,6 +44,9 @@ public:
     void init(HWND window);
     void update();
     void render();
+
+    void draw_objects(DirectX::XMMATRIX view_projection_matrix, Texture_mapping texture_mapping,
+                      Set_shadow_transform set_shadow_transform);
 
 private:
     void init_pipeline(HWND window);
@@ -57,6 +64,8 @@ private:
     void create_command_queue();
     void create_render_target_views();
     void create_depth_stencil_resources();
+    void create_texture_descriptor_heap();
+    void create_shadow_map();
     void create_pipeline_state_object();
     void create_root_signature();
     void create_main_command_list();
@@ -84,9 +93,12 @@ private:
     ComPtr<ID3D12PipelineState> m_pipeline_state;
     ComPtr<ID3D12RootSignature> m_root_signature;
 
+
     const int m_root_param_index_of_matrices = 0;
     const int m_root_param_index_of_textures = 1;
     const int m_root_param_index_of_vectors = 2;
+    const int m_root_param_index_of_shadow_map = 3;
+
 
     std::vector<std::shared_ptr<Texture>> m_textures;
     ComPtr<ID3D12DescriptorHeap> m_texture_descriptor_heap;
@@ -94,11 +106,15 @@ private:
 
     std::vector<std::shared_ptr<Graphical_object> > m_graphical_objects;
 
+    std::shared_ptr<Shadow_map> m_shadow_map;
+
     DirectX::XMMATRIX m_view_matrix;
     DirectX::XMMATRIX m_projection_matrix;
 
+
     DirectX::XMVECTOR m_eye_position;
     DirectX::XMVECTOR m_focus_point;
+    DirectX::XMVECTOR m_light_position;
 
     HANDLE m_fence_events[m_swap_chain_buffer_count];
     ComPtr<ID3D12Fence> m_frame_fences[m_swap_chain_buffer_count];
@@ -114,4 +130,7 @@ private:
     bool m_variable_refresh_rate_displays_support;
 };
 
-
+void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineState>& pipeline_state, 
+    ComPtr<ID3D12RootSignature> root_signature,
+    const char* vertex_shader_entry_function, const char* pixel_shader_entry_function,
+    DXGI_FORMAT dsv_format, UINT render_targets_count);

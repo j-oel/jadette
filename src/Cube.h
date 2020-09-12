@@ -18,3 +18,8 @@ private:
 
 };
 
+class Plane : public Mesh
+{
+public:
+    Plane(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list);
+};
