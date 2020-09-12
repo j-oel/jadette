@@ -34,6 +34,7 @@ public:
 
     void draw(ComPtr<ID3D12GraphicsCommandList> commandList);
 
+    int triangles_count();
 
 private:
 

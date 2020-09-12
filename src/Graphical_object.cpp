@@ -73,6 +73,11 @@ void Graphical_object::release_temp_resources()
     m_mesh->release_temp_resources();
 }
 
+int Graphical_object::triangles_count()
+{
+    return m_mesh->triangles_count();
+}
+
 void Graphical_object::init(DirectX::XMVECTOR translation)
 {
     // The XM types need to be 16 byte aligned because they use SSE. This is not the

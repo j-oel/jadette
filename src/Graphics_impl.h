@@ -125,6 +125,7 @@ private:
 #ifndef NO_TEXT
     Text m_text;
 #endif
+    int m_triangles_count;
     bool m_init_done;
     bool m_vsync;
     bool m_variable_refresh_rate_displays_support;

@@ -66,6 +66,7 @@ Graphics_impl::Graphics_impl(UINT width, UINT height, Input& input) :
     m_scissor_rect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
     m_rtv_descriptor_size(0),
     m_view_controller(input),
+    m_triangles_count(0),
     m_init_done(false),
     m_vsync(false),
     m_variable_refresh_rate_displays_support(false)
@@ -220,7 +221,8 @@ void Graphics_impl::render_2d_text()
     ss << "Frames per second: " << fixed << setprecision(0) << fps << endl;
     ss.unsetf(ios::ios_base::floatfield); // To get default floating point format
     ss << "Frame time: " << setprecision(4) << frame_time << " ms" << endl
-       << "Number of objects: " << m_graphical_objects.size();
+       << "Number of objects: " << m_graphical_objects.size() << endl
+       << "Number of triangles: " << m_triangles_count;
 
     float x_position = 5.0f;
     float y_position = 5.0f;
@@ -605,6 +607,9 @@ void Graphics_impl::setup_scene()
 
 
     upload_resources_to_gpu(command_list);
+
+    for (auto& g : m_graphical_objects)
+        m_triangles_count += g->triangles_count();
 }
 
 void Graphics_impl::upload_resources_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list)

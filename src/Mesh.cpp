@@ -47,6 +47,11 @@ void Mesh::draw(ComPtr<ID3D12GraphicsCommandList> commandList)
     commandList->DrawIndexedInstanced(m_index_count, 1, 0, 0, 0);
 }
 
+int Mesh::triangles_count()
+{
+    return m_index_count / 3;
+}
+
 
 namespace
 {

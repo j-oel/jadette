@@ -39,6 +39,7 @@ public:
     void set_model_matrix(const DirectX::XMMATRIX& matrix) { *m_model_matrix = matrix; }
     DirectX::XMVECTOR translation() { return *m_translation; }
     void release_temp_resources();
+    int triangles_count();
 
 private:
 
