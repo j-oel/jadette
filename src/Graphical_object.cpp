@@ -7,7 +7,7 @@
 
 #include "Graphical_object.h"
 #include "Mesh.h"
-#include "Cube.h"
+#include "Primitives.h"
 #include "util.h"
 
 using namespace DirectX;

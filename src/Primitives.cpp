@@ -5,7 +5,7 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
-#include "Cube.h"
+#include "Primitives.h"
 
 namespace {
 
