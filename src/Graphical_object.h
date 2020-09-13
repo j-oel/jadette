@@ -30,6 +30,10 @@ public:
         DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list,
         std::shared_ptr<Texture> texture);
 
+    Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh,
+        DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list,
+        std::shared_ptr<Texture> texture);
+
 
     ~Graphical_object();
     void draw(ComPtr<ID3D12GraphicsCommandList> command_list, int root_param_index_of_matrices);
@@ -45,7 +49,7 @@ private:
 
     void init(DirectX::XMVECTOR translation);
 
-    std::unique_ptr<Mesh> m_mesh;
+    std::shared_ptr<Mesh> m_mesh;
     DirectX::XMMATRIX* m_model_matrix;
     DirectX::XMVECTOR* m_translation;
     std::shared_ptr<Texture> m_texture;

@@ -15,7 +15,7 @@ using namespace DirectX;
 Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, const std::string& mesh_filename, 
     DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list,
     std::shared_ptr<Texture> texture) :
-    m_mesh(std::make_unique<Mesh>(device, command_list, mesh_filename)), 
+    m_mesh(std::make_shared<Mesh>(device, command_list, mesh_filename)), 
     m_model_matrix(nullptr), m_translation(nullptr),
     m_texture(texture)
 {
@@ -39,6 +39,16 @@ Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, Primitive_type p
     DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list, 
     std::shared_ptr<Texture> texture) :
     m_mesh(new_primitive(device, command_list, primitive_type)),
+    m_model_matrix(nullptr), m_translation(nullptr),
+    m_texture(texture)
+{
+    init(translation);
+}
+
+Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh, 
+    DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list, std
+    ::shared_ptr<Texture> texture) :
+    m_mesh(mesh),
     m_model_matrix(nullptr), m_translation(nullptr),
     m_texture(texture)
 {

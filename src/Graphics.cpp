@@ -17,6 +17,7 @@
 #include "Graphics_impl.h"
 #include "util.h"
 #include "View_controller.h"
+#include "Primitives.h"
 
 #include <D3DCompiler.h>
 #include <sstream>
@@ -597,11 +598,13 @@ void Graphics_impl::setup_scene()
 
     float offset = 2.0f;
 
+    std::shared_ptr<Mesh> cube(new Cube(m_device, command_list));
+
     for (int x = 0; x < 5; ++x)
         for (int y = 0; y < 5; ++y)
             for (int z = 0; z < 5; ++z)
                 m_graphical_objects.push_back(std::make_shared<Graphical_object>(m_device,
-                    Primitive_type::Cube, XMVectorSet(-x * offset, y * offset, z * offset, 0.0f),
+                    cube, XMVectorSet(-x * offset, y * offset, z * offset, 0.0f),
                     command_list, pattern_texture));
 
     offset = 3.0f;
