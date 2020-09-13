@@ -11,23 +11,26 @@ struct matrices_struct
     float4x4 model;
     float4x4 transform_to_shadow_map_space;
 };
-
 ConstantBuffer<matrices_struct> matrices : register(b0);
-
 
 struct vectors_struct
 {
     float4 eye_position;
     float4 light_position;
 };
-
 ConstantBuffer<vectors_struct> vectors : register(b1);
 
-Texture2D<float4> tex : register(t0);
+struct values_struct
+{
+    int shadow_map_size;
+};
+ConstantBuffer<values_struct> values : register(b2);
 
+Texture2D<float4> tex : register(t0);
 Texture2D<float> shadow_map : register(t1);
 
-sampler samp : register(s0);
+sampler texture_sampler : register(s0);
+SamplerComparisonState shadow_sampler : register(s1);
 
 struct pixel_shader_input
 {
@@ -53,14 +56,28 @@ pixel_shader_input vertex_shader(float4 position : POSITION, float3 normal : NOR
     return result;
 }
 
+
+float sample_shadow_map(pixel_shader_input input, float2 offset)
+{
+    const float bias = 0.001f;
+    float2 coord = input.position_in_shadow_map_space.xy + offset * (1.0f / values.shadow_map_size);
+    return shadow_map.SampleCmp(shadow_sampler, coord,
+        input.position_in_shadow_map_space.z - bias);
+}
+
+float shadow_value(pixel_shader_input input)
+{
+    float shadow = 0.0f;
+    for (float y = -1.5f; y <= 1.5f; y += 1.0f)
+        for (float x = -1.5f; x <= 1.5f; x += 1.0f)
+            shadow += sample_shadow_map(input, float2(x, y));
+
+    return shadow / 16.0f;
+}
+
 float4 pixel_shader(pixel_shader_input input) : SV_TARGET
 {
-    float shadow = 1.0;
-    const float bias = 0.001f;
-
-    if ((input.position_in_shadow_map_space.z - bias) > 
-        shadow_map.Sample(samp, input.position_in_shadow_map_space.xy))
-        shadow = 0.0f;
+    float shadow = shadow_value(input);
 
     const float3 normal = input.normal;
     const float3 eye = vectors.eye_position.xyz;
@@ -68,7 +85,7 @@ float4 pixel_shader(pixel_shader_input input) : SV_TARGET
     const float3 light = normalize(light_unorm);
     const float specular = pow(saturate(dot(2 * dot(normal, -light) * normal + light, 
         normalize(input.position.xyz - eye))), 15);
-    const float4 color = tex.Sample(samp, input.texcoord);
+    const float4 color = tex.Sample(texture_sampler, input.texcoord);
     const float4 ambient_light = float4(0.2f, 0.2f, 0.2f, 1.0f);
     const float4 ambient = color * ambient_light;
     const float4 result = ambient + shadow * (color * saturate(dot(normal, light)) +

@@ -174,10 +174,26 @@ void Shadow_map::record_shadow_map_generation_commands_in_command_list(Graphics_
 }
 
 void Shadow_map::set_shadow_map_for_shader(ComPtr<ID3D12GraphicsCommandList> command_list, 
-    int root_param_index_of_shadow_map)
+    int root_param_index_of_shadow_map, int root_param_index_of_values)
 {
     command_list->SetGraphicsRootDescriptorTable(root_param_index_of_shadow_map,
         m_shadow_map_gpu_descriptor_handle);
+    const UINT offset = 0;
+    const UINT size_in_words_of_value = 1;
+    command_list->SetGraphicsRoot32BitConstants(root_param_index_of_values,
+        size_in_words_of_value, &m_size, offset);
+}
+
+CD3DX12_STATIC_SAMPLER_DESC Shadow_map::shadow_map_sampler(UINT sampler_shader_register)
+{
+    CD3DX12_STATIC_SAMPLER_DESC s;
+    s.Init(sampler_shader_register);
+    s.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    s.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    s.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
+    s.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS;
+    s.Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+    return s;
 }
 
 

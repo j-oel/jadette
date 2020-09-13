@@ -27,7 +27,8 @@ public:
         ComPtr<ID3D12GraphicsCommandList> command_list, DirectX::XMVECTOR light_position);
     DirectX::XMMATRIX shadow_transform() { return m_shadow_transform; }
     void set_shadow_map_for_shader(ComPtr<ID3D12GraphicsCommandList> command_list,
-        int root_param_index_of_shadow_map);
+        int root_param_index_of_shadow_map, int root_param_index_of_values);
+    CD3DX12_STATIC_SAMPLER_DESC shadow_map_sampler(UINT sampler_shader_register);
 private:
     void create_root_signature(ComPtr<ID3D12Device> device, int root_param_index_of_matrices);
     ComPtr<ID3D12PipelineState> m_pipeline_state;
@@ -39,6 +40,6 @@ private:
 
     DirectX::XMMATRIX m_shadow_transform;
 
-    int m_size;
+    int32_t m_size;
 };
 

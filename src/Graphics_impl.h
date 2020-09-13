@@ -98,6 +98,7 @@ private:
     const int m_root_param_index_of_textures = 1;
     const int m_root_param_index_of_vectors = 2;
     const int m_root_param_index_of_shadow_map = 3;
+    const int m_root_param_index_of_values = 4;
 
 
     std::vector<std::shared_ptr<Texture>> m_textures;

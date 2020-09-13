@@ -400,7 +400,7 @@ void Graphics_impl::create_depth_stencil_resources()
 void Graphics_impl::create_texture_descriptor_heap()
 {
     const int textures_count = 200;
-    D3D12_DESCRIPTOR_HEAP_DESC srv_heap_desc{};
+    D3D12_DESCRIPTOR_HEAP_DESC srv_heap_desc {};
     srv_heap_desc.NumDescriptors = textures_count;
     srv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     srv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
@@ -418,7 +418,7 @@ void Graphics_impl::create_shadow_map()
 
 void Graphics_impl::create_root_signature()
 {
-    const int root_parameters_count = 4;
+    const int root_parameters_count = 5;
     CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count] {};
 
     const int matrices_count = 3;
@@ -431,6 +431,10 @@ void Graphics_impl::create_root_signature()
     root_parameters[m_root_param_index_of_vectors].InitAsConstants(
         vectors_count * size_in_words_of_XMVECTOR, shader_register, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 
+    const int values_count = 1;
+    ++shader_register;
+    root_parameters[m_root_param_index_of_values].InitAsConstants(
+        values_count, shader_register, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 
     CD3DX12_DESCRIPTOR_RANGE1 descriptor_range;
     const UINT descriptors_count = 1U;
@@ -445,19 +449,23 @@ void Graphics_impl::create_root_signature()
     root_parameters[m_root_param_index_of_shadow_map].InitAsDescriptorTable(
         1, &descriptor_range2, D3D12_SHADER_VISIBILITY_PIXEL);
 
-    CD3DX12_STATIC_SAMPLER_DESC sampler_description;
-    sampler_description.Init(0);
-    sampler_description.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-    sampler_description.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-    sampler_description.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
+    UINT sampler_shader_register = 0;
+    CD3DX12_STATIC_SAMPLER_DESC texture_sampler_description;
+    texture_sampler_description.Init(sampler_shader_register);
+
+    ++sampler_shader_register;
+    CD3DX12_STATIC_SAMPLER_DESC shadow_sampler_description = 
+        m_shadow_map->shadow_map_sampler(sampler_shader_register);
+
+    CD3DX12_STATIC_SAMPLER_DESC samplers[] = { texture_sampler_description, shadow_sampler_description };
 
     D3D12_ROOT_SIGNATURE_FLAGS root_signature_flags =
         D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_description;
-    const int samplers_count = 1;
-    root_signature_description.Init_1_1(_countof(root_parameters), root_parameters, samplers_count,
-        &sampler_description, root_signature_flags);
+
+    root_signature_description.Init_1_1(_countof(root_parameters), root_parameters, _countof(samplers),
+        samplers, root_signature_flags);
 
     ComPtr<ID3DBlob> signature;
     ComPtr<ID3DBlob> error;
@@ -704,7 +712,8 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     m_command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_vectors,
         size_in_words_of_XMVECTOR, &m_light_position, offset);
 
-    m_shadow_map->set_shadow_map_for_shader(m_command_list, m_root_param_index_of_shadow_map);
+    m_shadow_map->set_shadow_map_for_shader(m_command_list, m_root_param_index_of_shadow_map, 
+        m_root_param_index_of_values);
 
     XMMATRIX view_projection_matrix = XMMatrixMultiply(m_view_matrix, m_projection_matrix);
     draw_objects(view_projection_matrix, Texture_mapping::enabled, Set_shadow_transform::yes);
