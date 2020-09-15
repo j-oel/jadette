@@ -15,7 +15,7 @@
 #pragma once
 
 #include "dx12min.h"
-#include "Graphical_object.h"
+#include "Scene.h"
 #include "Shadow_map.h"
 #include "View_controller.h"
 #ifndef NO_TEXT
@@ -28,9 +28,6 @@
 #include <memory>
 #include <vector>
 
-
-enum class Texture_mapping { enabled, disabled };
-enum class Input_element_model { translation, matrix };
 
 using Microsoft::WRL::ComPtr;
 
@@ -45,18 +42,10 @@ public:
     void update();
     void render();
 
-    void draw_objects(const std::vector<std::shared_ptr<Graphical_object> >& graphical_objects, 
-        DirectX::XMMATRIX view_projection_matrix, Texture_mapping texture_mapping,
-        Input_element_model input_element_model);
-
-    void draw_static_objects(DirectX::XMMATRIX view_projection_matrix, Texture_mapping texture_mapping);
-    void draw_dynamic_objects(DirectX::XMMATRIX view_projection_matrix, Texture_mapping texture_mapping);
-
-
+    void upload_resources_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list);
 private:
     void init_pipeline(HWND window);
     void setup_scene();
-    void upload_resources_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list);
     void record_frame_rendering_commands_in_command_list();
     void wait_for_previous_frame_done();
     void signal_frame_done();
@@ -76,9 +65,6 @@ private:
     void create_main_command_list();
 
     void render_2d_text();
-
-    void upload_instance_vector_data();
-    void upload_instance_matrix_data(const std::vector<std::shared_ptr<Graphical_object> >& objects);
 
     CD3DX12_VIEWPORT m_viewport;
     CD3DX12_RECT m_scissor_rect;
@@ -108,19 +94,11 @@ private:
     const int m_root_param_index_of_shadow_map = 3;
     const int m_root_param_index_of_values = 4;
 
-    std::vector<std::shared_ptr<Texture>> m_textures;
     ComPtr<ID3D12DescriptorHeap> m_texture_descriptor_heap;
     ComPtr<ID3D12DescriptorHeap> m_sampler_heap;
 
-    std::vector<std::shared_ptr<Graphical_object> > m_graphical_objects;
-    std::vector<std::shared_ptr<Graphical_object> > m_static_objects;
-    std::vector<std::shared_ptr<Graphical_object> > m_dynamic_objects;
-
-    std::vector<Per_instance_vector_data> m_translations;
-    std::unique_ptr<Instance_data> m_instance_vector_data;
-    std::unique_ptr<Instance_data> m_instance_matrix_data;
-
     std::shared_ptr<Shadow_map> m_shadow_map;
+    std::shared_ptr<Scene> m_scene;
 
     DirectX::XMMATRIX m_view_matrix;
     DirectX::XMMATRIX m_projection_matrix;
@@ -139,7 +117,6 @@ private:
     Text m_text;
 #endif
 
-    int m_triangles_count;
     bool m_init_done;
     bool m_vsync;
     bool m_variable_refresh_rate_displays_support;

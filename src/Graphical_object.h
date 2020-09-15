@@ -24,21 +24,22 @@ class Graphical_object
 public:
     Graphical_object(ComPtr<ID3D12Device> device, const std::string& mesh_filename,
         DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list,
-        std::shared_ptr<Texture> texture, int id);
+        int m_root_param_index_of_textures, std::shared_ptr<Texture> texture, int id);
 
     Graphical_object(ComPtr<ID3D12Device> device, Primitive_type primitive_type,
         DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list,
-        std::shared_ptr<Texture> texture, int id);
+        int m_root_param_index_of_textures, std::shared_ptr<Texture> texture, int id);
 
     Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh,
         DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list,
-        std::shared_ptr<Texture> texture, int id, int instances = 1);
+        int m_root_param_index_of_textures, std::shared_ptr<Texture> texture, int id,
+        int instances = 1);
 
 
     ~Graphical_object();
     void draw(ComPtr<ID3D12GraphicsCommandList> command_list,
         D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view);
-    void draw_textured(ComPtr<ID3D12GraphicsCommandList> command_list, int root_param_index_of_textures,
+    void draw_textured(ComPtr<ID3D12GraphicsCommandList> command_list,
         D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view);
     DirectX::XMMATRIX model_matrix() const { return *m_model_matrix; }
     void set_model_matrix(const DirectX::XMMATRIX& matrix) { *m_model_matrix = matrix; }
@@ -55,6 +56,7 @@ private:
     DirectX::XMMATRIX* m_model_matrix;
     DirectX::XMVECTOR* m_translation;
     std::shared_ptr<Texture> m_texture;
+    int m_root_param_index_of_textures;
     int m_id;
     int m_instances;
 };

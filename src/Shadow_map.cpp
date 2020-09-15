@@ -16,10 +16,11 @@
 using namespace DirectX;
 
 
-Shadow_map::Shadow_map(ComPtr<ID3D12Device> device, ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
+Shadow_map::Shadow_map(ComPtr<ID3D12Device> device, 
+    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
     UINT texture_position_in_descriptor_heap, int root_param_index_of_matrices, 
     Bit_depth bit_depth/* = Bit_depth::bpp16*/, int size/* = 1024*/) :
-    m_size(size)
+    m_root_param_index_of_matrices(root_param_index_of_matrices), m_size(size)
 {
     DXGI_FORMAT dsv_format = DXGI_FORMAT_UNKNOWN;
     DXGI_FORMAT srv_format = DXGI_FORMAT_UNKNOWN;
@@ -80,7 +81,7 @@ Shadow_map::Shadow_map(ComPtr<ID3D12Device> device, ComPtr<ID3D12DescriptorHeap>
         texture_descriptor_heap->GetGPUDescriptorHandleForHeapStart(),
         texture_position_in_descriptor_heap);
 
-    create_root_signature(device, root_param_index_of_matrices);
+    create_root_signature(device);
 
     UINT render_targets_count = 0;
     create_pipeline_state(device, m_pipeline_state_model_vector, m_root_signature,
@@ -94,15 +95,16 @@ Shadow_map::Shadow_map(ComPtr<ID3D12Device> device, ComPtr<ID3D12DescriptorHeap>
 }
 
 
-void Shadow_map::create_root_signature(ComPtr<ID3D12Device> device, int root_param_index_of_matrices)
+void Shadow_map::create_root_signature(ComPtr<ID3D12Device> device)
 {
     const int root_parameters_count = 1;
     CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count] {};
 
     const int matrices_count = 2;
     const UINT shader_register = 0;
-    root_parameters[root_param_index_of_matrices].InitAsConstants(
-        matrices_count * size_in_words_of_XMMATRIX, shader_register, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+    root_parameters[m_root_param_index_of_matrices].InitAsConstants(
+        matrices_count * size_in_words_of_XMMATRIX, shader_register, 
+        0, D3D12_SHADER_VISIBILITY_VERTEX);
 
     const D3D12_ROOT_SIGNATURE_FLAGS root_signature_flags =
         D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
@@ -122,7 +124,7 @@ void Shadow_map::create_root_signature(ComPtr<ID3D12Device> device, int root_par
 }
 
 
-void Shadow_map::record_shadow_map_generation_commands_in_command_list(Graphics_impl* graphics,
+void Shadow_map::record_shadow_map_generation_commands_in_command_list(std::shared_ptr<Scene> scene,
     ComPtr<ID3D12GraphicsCommandList> command_list, DirectX::XMVECTOR light_position)
 {
     command_list->ResourceBarrier(1,
@@ -158,11 +160,14 @@ void Shadow_map::record_shadow_map_generation_commands_in_command_list(Graphics_
                                                           near_z, far_z);
 
     XMMATRIX view_projection_matrix = XMMatrixMultiply(view_matrix, projection_matrix);
+    const int view_projection_offset = 0;
+    command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_matrices,
+        size_in_words_of_XMMATRIX, &view_projection_matrix, view_projection_offset);
 
     command_list->SetPipelineState(m_pipeline_state_model_vector.Get());
-    graphics->draw_static_objects(view_projection_matrix, Texture_mapping::disabled);
+    scene->draw_static_objects(command_list, Texture_mapping::disabled);
     command_list->SetPipelineState(m_pipeline_state_model_matrix.Get());
-    graphics->draw_dynamic_objects(view_projection_matrix, Texture_mapping::disabled);
+    scene->draw_dynamic_objects(command_list, Texture_mapping::disabled);
 
     command_list->ResourceBarrier(1,
         &CD3DX12_RESOURCE_BARRIER::Transition(m_shadow_buffer.Get(),

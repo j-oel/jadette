@@ -14,10 +14,11 @@ using namespace DirectX;
 
 Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, const std::string& mesh_filename, 
     DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list,
-    std::shared_ptr<Texture> texture, int id) :
+    int root_param_index_of_textures, std::shared_ptr<Texture> texture, int id) :
     m_mesh(std::make_shared<Mesh>(device, command_list, mesh_filename)), 
     m_model_matrix(nullptr), m_translation(nullptr),
     m_texture(texture),
+    m_root_param_index_of_textures(root_param_index_of_textures),
     m_id(id),
     m_instances(1)
 {
@@ -38,11 +39,12 @@ Mesh* new_primitive(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandLis
 }
 
 Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, Primitive_type primitive_type, 
-    DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list, 
-    std::shared_ptr<Texture> texture, int id) :
+    DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list,
+    int root_param_index_of_textures, std::shared_ptr<Texture> texture, int id) :
     m_mesh(new_primitive(device, command_list, primitive_type)),
     m_model_matrix(nullptr), m_translation(nullptr),
     m_texture(texture),
+    m_root_param_index_of_textures(root_param_index_of_textures),
     m_id(id),
     m_instances(1)
 {
@@ -51,10 +53,12 @@ Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, Primitive_type p
 
 Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh, 
     DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list, 
-    std::shared_ptr<Texture> texture, int id, int instances/* = 1*/) :
+    int root_param_index_of_textures, std::shared_ptr<Texture> texture, 
+    int id, int instances/* = 1*/) :
     m_mesh(mesh),
     m_model_matrix(nullptr), m_translation(nullptr),
     m_texture(texture),
+    m_root_param_index_of_textures(root_param_index_of_textures),
     m_id(id),
     m_instances(instances)
 {
@@ -74,9 +78,9 @@ void Graphical_object::draw(ComPtr<ID3D12GraphicsCommandList> command_list,
 }
 
 void Graphical_object::draw_textured(ComPtr<ID3D12GraphicsCommandList> command_list,
-    int root_param_index_of_textures, D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view)
+    D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view)
 {
-    m_texture->set_texture_for_shader(command_list, root_param_index_of_textures);
+    m_texture->set_texture_for_shader(command_list, m_root_param_index_of_textures);
     draw(command_list, instance_vertex_buffer_view);
 }
 

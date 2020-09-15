@@ -67,7 +67,6 @@ Graphics_impl::Graphics_impl(UINT width, UINT height, Input& input) :
     m_scissor_rect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
     m_rtv_descriptor_size(0),
     m_view_controller(input),
-    m_triangles_count(0),
     m_init_done(false),
     m_vsync(false),
     m_variable_refresh_rate_displays_support(false)
@@ -105,25 +104,6 @@ void Graphics_impl::init(HWND window)
     m_init_done = true;
 }
 
-void fly_around_in_circle(std::shared_ptr<Graphical_object>& object)
-{
-    XMVECTOR rotation_axis = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    const float angle = XMConvertToRadians(static_cast<float>(elapsed_time_in_seconds() * 100.0));
-    XMMATRIX rotation_matrix = XMMatrixRotationAxis(rotation_axis, angle);
-    XMVECTOR point_on_the_radius = XMVectorSet(12.0f, -4.0f, 0.0f, 0.0f);
-    XMVECTOR current_rotation_point_around_the_radius =
-        XMVector3Transform(point_on_the_radius, rotation_matrix);
-    XMMATRIX go_in_a_circle = XMMatrixTranslationFromVector(
-        current_rotation_point_around_the_radius);
-    XMMATRIX orient_the_ship = XMMatrixRotationAxis(rotation_axis, angle + XMConvertToRadians(-90.0f));
-    XMMATRIX translate_to_the_point_on_which_to_rotate_around =
-        XMMatrixTranslationFromVector(object->translation());
-    XMMATRIX new_model_matrix = orient_the_ship * go_in_a_circle *
-        translate_to_the_point_on_which_to_rotate_around;
-
-    object->set_model_matrix(new_model_matrix);
-}
-
 void Graphics_impl::update()
 {
     // Update the view matrix.
@@ -138,37 +118,10 @@ void Graphics_impl::update()
     const float fov = 90.0f;
     const float near_z = 1.0f;
     const float far_z = 4000.0f;
-    m_projection_matrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(fov), aspect_ratio, near_z, far_z);
+    m_projection_matrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(fov), 
+        aspect_ratio, near_z, far_z);
 
-    // Update the model matrices.
-    const float angle = XMConvertToRadians(static_cast<float>(elapsed_time_in_seconds() * 100.0));
-    XMVECTOR rotation_axis = XMVectorSet(0.25f, 0.25f, 1.0f, 0.0f);
-    XMMATRIX rotation_matrix = XMMatrixRotationAxis(rotation_axis, angle);
-    rotation_axis = XMVectorSet(0.0f, 0.25f, 0.0f, 0.0f);
-    rotation_matrix = rotation_matrix*XMMatrixRotationAxis(rotation_axis, angle);
-    rotation_axis = XMVectorSet(0.5f, 0.0f, -0.2f, 0.0f);
-    rotation_matrix = rotation_matrix * XMMatrixRotationAxis(rotation_axis, angle);
-
-    for (auto& graphical_object : m_dynamic_objects)
-    {
-        XMMATRIX model_translation_matrix = XMMatrixTranslationFromVector(graphical_object->translation());
-        XMMATRIX new_model_matrix = rotation_matrix * model_translation_matrix;
-        graphical_object->set_model_matrix(new_model_matrix);
-    }
-
-    if (m_graphical_objects.size() >= 2)
-    {
-        // Do not rotate the plane
-        auto& plane = m_graphical_objects[1];
-        XMMATRIX model_translation_matrix = XMMatrixTranslationFromVector(plane->translation());
-        plane->set_model_matrix(model_translation_matrix);
-    }
-
-    if (!m_graphical_objects.empty())
-    {
-        auto& ship = m_graphical_objects[0];
-        fly_around_in_circle(ship);
-    }
+    m_scene->update();
 }
 
 void Graphics_impl::render()
@@ -222,8 +175,8 @@ void Graphics_impl::render_2d_text()
     ss << "Frames per second: " << fixed << setprecision(0) << fps << endl;
     ss.unsetf(ios::ios_base::floatfield); // To get default floating point format
     ss << "Frame time: " << setprecision(4) << frame_time << " ms" << endl
-       << "Number of objects: " << m_graphical_objects.size() << endl
-       << "Number of triangles: " << m_triangles_count;
+       << "Number of objects: " << m_scene->objects_count() << endl
+       << "Number of triangles: " << m_scene->triangles_count();
 
     float x_position = 5.0f;
     float y_position = 5.0f;
@@ -587,108 +540,17 @@ void Graphics_impl::create_main_command_list()
     throw_if_failed(m_command_list->Close());
 }
 
-
 void Graphics_impl::setup_scene()
 {
-    ComPtr<ID3D12GraphicsCommandList> command_list;
-    ComPtr<ID3D12CommandAllocator> command_allocator;
-
-    throw_if_failed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-        IID_PPV_ARGS(&command_allocator)));
-
-    throw_if_failed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
-        command_allocator.Get(), m_pipeline_state_model_vector.Get(), IID_PPV_ARGS(&command_list)));
-   
-    int texture_index = 1; // The shadow map has index number 0
-
-    int object_id = 0;
-
-    auto spaceship = std::make_shared<Graphical_object>(m_device, "../resources/spaceship.obj",
-        XMVectorSet(0.0f, 0.0f, 10.0f, 0.0f), command_list,
-        std::make_shared<Texture>(m_device, command_list, m_texture_descriptor_heap,
-            L"../resources/spaceship_diff.jpg", texture_index), object_id);
-
-    m_graphical_objects.push_back(spaceship);
-    m_dynamic_objects.push_back(spaceship);
-
-    m_textures.push_back(std::make_shared<Texture>(m_device, command_list, m_texture_descriptor_heap,
-        L"../resources/pattern.jpg", ++texture_index));
-    auto& pattern_texture = m_textures[0];
-
-    auto plane = std::make_shared<Graphical_object>(m_device,
-        Primitive_type::Plane, XMVectorSet(0.0f, -10.0f, 0.0f, 0.0f),
-        command_list, pattern_texture, ++object_id);
-
-    m_graphical_objects.push_back(plane);
-    m_static_objects.push_back(plane);
-
-    float offset = 3.0f;
-    std::shared_ptr<Mesh> cube_from_file(new Mesh(m_device, command_list, "../resources/cube.obj"));
-    {
-        int x_count = 3;
-        int y_count = 3;
-        int z_count = 3;
-        int instances = x_count * y_count * z_count;
-
-        for (int x = 0; x < x_count; ++x)
-            for (int y = 0; y < y_count; ++y)
-                for (int z = 0; z < z_count; ++z, --instances)
-                {
-                    auto box = std::make_shared<Graphical_object>(m_device,
-                        cube_from_file, XMVectorSet(offset * x + 1.0f, offset * y, offset * z, 0.0f),
-                        command_list, pattern_texture, ++object_id, instances);
-                    m_graphical_objects.push_back(box);
-                    m_dynamic_objects.push_back(box);
-                }
-    }
-
-
-    std::shared_ptr<Mesh> cube(new Cube(m_device, command_list));
-    {
-        int x_count = 40;
-        int y_count = 40;
-        int z_count = 40;
-        int instances = x_count * y_count * z_count;
-
-        for (int x = 0; x < x_count; ++x)
-            for (int y = 0; y < y_count; ++y)
-                for (int z = 0; z < z_count; ++z, --instances)
-                {
-                    auto box = std::make_shared<Graphical_object>(m_device,
-                        cube, XMVectorSet(-x * offset, y * offset, z * offset, 0.0f),
-                        command_list, pattern_texture, ++object_id, instances);
-                    m_graphical_objects.push_back(box);
-                    m_static_objects.push_back(box);
-                }
-    }
-
-    m_instance_vector_data = std::make_unique<Instance_data>(m_device, command_list,
-        static_cast<UINT>(m_graphical_objects.size()), Per_instance_vector_data());
-    m_instance_matrix_data = std::make_unique<Instance_data>(m_device, command_list,
-        static_cast<UINT>(m_dynamic_objects.size()), Per_instance_matrix_data());
-
-    upload_resources_to_gpu(command_list);
-
-    for (auto& g : m_graphical_objects)
-    {
-        m_triangles_count += g->triangles_count();
-
-        XMFLOAT4 t;
-        XMStoreFloat4(&t, g->translation());
-        Per_instance_vector_data data;
-        data.model.x = DirectX::PackedVector::XMConvertFloatToHalf(t.x);
-        data.model.y = DirectX::PackedVector::XMConvertFloatToHalf(t.y);
-        data.model.z = DirectX::PackedVector::XMConvertFloatToHalf(t.z);
-        data.model.w = DirectX::PackedVector::XMConvertFloatToHalf(t.w);
-        m_translations.push_back(data);
-    }
+    m_scene = std::make_shared<Scene>(m_device, this, m_texture_descriptor_heap,
+        m_root_param_index_of_textures);
 }
 
 void Graphics_impl::upload_resources_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
     ComPtr<ID3D12Fence> fence;
     enum Resources_uploaded { not_done, done };
-    throw_if_failed(m_device->CreateFence(Resources_uploaded::not_done, D3D12_FENCE_FLAG_NONE, 
+    throw_if_failed(m_device->CreateFence(Resources_uploaded::not_done, D3D12_FENCE_FLAG_NONE,
         IID_PPV_ARGS(&fence)));
     HANDLE resources_uploaded = CreateEvent(nullptr, FALSE, FALSE, L"Resources Uploaded");
 
@@ -702,84 +564,9 @@ void Graphics_impl::upload_resources_to_gpu(ComPtr<ID3D12GraphicsCommandList>& c
 
     const DWORD time_to_wait = 2000; // ms
     WaitForSingleObject(resources_uploaded, time_to_wait);
-
-    for (auto& g : m_graphical_objects)
-        g->release_temp_resources();
-}
-
-void Graphics_impl::draw_objects(const std::vector<std::shared_ptr<Graphical_object> >& objects, 
-DirectX::XMMATRIX view_projection_matrix, Texture_mapping texture_mapping,
-    Input_element_model input_element_model)
-{
-    const int view_projection_offset = 0;
-    m_command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_matrices,
-        size_in_words_of_XMMATRIX, &view_projection_matrix, view_projection_offset);
-
-    for (int i = 0; i < objects.size();)
-    {
-        auto& graphical_object = objects[i];
-        bool vector_data = true;
-        if (input_element_model == Input_element_model::translation)
-        {
-            if (texture_mapping == Texture_mapping::enabled)
-                graphical_object->draw_textured(m_command_list, m_root_param_index_of_textures,
-                    m_instance_vector_data->buffer_view());
-            else
-                graphical_object->draw(m_command_list, m_instance_vector_data->buffer_view());
-        }
-        else if (input_element_model == Input_element_model::matrix)
-        {
-            if (texture_mapping == Texture_mapping::enabled)
-                graphical_object->draw_textured(m_command_list, m_root_param_index_of_textures,
-                    m_instance_matrix_data->buffer_view());
-            else
-                graphical_object->draw(m_command_list, m_instance_matrix_data->buffer_view());
-        }
-
-        // If instances() returns more than 1, those additional instances were already drawn
-        // by the last draw call and the corresponding graphical objects should hence be skipped.
-        i += graphical_object->instances();
-    }
-}
-
-void Graphics_impl::draw_static_objects(DirectX::XMMATRIX view_projection_matrix, 
-    Texture_mapping texture_mapping)
-{
-    draw_objects(m_static_objects, view_projection_matrix, texture_mapping, Input_element_model::translation);
-}
-
-void Graphics_impl::draw_dynamic_objects(DirectX::XMMATRIX view_projection_matrix, 
-    Texture_mapping texture_mapping)
-{
-    draw_objects(m_dynamic_objects, view_projection_matrix, texture_mapping, Input_element_model::matrix);
 }
 
 
-void Graphics_impl::upload_instance_vector_data()
-{
-    static bool first = true;
-    if (first)
-    {
-        m_instance_vector_data->upload_new_vector_data(m_command_list, m_translations);
-        first = false;
-    }
-}
-
-void Graphics_impl::upload_instance_matrix_data(const std::vector<std::shared_ptr<Graphical_object> >& objects)
-{
-    // This is static because we don't want to allocate new memory each time it is called.
-    static std::vector<Per_instance_matrix_data> instance_data(m_graphical_objects.size());
-    // Because it is static we need to clear the data from the previous call.
-    instance_data.clear();
-
-    for (auto& g : objects)
-    {
-        Per_instance_matrix_data data;
-        XMStoreFloat4x4(&data.model, g->model_matrix());
-        instance_data.push_back(data);
-    }
-    m_instance_matrix_data->upload_new_matrix_data(m_command_list, instance_data);
-}
 
 void Graphics_impl::record_frame_rendering_commands_in_command_list()
 {
@@ -787,10 +574,9 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     throw_if_failed(m_command_list->Reset(m_command_allocators[m_back_buf_index].Get(), 
         m_pipeline_state_model_vector.Get()));
 
-    upload_instance_vector_data();
-    upload_instance_matrix_data(m_dynamic_objects);
+    m_scene->upload_instance_data(m_command_list);
 
-    m_shadow_map->record_shadow_map_generation_commands_in_command_list(this, m_command_list, 
+    m_shadow_map->record_shadow_map_generation_commands_in_command_list(m_scene, m_command_list, 
         m_light_position);
 
     m_command_list->ResourceBarrier(1,
@@ -831,11 +617,14 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
             size_in_words_of_XMMATRIX, &m_shadow_map->shadow_transform(), shadow_transform_offset);
 
     XMMATRIX view_projection_matrix = XMMatrixMultiply(m_view_matrix, m_projection_matrix);
+    const int view_projection_offset = 0;
+    m_command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_matrices,
+        size_in_words_of_XMMATRIX, &view_projection_matrix, view_projection_offset);
 
     m_command_list->SetPipelineState(m_pipeline_state_model_vector.Get());
-    draw_static_objects(view_projection_matrix, Texture_mapping::enabled);
+    m_scene->draw_static_objects(m_command_list, Texture_mapping::enabled);
     m_command_list->SetPipelineState(m_pipeline_state_model_matrix.Get());
-    draw_dynamic_objects(view_projection_matrix, Texture_mapping::enabled);
+    m_scene->draw_dynamic_objects(m_command_list, Texture_mapping::enabled);
 
 
     // If text is enabled, the text object takes care of the render target state transition.
