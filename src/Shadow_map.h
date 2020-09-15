@@ -10,7 +10,6 @@
 #include "dx12min.h"
 #include <directxmath.h>
 
-
 enum class Bit_depth { bpp16, bpp32 };
 
 using Microsoft::WRL::ComPtr;
@@ -31,7 +30,8 @@ public:
     CD3DX12_STATIC_SAMPLER_DESC shadow_map_sampler(UINT sampler_shader_register);
 private:
     void create_root_signature(ComPtr<ID3D12Device> device, int root_param_index_of_matrices);
-    ComPtr<ID3D12PipelineState> m_pipeline_state;
+    ComPtr<ID3D12PipelineState> m_pipeline_state_model_matrix;
+    ComPtr<ID3D12PipelineState> m_pipeline_state_model_vector;
     ComPtr<ID3D12RootSignature> m_root_signature;
     ComPtr<ID3D12DescriptorHeap> m_shadow_dsv_heap;
     ComPtr<ID3D12Resource> m_shadow_buffer;

@@ -83,9 +83,14 @@ Shadow_map::Shadow_map(ComPtr<ID3D12Device> device, ComPtr<ID3D12DescriptorHeap>
     create_root_signature(device, root_param_index_of_matrices);
 
     UINT render_targets_count = 0;
-    create_pipeline_state(device, m_pipeline_state, m_root_signature, "shadow_vertex_shader", 
-        "shadow_pixel_shader", dsv_format, render_targets_count);
-    SET_DEBUG_NAME(m_pipeline_state, L"Shadow Pipeline State Object");
+    create_pipeline_state(device, m_pipeline_state_model_vector, m_root_signature,
+        "shadow_vertex_shader_model_vector", "shadow_pixel_shader",
+        dsv_format, render_targets_count, Input_element_model::translation);
+    SET_DEBUG_NAME(m_pipeline_state_model_vector, L"Shadow Pipeline State Object Model Vector");
+    create_pipeline_state(device, m_pipeline_state_model_matrix, m_root_signature,
+        "shadow_vertex_shader_model_matrix", "shadow_pixel_shader",
+        dsv_format, render_targets_count, Input_element_model::matrix);
+    SET_DEBUG_NAME(m_pipeline_state_model_matrix, L"Shadow Pipeline State Object Model Matrix");
 }
 
 
@@ -124,7 +129,8 @@ void Shadow_map::record_shadow_map_generation_commands_in_command_list(Graphics_
         &CD3DX12_RESOURCE_BARRIER::Transition(m_shadow_buffer.Get(),
             D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 
-    command_list->SetPipelineState(m_pipeline_state.Get());
+
+
     command_list->SetGraphicsRootSignature(m_root_signature.Get());
 
     float size_f = static_cast<float>(m_size);
@@ -152,8 +158,12 @@ void Shadow_map::record_shadow_map_generation_commands_in_command_list(Graphics_
                                                           near_z, far_z);
 
     XMMATRIX view_projection_matrix = XMMatrixMultiply(view_matrix, projection_matrix);
-    graphics->draw_objects(view_projection_matrix, Texture_mapping::disabled, Set_shadow_transform::no);
-    
+
+    command_list->SetPipelineState(m_pipeline_state_model_vector.Get());
+    graphics->draw_static_objects(view_projection_matrix, Texture_mapping::disabled);
+    command_list->SetPipelineState(m_pipeline_state_model_matrix.Get());
+    graphics->draw_dynamic_objects(view_projection_matrix, Texture_mapping::disabled);
+
     command_list->ResourceBarrier(1,
         &CD3DX12_RESOURCE_BARRIER::Transition(m_shadow_buffer.Get(),
             D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));

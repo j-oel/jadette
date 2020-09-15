@@ -136,8 +136,8 @@ void Graphics_impl::update()
     // Update the projection matrix.
     const float aspect_ratio = static_cast<float>(m_width) / m_height;
     const float fov = 90.0f;
-    const float near_z = 0.1f;
-    const float far_z = 100.0f;
+    const float near_z = 1.0f;
+    const float far_z = 4000.0f;
     m_projection_matrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(fov), aspect_ratio, near_z, far_z);
 
     // Update the model matrices.
@@ -149,7 +149,7 @@ void Graphics_impl::update()
     rotation_axis = XMVectorSet(0.5f, 0.0f, -0.2f, 0.0f);
     rotation_matrix = rotation_matrix * XMMatrixRotationAxis(rotation_axis, angle);
 
-    for (auto& graphical_object : m_graphical_objects)
+    for (auto& graphical_object : m_dynamic_objects)
     {
         XMMATRIX model_translation_matrix = XMMatrixTranslationFromVector(graphical_object->translation());
         XMMATRIX new_model_matrix = rotation_matrix * model_translation_matrix;
@@ -422,7 +422,7 @@ void Graphics_impl::create_root_signature()
     const int root_parameters_count = 5;
     CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count] {};
 
-    const int matrices_count = 3;
+    const int matrices_count = 2;
     UINT shader_register = 0;
     root_parameters[m_root_param_index_of_matrices].InitAsConstants(
         matrices_count * size_in_words_of_XMMATRIX, shader_register, 0, D3D12_SHADER_VISIBILITY_VERTEX);
@@ -481,15 +481,22 @@ void Graphics_impl::create_root_signature()
 void Graphics_impl::create_pipeline_state_object()
 {
     UINT render_targets_count = 1;
-    create_pipeline_state(m_device, m_pipeline_state, m_root_signature, "vertex_shader", "pixel_shader", 
-        DXGI_FORMAT_D32_FLOAT, render_targets_count);
-    SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object");
+
+    create_pipeline_state(m_device, m_pipeline_state_model_vector, m_root_signature,
+        "vertex_shader_model_vector", "pixel_shader", DXGI_FORMAT_D32_FLOAT,
+        render_targets_count, Input_element_model::translation);
+    SET_DEBUG_NAME(m_pipeline_state_model_vector, L"Pipeline State Object Model Vector");
+
+    create_pipeline_state(m_device, m_pipeline_state_model_matrix, m_root_signature,
+        "vertex_shader_model_matrix", "pixel_shader", DXGI_FORMAT_D32_FLOAT,
+        render_targets_count, Input_element_model::matrix);
+    SET_DEBUG_NAME(m_pipeline_state_model_matrix, L"Pipeline State Object Model Matrix");
 }
 
 void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineState>& pipeline_state,
     ComPtr<ID3D12RootSignature> root_signature, 
     const char* vertex_shader_entry_function, const char* pixel_shader_entry_function,
-    DXGI_FORMAT dsv_format, UINT render_targets_count)
+    DXGI_FORMAT dsv_format, UINT render_targets_count, Input_element_model input_element_model)
 {
 
 #if defined(_DEBUG)
@@ -525,16 +532,32 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
 
     handle_shader_errors(hr);
 
-
-    D3D12_INPUT_ELEMENT_DESC input_element_descriptions[] =
+    D3D12_INPUT_ELEMENT_DESC input_element_desc_translation[] =
     {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R16G16_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "TRANSLATION", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 }
     };
 
+
+    D3D12_INPUT_ELEMENT_DESC input_element_desc_model_matrix[] =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R16G16_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+         { "MODEL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+         { "MODEL", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+         { "MODEL", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+         { "MODEL", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 }
+    };
+
+
     D3D12_GRAPHICS_PIPELINE_STATE_DESC s{};
-    s.InputLayout = { input_element_descriptions, _countof(input_element_descriptions) };
+    if (input_element_model == Input_element_model::translation)
+        s.InputLayout = { input_element_desc_translation, _countof(input_element_desc_translation) };
+    if (input_element_model == Input_element_model::matrix)
+        s.InputLayout = { input_element_desc_model_matrix, _countof(input_element_desc_model_matrix) };
     s.pRootSignature = root_signature.Get();
     s.VS = CD3DX12_SHADER_BYTECODE(vertex_shader.Get());
     s.PS = CD3DX12_SHADER_BYTECODE(pixel_shader.Get());
@@ -558,7 +581,7 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
 void Graphics_impl::create_main_command_list()
 {
     throw_if_failed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
-        m_command_allocators[m_back_buf_index].Get(), m_pipeline_state.Get(),
+        m_command_allocators[m_back_buf_index].Get(), m_pipeline_state_model_vector.Get(),
         IID_PPV_ARGS(&m_command_list)));
     SET_DEBUG_NAME(m_command_list, L"Main Command List");
     throw_if_failed(m_command_list->Close());
@@ -574,53 +597,91 @@ void Graphics_impl::setup_scene()
         IID_PPV_ARGS(&command_allocator)));
 
     throw_if_failed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
-        command_allocator.Get(), m_pipeline_state.Get(), IID_PPV_ARGS(&command_list)));
-
-
+        command_allocator.Get(), m_pipeline_state_model_vector.Get(), IID_PPV_ARGS(&command_list)));
    
     int texture_index = 1; // The shadow map has index number 0
 
-    m_graphical_objects = {
-        std::make_shared<Graphical_object>(m_device, "../resources/spaceship.obj",
+    int object_id = 0;
+
+    auto spaceship = std::make_shared<Graphical_object>(m_device, "../resources/spaceship.obj",
         XMVectorSet(0.0f, 0.0f, 10.0f, 0.0f), command_list,
         std::make_shared<Texture>(m_device, command_list, m_texture_descriptor_heap,
-        L"../resources/spaceship_diff.jpg", texture_index)),
-    };
+            L"../resources/spaceship_diff.jpg", texture_index), object_id);
 
+    m_graphical_objects.push_back(spaceship);
+    m_dynamic_objects.push_back(spaceship);
 
     m_textures.push_back(std::make_shared<Texture>(m_device, command_list, m_texture_descriptor_heap,
         L"../resources/pattern.jpg", ++texture_index));
     auto& pattern_texture = m_textures[0];
 
-    m_graphical_objects.push_back(std::make_shared<Graphical_object>(m_device,
+    auto plane = std::make_shared<Graphical_object>(m_device,
         Primitive_type::Plane, XMVectorSet(0.0f, -10.0f, 0.0f, 0.0f),
-        command_list, pattern_texture));
+        command_list, pattern_texture, ++object_id);
 
-    float offset = 2.0f;
+    m_graphical_objects.push_back(plane);
+    m_static_objects.push_back(plane);
+
+    float offset = 3.0f;
+    std::shared_ptr<Mesh> cube_from_file(new Mesh(m_device, command_list, "../resources/cube.obj"));
+    {
+        int x_count = 3;
+        int y_count = 3;
+        int z_count = 3;
+        int instances = x_count * y_count * z_count;
+
+        for (int x = 0; x < x_count; ++x)
+            for (int y = 0; y < y_count; ++y)
+                for (int z = 0; z < z_count; ++z, --instances)
+                {
+                    auto box = std::make_shared<Graphical_object>(m_device,
+                        cube_from_file, XMVectorSet(offset * x + 1.0f, offset * y, offset * z, 0.0f),
+                        command_list, pattern_texture, ++object_id, instances);
+                    m_graphical_objects.push_back(box);
+                    m_dynamic_objects.push_back(box);
+                }
+    }
+
 
     std::shared_ptr<Mesh> cube(new Cube(m_device, command_list));
+    {
+        int x_count = 40;
+        int y_count = 40;
+        int z_count = 40;
+        int instances = x_count * y_count * z_count;
 
-    for (int x = 0; x < 5; ++x)
-        for (int y = 0; y < 5; ++y)
-            for (int z = 0; z < 5; ++z)
-                m_graphical_objects.push_back(std::make_shared<Graphical_object>(m_device,
-                    cube, XMVectorSet(-x * offset, y * offset, z * offset, 0.0f),
-                    command_list, pattern_texture));
+        for (int x = 0; x < x_count; ++x)
+            for (int y = 0; y < y_count; ++y)
+                for (int z = 0; z < z_count; ++z, --instances)
+                {
+                    auto box = std::make_shared<Graphical_object>(m_device,
+                        cube, XMVectorSet(-x * offset, y * offset, z * offset, 0.0f),
+                        command_list, pattern_texture, ++object_id, instances);
+                    m_graphical_objects.push_back(box);
+                    m_static_objects.push_back(box);
+                }
+    }
 
-    offset = 3.0f;
-
-    for (int x = 1; x < 4; ++x)
-        for (int y = 0; y < 3; ++y)
-            for (int z = 0; z < 3; ++z)
-                m_graphical_objects.push_back(std::make_shared<Graphical_object>(m_device,
-                    "../resources/cube.obj", XMVectorSet(offset * x, offset * y, offset * z, 0.0f),
-                    command_list, pattern_texture));
-
+    m_instance_vector_data = std::make_unique<Instance_data>(m_device, command_list,
+        static_cast<UINT>(m_graphical_objects.size()), Per_instance_vector_data());
+    m_instance_matrix_data = std::make_unique<Instance_data>(m_device, command_list,
+        static_cast<UINT>(m_dynamic_objects.size()), Per_instance_matrix_data());
 
     upload_resources_to_gpu(command_list);
 
     for (auto& g : m_graphical_objects)
+    {
         m_triangles_count += g->triangles_count();
+
+        XMFLOAT4 t;
+        XMStoreFloat4(&t, g->translation());
+        Per_instance_vector_data data;
+        data.model.x = DirectX::PackedVector::XMConvertFloatToHalf(t.x);
+        data.model.y = DirectX::PackedVector::XMConvertFloatToHalf(t.y);
+        data.model.z = DirectX::PackedVector::XMConvertFloatToHalf(t.z);
+        data.model.w = DirectX::PackedVector::XMConvertFloatToHalf(t.w);
+        m_translations.push_back(data);
+    }
 }
 
 void Graphics_impl::upload_resources_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list)
@@ -646,40 +707,88 @@ void Graphics_impl::upload_resources_to_gpu(ComPtr<ID3D12GraphicsCommandList>& c
         g->release_temp_resources();
 }
 
-void Graphics_impl::draw_objects(DirectX::XMMATRIX view_projection_matrix,
-    Texture_mapping texture_mapping, Set_shadow_transform set_shadow_transform)
+void Graphics_impl::draw_objects(const std::vector<std::shared_ptr<Graphical_object> >& objects, 
+DirectX::XMMATRIX view_projection_matrix, Texture_mapping texture_mapping,
+    Input_element_model input_element_model)
 {
-    const int mvp_offset = 0;
-    const int shadow_transform_offset = 2 * size_in_words_of_XMMATRIX;
-    for (auto& graphical_object : m_graphical_objects)
-    {
-        XMMATRIX model_view_projection_matrix = XMMatrixMultiply(graphical_object->model_matrix(),
-            view_projection_matrix);
-        m_command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_matrices,
-            size_in_words_of_XMMATRIX, &model_view_projection_matrix, mvp_offset);
+    const int view_projection_offset = 0;
+    m_command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_matrices,
+        size_in_words_of_XMMATRIX, &view_projection_matrix, view_projection_offset);
 
-        if (set_shadow_transform == Set_shadow_transform::yes)
+    for (int i = 0; i < objects.size();)
+    {
+        auto& graphical_object = objects[i];
+        bool vector_data = true;
+        if (input_element_model == Input_element_model::translation)
         {
-            XMMATRIX transform_to_shadow_map_space = 
-                XMMatrixMultiply(graphical_object->model_matrix(), m_shadow_map->shadow_transform());
-            m_command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_matrices,
-                size_in_words_of_XMMATRIX, &transform_to_shadow_map_space, shadow_transform_offset);
+            if (texture_mapping == Texture_mapping::enabled)
+                graphical_object->draw_textured(m_command_list, m_root_param_index_of_textures,
+                    m_instance_vector_data->buffer_view());
+            else
+                graphical_object->draw(m_command_list, m_instance_vector_data->buffer_view());
+        }
+        else if (input_element_model == Input_element_model::matrix)
+        {
+            if (texture_mapping == Texture_mapping::enabled)
+                graphical_object->draw_textured(m_command_list, m_root_param_index_of_textures,
+                    m_instance_matrix_data->buffer_view());
+            else
+                graphical_object->draw(m_command_list, m_instance_matrix_data->buffer_view());
         }
 
-        if (texture_mapping == Texture_mapping::enabled)
-            graphical_object->draw_textured(m_command_list, m_root_param_index_of_matrices,
-                m_root_param_index_of_textures);
-        else
-            graphical_object->draw(m_command_list, m_root_param_index_of_matrices);
+        // If instances() returns more than 1, those additional instances were already drawn
+        // by the last draw call and the corresponding graphical objects should hence be skipped.
+        i += graphical_object->instances();
     }
 }
 
+void Graphics_impl::draw_static_objects(DirectX::XMMATRIX view_projection_matrix, 
+    Texture_mapping texture_mapping)
+{
+    draw_objects(m_static_objects, view_projection_matrix, texture_mapping, Input_element_model::translation);
+}
+
+void Graphics_impl::draw_dynamic_objects(DirectX::XMMATRIX view_projection_matrix, 
+    Texture_mapping texture_mapping)
+{
+    draw_objects(m_dynamic_objects, view_projection_matrix, texture_mapping, Input_element_model::matrix);
+}
+
+
+void Graphics_impl::upload_instance_vector_data()
+{
+    static bool first = true;
+    if (first)
+    {
+        m_instance_vector_data->upload_new_vector_data(m_command_list, m_translations);
+        first = false;
+    }
+}
+
+void Graphics_impl::upload_instance_matrix_data(const std::vector<std::shared_ptr<Graphical_object> >& objects)
+{
+    // This is static because we don't want to allocate new memory each time it is called.
+    static std::vector<Per_instance_matrix_data> instance_data(m_graphical_objects.size());
+    // Because it is static we need to clear the data from the previous call.
+    instance_data.clear();
+
+    for (auto& g : objects)
+    {
+        Per_instance_matrix_data data;
+        XMStoreFloat4x4(&data.model, g->model_matrix());
+        instance_data.push_back(data);
+    }
+    m_instance_matrix_data->upload_new_matrix_data(m_command_list, instance_data);
+}
 
 void Graphics_impl::record_frame_rendering_commands_in_command_list()
 {
     throw_if_failed(m_command_allocators[m_back_buf_index]->Reset());
     throw_if_failed(m_command_list->Reset(m_command_allocators[m_back_buf_index].Get(), 
-        m_pipeline_state.Get()));
+        m_pipeline_state_model_vector.Get()));
+
+    upload_instance_vector_data();
+    upload_instance_matrix_data(m_dynamic_objects);
 
     m_shadow_map->record_shadow_map_generation_commands_in_command_list(this, m_command_list, 
         m_light_position);
@@ -688,7 +797,6 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
         &CD3DX12_RESOURCE_BARRIER::Transition(m_render_targets[m_back_buf_index].Get(),
             D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
-    m_command_list->SetPipelineState(m_pipeline_state.Get());
     m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
     m_command_list->RSSetViewports(1, &m_viewport);
     m_command_list->RSSetScissorRects(1, &m_scissor_rect);
@@ -718,8 +826,17 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     m_shadow_map->set_shadow_map_for_shader(m_command_list, m_root_param_index_of_shadow_map, 
         m_root_param_index_of_values);
 
+    const int shadow_transform_offset = size_in_words_of_XMMATRIX;
+        m_command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_matrices,
+            size_in_words_of_XMMATRIX, &m_shadow_map->shadow_transform(), shadow_transform_offset);
+
     XMMATRIX view_projection_matrix = XMMatrixMultiply(m_view_matrix, m_projection_matrix);
-    draw_objects(view_projection_matrix, Texture_mapping::enabled, Set_shadow_transform::yes);
+
+    m_command_list->SetPipelineState(m_pipeline_state_model_vector.Get());
+    draw_static_objects(view_projection_matrix, Texture_mapping::enabled);
+    m_command_list->SetPipelineState(m_pipeline_state_model_matrix.Get());
+    draw_dynamic_objects(view_projection_matrix, Texture_mapping::enabled);
+
 
     // If text is enabled, the text object takes care of the render target state transition.
 #ifdef NO_TEXT

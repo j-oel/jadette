@@ -7,8 +7,7 @@
 
 struct matrices_struct
 {
-    float4x4 model_view_projection;
-    float4x4 model;
+    float4x4 view_projection;
     float4x4 transform_to_shadow_map_space;
 };
 ConstantBuffer<matrices_struct> matrices : register(b0);
@@ -38,22 +37,34 @@ struct pixel_shader_input
     float4 position : POSITION;
     float4 position_in_shadow_map_space : POSITION1;
     float3 normal : NORMAL;
-    float2 texcoord : TEXCOORD;
+    half2 texcoord : TEXCOORD;
 };
 
-pixel_shader_input vertex_shader(float4 position : POSITION, float3 normal : NORMAL, 
-    float2 texcoord : TEXCOORD)
+pixel_shader_input vertex_shader_model_matrix(float4 position : POSITION, float3 normal : NORMAL,
+    float2 texcoord : TEXCOORD, float4x4 model : MODEL)
 {
     pixel_shader_input result;
-    result.sv_position = mul(matrices.model_view_projection, position);
-    result.position = mul(matrices.model, position);
-    result.position_in_shadow_map_space = mul(matrices.transform_to_shadow_map_space, position);
-    result.position_in_shadow_map_space /= result.position_in_shadow_map_space.w;
 
-    result.normal = mul(matrices.model, float4(normal, 0.0f)).xyz;
+    float4x4 model_view_projection = mul(matrices.view_projection, model);
+    result.sv_position = mul(model_view_projection, position);
+    result.position = mul(model, position);
+    float4x4 transform_to_shadow_map_space = mul(matrices.transform_to_shadow_map_space, model);
+    result.position_in_shadow_map_space = mul(transform_to_shadow_map_space, position);
+    result.position_in_shadow_map_space /= result.position_in_shadow_map_space.w;
+    result.normal = mul(model, float4(normal, 0.0f)).xyz;
     result.texcoord = texcoord;
 
     return result;
+}
+
+pixel_shader_input vertex_shader_model_vector(float4 position : POSITION, float3 normal : NORMAL,
+    float2 texcoord : TEXCOORD, half4 translation : TRANSLATION)
+{
+    float4x4 model = { 1, 0, 0, translation.x,
+                   0, 1, 0 , translation.y,
+                   0, 0, 1, translation.z,
+                   0, 0, 0, 1 };
+    return vertex_shader_model_matrix(position, normal, texcoord, model);
 }
 
 
@@ -100,12 +111,24 @@ struct shadow_pixel_shader_input
 };
 
 
-shadow_pixel_shader_input shadow_vertex_shader(float4 position : POSITION, float3 normal : NORMAL,
-    float2 texcoord : TEXCOORD)
+shadow_pixel_shader_input shadow_vertex_shader_model_matrix(float4 position : POSITION,
+    float3 normal : NORMAL, float2 texcoord : TEXCOORD, float4x4 model : MODEL)
 {
     shadow_pixel_shader_input result;
-    result.sv_position = mul(matrices.model_view_projection, position);
+    float4x4 model_view_projection = mul(matrices.view_projection, model);
+    result.sv_position = mul(model_view_projection, position);
     return result;
+}
+
+
+shadow_pixel_shader_input shadow_vertex_shader_model_vector(float4 position : POSITION,
+    float3 normal : NORMAL, float2 texcoord : TEXCOORD, half4 translation : TRANSLATION)
+{
+    float4x4 model = { 1, 0, 0, translation.x,
+                   0, 1, 0 , translation.y,
+                   0, 0, 1, translation.z,
+                   0, 0, 0, 1 };
+    return shadow_vertex_shader_model_matrix(position, normal, texcoord, model);
 }
 
 void shadow_pixel_shader(shadow_pixel_shader_input input)

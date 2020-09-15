@@ -34,17 +34,19 @@ Mesh::Mesh(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& comma
 
 void Mesh::release_temp_resources()
 {
-    temp_upload_resource_vb.Reset();
-    temp_upload_resource_ib.Reset();
+    m_temp_upload_resource_vb.Reset();
+    m_temp_upload_resource_ib.Reset();
 }
 
 
-void Mesh::draw(ComPtr<ID3D12GraphicsCommandList> commandList)
+void Mesh::draw(ComPtr<ID3D12GraphicsCommandList> commandList,
+    D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view, int instance_id, int draw_instances_count)
 {
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    commandList->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
+    D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_buffer_view, instance_vertex_buffer_view };
+    commandList->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
     commandList->IASetIndexBuffer(&m_index_buffer_view);
-    commandList->DrawIndexedInstanced(m_index_count, 1, 0, 0, 0);
+    commandList->DrawIndexedInstanced(m_index_count, draw_instances_count, 0, 0, instance_id);
 }
 
 int Mesh::triangles_count()
@@ -56,7 +58,7 @@ int Mesh::triangles_count()
 namespace
 {
     template <typename T>
-    void upload_buffer_to_gpu(const T source_data, UINT size, 
+    void upload_buffer_to_gpu(const T& source_data, UINT size, 
         ComPtr<ID3D12Resource>& destination_buffer,
         ComPtr<ID3D12Resource>& temp_upload_resource,
         ComPtr<ID3D12GraphicsCommandList>& command_list)
@@ -112,7 +114,7 @@ namespace
         ComPtr<ID3D12GraphicsCommandList>& command_list,
         ComPtr<ID3D12Resource>& destination_buffer,
         ComPtr<ID3D12Resource>& temp_upload_resource,
-        const T source_data, UINT size, View_type& view)
+        const T& source_data, UINT size, View_type& view)
     {
         create_upload_heap(device, size, temp_upload_resource);
         create_gpu_buffer(device, size, destination_buffer);
@@ -132,7 +134,7 @@ void Mesh::create_and_fill_vertex_buffer(const std::vector<Vertex>& vertices,
     const UINT vertex_buffer_size = static_cast<UINT>(vertices.size() * sizeof(Vertex));
 
     create_and_fill_buffer(device, command_list, m_vertex_buffer, 
-        temp_upload_resource_vb, vertices, vertex_buffer_size, m_vertex_buffer_view);
+        m_temp_upload_resource_vb, vertices, vertex_buffer_size, m_vertex_buffer_view);
 
     SET_DEBUG_NAME(m_vertex_buffer, L"Vertex Buffer");
 
@@ -147,7 +149,7 @@ void Mesh::create_and_fill_index_buffer(const std::vector<int>& indices,
     const UINT index_buffer_size = static_cast<UINT>(indices.size() * sizeof(int));
 
     create_and_fill_buffer(device, command_list, m_index_buffer, 
-        temp_upload_resource_ib, indices, index_buffer_size, m_index_buffer_view);
+        m_temp_upload_resource_ib, indices, index_buffer_size, m_index_buffer_view);
 
     SET_DEBUG_NAME(m_index_buffer, L"Index Buffer");
 
@@ -169,7 +171,7 @@ void Mesh::read_obj(const std::string& filename, std::vector<Vertex>& vertices,
 
     vector<XMFLOAT3> input_vertices;
     vector<XMFLOAT3> normals;
-    vector<XMFLOAT2> texture_coords;
+    vector<DirectX::PackedVector::XMHALF2> texture_coords;
 
     while (file.is_open() && !file.eof())
     {
@@ -193,10 +195,13 @@ void Mesh::read_obj(const std::string& filename, std::vector<Vertex>& vertices,
         }
         else if (input == "vt")
         {
-            XMFLOAT2 vt;
-            file >> vt.x;
-            file >> vt.y;
-            vt.y = 1.0f - vt.y; // Obj files seems to use an inverted v-axis.
+            DirectX::PackedVector::XMHALF2 vt;
+            float f;
+            file >> f;
+            vt.x = DirectX::PackedVector::XMConvertFloatToHalf(f);
+            file >> f;
+            f = 1.0f - f; // Obj files seems to use an inverted v-axis.
+            vt.y = DirectX::PackedVector::XMConvertFloatToHalf(f);
             texture_coords.push_back(vt);
         }
         else if (input == "f")
@@ -228,4 +233,67 @@ void Mesh::read_obj(const std::string& filename, std::vector<Vertex>& vertices,
             }
         }
     }
+}
+
+
+template <typename T>
+void construct_instance_data(ComPtr<ID3D12Device> device,
+    ComPtr<ID3D12GraphicsCommandList>& command_list, UINT instance_count,
+    ComPtr<ID3D12Resource>& instance_vertex_buffer, ComPtr<ID3D12Resource>& upload_resource,
+    D3D12_VERTEX_BUFFER_VIEW& instance_vertex_buffer_view, UINT& vertex_buffer_size)
+{
+    vertex_buffer_size = static_cast<UINT>(instance_count * sizeof(T));
+    std::vector<T> instance_data;
+    instance_data.resize(vertex_buffer_size);
+
+    create_and_fill_buffer(device, command_list, instance_vertex_buffer,
+        upload_resource, instance_data, vertex_buffer_size, instance_vertex_buffer_view);
+
+    instance_vertex_buffer_view.StrideInBytes = sizeof(T);
+}
+
+Instance_data::Instance_data(ComPtr<ID3D12Device> device,
+    ComPtr<ID3D12GraphicsCommandList>& command_list,
+    UINT instance_count, Per_instance_vector_data data)
+{
+    construct_instance_data<Per_instance_vector_data>(device, command_list, instance_count,
+        m_instance_vertex_buffer, m_upload_resource, m_instance_vertex_buffer_view,
+        m_vertex_buffer_size);
+    SET_DEBUG_NAME(m_instance_vertex_buffer, L"Vector Instance Buffer");
+}
+
+Instance_data::Instance_data(ComPtr<ID3D12Device> device,
+    ComPtr<ID3D12GraphicsCommandList>& command_list,
+    UINT instance_count, Per_instance_matrix_data data)
+{
+    construct_instance_data<Per_instance_matrix_data>(device, command_list, instance_count,
+        m_instance_vertex_buffer, m_upload_resource, m_instance_vertex_buffer_view,
+        m_vertex_buffer_size);
+    SET_DEBUG_NAME(m_instance_vertex_buffer, L"Matrix Instance Buffer");
+}
+
+template <typename T>
+void upload_new_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    const std::vector<T>& instance_data, ComPtr<ID3D12Resource>& instance_vertex_buffer,
+    ComPtr<ID3D12Resource>& upload_resource, UINT& vertex_buffer_size)
+{
+    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(instance_vertex_buffer.Get(),
+        D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST);
+    command_list->ResourceBarrier(1, &barrier);
+    upload_buffer_to_gpu(instance_data, vertex_buffer_size, instance_vertex_buffer,
+        upload_resource, command_list);
+}
+
+void Instance_data::upload_new_vector_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    const std::vector<Per_instance_vector_data>& instance_data)
+{
+    upload_new_data(command_list, instance_data, m_instance_vertex_buffer, m_upload_resource,
+        m_vertex_buffer_size);
+}
+
+void Instance_data::upload_new_matrix_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    const std::vector<Per_instance_matrix_data>& instance_data)
+{
+    upload_new_data(command_list, instance_data, m_instance_vertex_buffer, m_upload_resource,
+        m_vertex_buffer_size);
 }

@@ -30,7 +30,7 @@
 
 
 enum class Texture_mapping { enabled, disabled };
-enum class Set_shadow_transform { yes, no };
+enum class Input_element_model { translation, matrix };
 
 using Microsoft::WRL::ComPtr;
 
@@ -45,8 +45,13 @@ public:
     void update();
     void render();
 
-    void draw_objects(DirectX::XMMATRIX view_projection_matrix, Texture_mapping texture_mapping,
-                      Set_shadow_transform set_shadow_transform);
+    void draw_objects(const std::vector<std::shared_ptr<Graphical_object> >& graphical_objects, 
+        DirectX::XMMATRIX view_projection_matrix, Texture_mapping texture_mapping,
+        Input_element_model input_element_model);
+
+    void draw_static_objects(DirectX::XMMATRIX view_projection_matrix, Texture_mapping texture_mapping);
+    void draw_dynamic_objects(DirectX::XMMATRIX view_projection_matrix, Texture_mapping texture_mapping);
+
 
 private:
     void init_pipeline(HWND window);
@@ -72,6 +77,9 @@ private:
 
     void render_2d_text();
 
+    void upload_instance_vector_data();
+    void upload_instance_matrix_data(const std::vector<std::shared_ptr<Graphical_object> >& objects);
+
     CD3DX12_VIEWPORT m_viewport;
     CD3DX12_RECT m_scissor_rect;
 
@@ -90,9 +98,9 @@ private:
     ComPtr<ID3D12CommandAllocator> m_command_allocators[m_swap_chain_buffer_count];
     ComPtr<ID3D12CommandQueue> m_command_queue;
     ComPtr<ID3D12GraphicsCommandList> m_command_list;
-    ComPtr<ID3D12PipelineState> m_pipeline_state;
+    ComPtr<ID3D12PipelineState> m_pipeline_state_model_matrix;
+    ComPtr<ID3D12PipelineState> m_pipeline_state_model_vector;
     ComPtr<ID3D12RootSignature> m_root_signature;
-
 
     const int m_root_param_index_of_matrices = 0;
     const int m_root_param_index_of_textures = 1;
@@ -100,18 +108,22 @@ private:
     const int m_root_param_index_of_shadow_map = 3;
     const int m_root_param_index_of_values = 4;
 
-
     std::vector<std::shared_ptr<Texture>> m_textures;
     ComPtr<ID3D12DescriptorHeap> m_texture_descriptor_heap;
     ComPtr<ID3D12DescriptorHeap> m_sampler_heap;
 
     std::vector<std::shared_ptr<Graphical_object> > m_graphical_objects;
+    std::vector<std::shared_ptr<Graphical_object> > m_static_objects;
+    std::vector<std::shared_ptr<Graphical_object> > m_dynamic_objects;
+
+    std::vector<Per_instance_vector_data> m_translations;
+    std::unique_ptr<Instance_data> m_instance_vector_data;
+    std::unique_ptr<Instance_data> m_instance_matrix_data;
 
     std::shared_ptr<Shadow_map> m_shadow_map;
 
     DirectX::XMMATRIX m_view_matrix;
     DirectX::XMMATRIX m_projection_matrix;
-
 
     DirectX::XMVECTOR m_eye_position;
     DirectX::XMVECTOR m_focus_point;
@@ -126,6 +138,7 @@ private:
 #ifndef NO_TEXT
     Text m_text;
 #endif
+
     int m_triangles_count;
     bool m_init_done;
     bool m_vsync;
@@ -135,4 +148,4 @@ private:
 void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineState>& pipeline_state, 
     ComPtr<ID3D12RootSignature> root_signature,
     const char* vertex_shader_entry_function, const char* pixel_shader_entry_function,
-    DXGI_FORMAT dsv_format, UINT render_targets_count);
+    DXGI_FORMAT dsv_format, UINT render_targets_count, Input_element_model input_element_model);
