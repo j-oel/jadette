@@ -62,19 +62,39 @@ void View_controller::mouse_look(DirectX::XMVECTOR& eye_position,
     {
         const XMVECTOR up_direction = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
         const float sensitivity = 0.2f;
-        XMMATRIX rotation_x = XMMatrixRotationAxis(up_direction, -static_cast<float>(delta.x * 
-            sensitivity * delta_time));
 
-        XMVECTOR eye_to_look_at = eye_position - focus_point;
-        XMVECTOR x_axis = XMVector3Cross(eye_to_look_at, up_direction);
-        XMMATRIX rotation_y = XMMatrixRotationAxis(x_axis, -static_cast<float>(delta.y * 
-            sensitivity * delta_time));
+        XMVECTOR rotation_sideways = XMQuaternionRotationNormal(up_direction, 
+            -static_cast<float>(delta.x * sensitivity * delta_time));
 
-        XMMATRIX rotation_matrix = rotation_x * rotation_y;
+        XMVECTOR eye_to_focus_point = XMVector3Normalize(focus_point - eye_position);
 
-        XMVECTOR q = XMQuaternionRotationMatrix(rotation_matrix);
-        rotation_matrix = XMMatrixTransformation(XMVectorZero(), XMVectorZero(),
-            XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f), eye_position, q, XMVectorZero());
+        XMVECTOR total_rotation;
+
+        XMVECTOR angle_vector = XMVector3AngleBetweenNormals(eye_to_focus_point, up_direction);
+        float angle = XMConvertToDegrees(XMVectorGetX(angle_vector));
+
+        float absolute_minimum_angle = 10.0f;
+        float min_angle = 0.0f + absolute_minimum_angle;
+        float max_angle = 180.0f - absolute_minimum_angle;
+        bool trying_to_look_too_much_up = (angle < min_angle && delta.y > 0);
+        bool trying_to_look_too_much_down = (angle > max_angle && delta.y < 0);
+        if (trying_to_look_too_much_up or trying_to_look_too_much_down)
+        {
+            total_rotation = rotation_sideways;
+        }
+        else
+        {
+            XMVECTOR x_axis = XMVector3Cross(eye_to_focus_point, up_direction);
+
+            XMVECTOR rotation_up_down = XMQuaternionRotationNormal(x_axis, 
+                static_cast<float>(delta.y * sensitivity * delta_time));
+
+            total_rotation = XMQuaternionMultiply(rotation_sideways, rotation_up_down);
+        }
+
+        XMVECTOR no_scaling = XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f);
+        XMMATRIX rotation_matrix = XMMatrixTransformation(XMVectorZero(), XMVectorZero(),
+            no_scaling, eye_position, total_rotation, XMVectorZero());
 
         focus_point = XMVector3TransformCoord(focus_point, rotation_matrix);
 
