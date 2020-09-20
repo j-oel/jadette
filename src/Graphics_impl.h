@@ -76,6 +76,7 @@ private:
     View_controller m_view_controller;
     View m_view;
     Commands m_commands;
+    Input& m_input;
 
 #ifndef NO_TEXT
     Text m_text;
@@ -83,5 +84,6 @@ private:
 
     UINT m_width;
     UINT m_height;
+    bool m_show_help;
 };
 

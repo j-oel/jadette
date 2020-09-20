@@ -49,6 +49,10 @@ void Input::key_down(WPARAM key_code)
         case VK_SHIFT:
             m_down = true;
             break;
+
+        case  VK_F1:
+            m_f1 = true;
+            break;
     }
 }
 
@@ -89,6 +93,13 @@ void Input::key_up(WPARAM key_code)
 void Input::mouse_move(LPARAM position)
 {
     m_mouse_position = { GET_X_LPARAM(position), GET_Y_LPARAM(position) };
+}
+
+bool Input::f1()
+{
+    bool f1 = m_f1;
+    m_f1 = false;
+    return f1;
 }
 
 POINT Input::mouse_position()

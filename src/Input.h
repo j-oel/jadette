@@ -17,12 +17,14 @@ public:
     void key_up(WPARAM key_code);
     void mouse_move(LPARAM position);
 
-    bool forward() { return m_forward; }
-    bool backward() { return m_backward; }
-    bool left() { return m_left; }
-    bool right() { return m_right; }
-    bool up() { return m_up; }
-    bool down() { return m_down; }
+    bool forward() const { return m_forward; }
+    bool backward() const { return m_backward; }
+    bool left() const { return m_left; }
+    bool right() const { return m_right; }
+    bool up() const { return m_up; }
+    bool down() const { return m_down; }
+
+    bool f1();
 
     POINT mouse_position();
 
@@ -34,5 +36,6 @@ private:
     bool m_right;
     bool m_up;
     bool m_down;
+    bool m_f1;
 };
 

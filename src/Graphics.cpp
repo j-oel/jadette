@@ -8,6 +8,7 @@
 #include "Graphics.h"
 #include "Graphics_impl.h"
 #include "util.h"
+#include "Input.h"
 
 #include <sstream>
 #include <iomanip>
@@ -64,8 +65,10 @@ Graphics_impl::Graphics_impl(HWND window, UINT width, UINT height, Input& input)
         1.0f, 4000.0f),
     m_commands(create_main_command_list(), &m_depth_stencil, Texture_mapping::enabled,
         &m_view, &m_scene, &m_root_signature, &m_shadow_map),
+    m_input(input),
     m_width(width),
-    m_height(height)
+    m_height(height),
+    m_show_help(false)
 {
     m_depth_stencil.set_debug_names(L"DSV Heap", L"Depth Buffer");
     create_pipeline_states();
@@ -78,6 +81,8 @@ Graphics_impl::Graphics_impl(HWND window, UINT width, UINT height, Input& input)
 
 void Graphics_impl::update()
 {
+    if (m_input.f1())
+        m_show_help = !m_show_help;
     m_view_controller.update(m_view);
     m_scene.update();
 }
@@ -128,7 +133,15 @@ void Graphics_impl::render_2d_text()
     ss.unsetf(ios::ios_base::floatfield); // To get default floating point format
     ss << "Frame time: " << setprecision(4) << frame_time << " ms" << endl
        << "Number of objects: " << m_scene.objects_count() << endl
-       << "Number of triangles: " << m_scene.triangles_count();
+       << "Number of triangles: " << m_scene.triangles_count() << "\n\n";
+
+    if (m_show_help)
+        ss << "Press F1 to hide help\n"
+              "Controls: Arrow keys or WASD keys to move.\n"
+              "Shift moves down, space moves up.\n"
+              "Mouse look.";
+    else
+        ss << "Press F1 for help";
 
     float x_position = 5.0f;
     float y_position = 5.0f;
