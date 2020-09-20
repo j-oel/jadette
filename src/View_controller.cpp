@@ -10,6 +10,10 @@
 #include "input.h"
 #include "View.h"
 
+#undef min
+#undef max
+#include <algorithm>
+
 
 using namespace DirectX;
 
@@ -108,7 +112,7 @@ void View_controller::first_person_view_update(DirectX::XMVECTOR& eye_position,
     auto decelerate_positive = [=](double& acceleration)
     {
         if (acceleration > 0.0)
-            acceleration -= acceleration_speed * delta_time;
+            acceleration = std::max(acceleration - acceleration_speed * delta_time, 0.0);
     };
 
     auto accelerate_negative = [=](double& acceleration)
@@ -120,7 +124,7 @@ void View_controller::first_person_view_update(DirectX::XMVECTOR& eye_position,
     auto decelerate_negative = [=](double& acceleration)
     {
         if (acceleration < 0.0)
-            acceleration += acceleration_speed * delta_time;
+            acceleration = std::min(acceleration + acceleration_speed * delta_time, 0.0);
     };
 
     if (m_input.forward())
