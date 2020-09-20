@@ -16,10 +16,8 @@ class Graphics
 {
 
 public:
-    Graphics(UINT width, UINT height, Input& input);
-    ~Graphics();
+    Graphics(HWND window, UINT width, UINT height, Input& input);
 
-    void init(HWND window);
     void update();
     void render();
 

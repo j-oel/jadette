@@ -12,7 +12,7 @@
 
 struct Engine
 {
-    Engine(UINT width, UINT height);
+    Engine(HWND window, UINT width, UINT height) : graphics(window, width, height, input) {}
     Input input;
     Graphics graphics;
 };

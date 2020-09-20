@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include "Dx12_display.h"
+
 #include <wrl/client.h> // For ComPtr
 #include <ole2.h>
 #define COM_NO_WINDOWS_H
@@ -15,16 +17,15 @@
 #include <dwrite.h>
 #include <string>
 #include <vector>
+#include <memory>
 
 using Microsoft::WRL::ComPtr;
-
 
 class Text
 {
 public:
     Text(float font_size = 14.0f, const WCHAR* font_family = L"Arial", const WCHAR* locale = L"en_us");
-    void init(HWND window, ComPtr<ID3D12Device> d3d12_device, ComPtr<ID3D12CommandQueue> command_queue,
-        ComPtr<ID3D12Resource>* d3d12_render_targets, UINT swap_chain_buffer_count);
+    void init(HWND window, std::shared_ptr<Dx12_display> dx12_display);
     void draw(std::wstring text, float x, float y, UINT back_buf_index);
 private:
     ComPtr<ID3D11On12Device> m_d3d11_on_12_device;

@@ -8,26 +8,20 @@
 #include "View_controller.h"
 #include "util.h"
 #include "input.h"
+#include "View.h"
 
 
 using namespace DirectX;
 
 
-View_controller::View_controller(Input& input) : m_input(input),
+View_controller::View_controller(Input& input, HWND window) : m_input(input),
 m_acceleration_x(0.0f),
 m_acceleration_y(0.0f),
 m_acceleration_z(0.0f),
 m_mouse_initial_position(m_input.mouse_position()),
-m_window(nullptr),
+m_window(window),
 m_window_center(POINT())
 {
-}
-
-
-void View_controller::set_window(HWND window)
-{
-    m_window = window;
-
     RECT rect;
     GetWindowRect(window, &rect);
     m_window_center.x = (rect.right - rect.left) / 2;
@@ -38,10 +32,10 @@ void View_controller::set_window(HWND window)
 }
 
 
-void View_controller::update(DirectX::XMVECTOR& eye_position,
-    DirectX::XMVECTOR& focus_point)
+void View_controller::update(View& view)
 {
-    return first_person_view_update(eye_position, focus_point);
+    first_person_view_update(view.eye_position(), view.focus_point());
+    view.update();
 }
 
 
@@ -64,13 +58,13 @@ void View_controller::mouse_look(DirectX::XMVECTOR& eye_position,
     {
         const XMVECTOR up_direction = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
         const float sensitivity = 0.2f;
-        XMMATRIX rotation_x = XMMatrixRotationAxis(up_direction, -static_cast<float>(delta.x) * 
-            sensitivity * delta_time);
+        XMMATRIX rotation_x = XMMatrixRotationAxis(up_direction, -static_cast<float>(delta.x * 
+            sensitivity * delta_time));
 
         XMVECTOR eye_to_look_at = eye_position - focus_point;
         XMVECTOR x_axis = XMVector3Cross(eye_to_look_at, up_direction);
-        XMMATRIX rotation_y = XMMatrixRotationAxis(x_axis, -static_cast<float>(delta.y) * 
-            sensitivity * delta_time);
+        XMMATRIX rotation_y = XMMatrixRotationAxis(x_axis, -static_cast<float>(delta.y * 
+            sensitivity * delta_time));
 
         XMMATRIX rotation_matrix = rotation_x * rotation_y;
 

@@ -11,14 +11,13 @@
 #include "windefmin.h"
 
 class Input;
+class View;
 
 class View_controller
 {
 public:
-    View_controller(Input& input);
-    void set_window(HWND window);
-    void update(DirectX::XMVECTOR& eye_position,
-        DirectX::XMVECTOR& focus_point);
+    View_controller(Input& input, HWND window);
+    void update(View& view);
 private:
     void first_person_view_update(DirectX::XMVECTOR& eye_position, DirectX::XMVECTOR& focus_point);
     void mouse_look(DirectX::XMVECTOR& eye_position,

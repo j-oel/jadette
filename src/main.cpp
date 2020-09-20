@@ -15,20 +15,22 @@
 
 LRESULT CALLBACK window_procedure(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_param);
 
+struct Size
+{
+    long width;
+    long height;
+};
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, int cmd_show)
 {
-    const long width = 800;
-    const long height = 600;
+    Size size = { 800, 600 };
 
-    Engine engine(width, height);
-
-    RECT window_rect = { 0, 0, width, height };
+    RECT window_rect = { 0, 0, size.width, size.height };
     const DWORD window_style = WS_TILEDWINDOW;
     BOOL use_menu = FALSE;
     AdjustWindowRect(&window_rect, window_style, use_menu);
 
-    WNDCLASS c{};
+    WNDCLASS c {};
     c.lpfnWndProc = window_procedure;
     c.hInstance = instance;
     c.lpszClassName = L"Jadette_Class";
@@ -43,42 +45,50 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     int position_y = 30;
     int window_width = window_rect.right - window_rect.left;
     int window_height = window_rect.bottom - window_rect.top;
-    HWND window = CreateWindow(window_class.lpszClassName, title, window_style, 
-        position_x, position_y, window_width, window_height, 
-        parent_window, menu, instance, &engine);
+    
+    try
+    {
+        HWND window = CreateWindow(window_class.lpszClassName, title, window_style,
+            position_x, position_y, window_width, window_height,
+            parent_window, menu, instance, &size);
 
+        ShowWindow(window, cmd_show);
 
-    engine.graphics.init(window);
+        const HWND value_indicating_all_messages = NULL;
+        const UINT filter_min = 0; // If this and
+        const UINT filter_max = 0; // this are both zero, no filtering is performed.
+        MSG m {};
 
-    ShowWindow(window, cmd_show);
+        while (m.message != WM_QUIT)
+            if (PeekMessage(&m, value_indicating_all_messages, filter_min, filter_max, PM_REMOVE))
+            {
+                TranslateMessage(&m);
+                DispatchMessage(&m);
+            }
 
-    const HWND value_indicating_all_messages = NULL;
-    const UINT filter_min = 0; // If this and
-    const UINT filter_max = 0; // this are both zero, no filtering is performed.
-    MSG m {};
+        int exit_code = static_cast<int>(m.wParam);
+        return exit_code;
 
-    while (m.message != WM_QUIT)
-        if (PeekMessage(&m, value_indicating_all_messages, filter_min, filter_max, PM_REMOVE))
-        {
-            TranslateMessage(&m);
-            DispatchMessage(&m);
-        }
-
-    int exit_code = static_cast<int>(m.wParam);
-
-    return exit_code;
+    }
+    catch (std::bad_alloc&)
+    {
+        print("Tried to allocate more memory than is available.", "Fatal error.");
+        return 1;
+    }
 }
 
 LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM w_param, LPARAM l_param)
 {
     static Engine* engine = nullptr;
-
+    
     switch (message)
     {
         case WM_CREATE:
         {
             LPCREATESTRUCT create_struct = bit_cast<LPCREATESTRUCT>(l_param);
-            engine = bit_cast<Engine*>(create_struct->lpCreateParams);
+            Size* size = bit_cast<Size*>(create_struct->lpCreateParams);
+            static Engine the_engine(window, size->width, size->height);
+            engine = &the_engine;
             return 0;
         }
 

@@ -8,7 +8,6 @@
 #include "Text.h"
 #include "util.h"
 
-
 Text::Text(float font_size/* = 14*/, const WCHAR* font_family/* = L"Arial"*/, 
     const WCHAR* locale/* = L"en_us"*/) :
     m_font_size(font_size)
@@ -23,17 +22,16 @@ Text::Text(float font_size/* = 14*/, const WCHAR* font_family/* = L"Arial"*/,
 }
 
 
-void Text::init(HWND window, ComPtr<ID3D12Device> d3d12_device, ComPtr<ID3D12CommandQueue> command_queue,
-    ComPtr<ID3D12Resource>* d3d12_render_targets, UINT swap_chain_buffer_count)
+void Text::init(HWND window, std::shared_ptr<Dx12_display> dx12_display)
 {
     UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT; // Required for interoperability with Direct2D
     const D3D_FEATURE_LEVEL* value_meaning_use_feature_level_of_d3d12_device = nullptr;
     UINT size_of_feature_levels_array = 0;
     constexpr UINT command_queues_size = 1;
-    IUnknown* command_queues[command_queues_size] = { command_queue.Get() };
+    IUnknown* command_queues[command_queues_size] = { dx12_display->command_queue().Get() };
     UINT node_mask = 0;
     ComPtr<ID3D11Device> d3d11_device;
-    throw_if_failed(D3D11On12CreateDevice(d3d12_device.Get(), flags, 
+    throw_if_failed(D3D11On12CreateDevice(dx12_display->device().Get(), flags,
         value_meaning_use_feature_level_of_d3d12_device, size_of_feature_levels_array,
         command_queues, command_queues_size, node_mask, &d3d11_device, 
         &m_d3d11_device_context, nullptr));
@@ -55,8 +53,10 @@ void Text::init(HWND window, ComPtr<ID3D12Device> d3d12_device, ComPtr<ID3D12Com
         D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
         D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED), dpi, dpi);
 
+    auto swap_chain_buffer_count = dx12_display->swap_chain_buffer_count();
     m_wrapped_render_targets.resize(swap_chain_buffer_count);
     m_d2d_render_targets.resize(swap_chain_buffer_count);
+    auto d3d12_render_targets = dx12_display->render_targets();
     for (UINT i = 0; i < swap_chain_buffer_count; ++i)
     {
         throw_if_failed(m_d3d11_on_12_device->CreateWrappedResource(d3d12_render_targets[i].Get(),

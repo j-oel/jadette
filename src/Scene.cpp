@@ -8,25 +8,30 @@
 #include "Scene.h"
 #include "util.h"
 #include "Primitives.h"
-#include "Graphics_impl.h"
+#include "Root_signature.h" // For Input_element_model
 
 using namespace DirectX;
 
-Scene::Scene(ComPtr<ID3D12Device> device, Graphics_impl* graphics, 
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
-    int root_param_index_of_textures) :
-    m_triangles_count(0)
+Scene::Scene(ComPtr<ID3D12Device> device, int texture_start_index, 
+    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures) :
+    m_triangles_count(0),
+    m_light_position(XMVectorSet(0.0f, 20.0f, 5.0f, 1.0f))
 {
+
+    // Initialize COM, needed by Windows Imaging Component (WIC)
+    throw_if_failed(CoInitializeEx(nullptr, COINITBASE_MULTITHREADED | COINIT_DISABLE_OLE1DDE));
+
     ComPtr<ID3D12GraphicsCommandList> command_list;
     ComPtr<ID3D12CommandAllocator> command_allocator;
 
     throw_if_failed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
         IID_PPV_ARGS(&command_allocator)));
 
+    constexpr ID3D12PipelineState* initial_pipeline_state = nullptr;
     throw_if_failed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
-        command_allocator.Get(), nullptr, IID_PPV_ARGS(&command_list)));
+        command_allocator.Get(), initial_pipeline_state, IID_PPV_ARGS(&command_list)));
 
-    int texture_index = 1; // The shadow map has index number 0
+    int texture_index = texture_start_index;
 
     int object_id = 0;
 
@@ -94,7 +99,7 @@ Scene::Scene(ComPtr<ID3D12Device> device, Graphics_impl* graphics,
     m_instance_matrix_data = std::make_unique<Instance_data>(device, command_list,
         static_cast<UINT>(m_dynamic_objects.size()), Per_instance_matrix_data());
 
-    graphics->upload_resources_to_gpu(command_list);
+    upload_resources_to_gpu(device, command_list);
     for (auto& g : m_graphical_objects)
         g->release_temp_resources();
 
@@ -113,6 +118,10 @@ Scene::Scene(ComPtr<ID3D12Device> device, Graphics_impl* graphics,
     }
 }
 
+Scene::~Scene()
+{
+    CoUninitialize();
+}
 
 void fly_around_in_circle(std::shared_ptr<Graphical_object>& object)
 {
@@ -133,7 +142,6 @@ void fly_around_in_circle(std::shared_ptr<Graphical_object>& object)
 
     object->set_model_matrix(new_model_matrix);
 }
-
 
 void Scene::update()
 {
@@ -169,12 +177,11 @@ void Scene::update()
     }
 }
 
-
 void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list, 
     const std::vector<std::shared_ptr<Graphical_object> >& objects,
-    Texture_mapping texture_mapping, Input_element_model input_element_model)
+    Texture_mapping texture_mapping, const Input_element_model& input_element_model) const
 {
-    for (int i = 0; i < objects.size();)
+    for (size_t i = 0; i < objects.size();)
     {
         auto& graphical_object = objects[i];
         bool vector_data = true;
@@ -202,13 +209,13 @@ void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
 }
 
 void Scene::draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    Texture_mapping texture_mapping)
+    Texture_mapping texture_mapping) const
 {
     draw_objects(command_list, m_static_objects, texture_mapping, Input_element_model::translation);
 }
 
 void Scene::draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    Texture_mapping texture_mapping)
+    Texture_mapping texture_mapping) const
 {
     draw_objects(command_list, m_dynamic_objects, texture_mapping, Input_element_model::matrix);
 }
@@ -244,4 +251,34 @@ void Scene::upload_instance_matrix_data(ComPtr<ID3D12GraphicsCommandList>& comma
         instance_data.push_back(data);
     }
     m_instance_matrix_data->upload_new_matrix_data(command_list, instance_data);
+}
+
+void Scene::upload_resources_to_gpu(ComPtr<ID3D12Device> device, 
+    ComPtr<ID3D12GraphicsCommandList>& command_list)
+{
+    D3D12_COMMAND_QUEUE_DESC desc {};
+    desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    ComPtr<ID3D12CommandQueue> command_queue;
+    throw_if_failed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&command_queue)));
+
+    ComPtr<ID3D12Fence> fence;
+    enum Resources_uploaded { not_done, done };
+    throw_if_failed(device->CreateFence(Resources_uploaded::not_done, D3D12_FENCE_FLAG_NONE,
+        IID_PPV_ARGS(&fence)));
+    constexpr BOOL manual_reset = FALSE;
+    constexpr BOOL initial_state = FALSE;
+    constexpr LPSECURITY_ATTRIBUTES attributes = nullptr;
+    HANDLE resources_uploaded = CreateEvent(attributes, manual_reset, initial_state,
+        L"Resources Uploaded");
+
+    throw_if_failed(fence->SetEventOnCompletion(Resources_uploaded::done, resources_uploaded));
+
+    throw_if_failed(command_list->Close());
+    ID3D12CommandList* const list = command_list.Get();
+    constexpr UINT command_list_count = 1;
+    command_queue->ExecuteCommandLists(command_list_count, &list);
+    command_queue->Signal(fence.Get(), Resources_uploaded::done);
+
+    constexpr DWORD time_to_wait = 2000; // ms
+    WaitForSingleObject(resources_uploaded, time_to_wait);
 }

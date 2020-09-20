@@ -15,38 +15,42 @@
 
 
 enum class Texture_mapping { enabled, disabled };
-enum class Input_element_model { translation, matrix };
-
-class Graphics_impl;
+enum class Input_element_model;
 
 class Scene
 {
 public:
-    Scene(ComPtr<ID3D12Device> device, Graphics_impl* graphics, 
+    Scene(ComPtr<ID3D12Device> device, int texture_start_index, 
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
         int root_param_index_of_textures);
+    ~Scene();
     void update();
 
     void draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list, 
-        Texture_mapping texture_mapping);
+        Texture_mapping texture_mapping) const;
     void draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list, 
-        Texture_mapping texture_mapping);
+        Texture_mapping texture_mapping) const;
     void upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
-    int triangles_count() { return m_triangles_count; }
-    size_t objects_count() { return m_graphical_objects.size(); }
+    int triangles_count() const { return m_triangles_count; }
+    size_t objects_count() const { return m_graphical_objects.size(); }
+    DirectX::XMVECTOR light_position() const { return m_light_position; }
 private:
+    void upload_resources_to_gpu(ComPtr<ID3D12Device> device,
+        ComPtr<ID3D12GraphicsCommandList>& command_list);
     void upload_instance_vector_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
     void upload_instance_matrix_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
         const std::vector<std::shared_ptr<Graphical_object> >& objects);
     void draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
         const std::vector<std::shared_ptr<Graphical_object> >& objects,
-        Texture_mapping texture_mapping, Input_element_model input_element_model);
+        Texture_mapping texture_mapping, const Input_element_model& input_element_model) const;
 
     std::vector<std::shared_ptr<Graphical_object> > m_graphical_objects;
     std::vector<std::shared_ptr<Graphical_object> > m_static_objects;
     std::vector<std::shared_ptr<Graphical_object> > m_dynamic_objects;
 
     std::vector<std::shared_ptr<Texture>> m_textures;
+
+    DirectX::XMVECTOR m_light_position;
 
     std::vector<Per_instance_vector_data> m_translations;
     std::unique_ptr<Instance_data> m_instance_vector_data;

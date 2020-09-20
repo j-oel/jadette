@@ -176,36 +176,45 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\MS\WICTextureLoader12.cpp" />
-    <ClCompile Include="Engine.cpp" />
+    <ClCompile Include="Commands.cpp" />
+    <ClCompile Include="Depth_stencil.cpp" />
+    <ClCompile Include="Dx12_display.cpp" />
     <ClCompile Include="Graphical_object.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Primitives.cpp" />
+    <ClCompile Include="Root_signature.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Shadow_map.cpp" />
     <ClCompile Include="Text.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="Graphics.cpp" />
+    <ClCompile Include="View.cpp" />
     <ClCompile Include="View_controller.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\MS\d3dx12.h" />
     <ClInclude Include="..\MS\WICTextureLoader12.h" />
+    <ClInclude Include="Commands.h" />
+    <ClInclude Include="Depth_stencil.h" />
     <ClInclude Include="dx12min.h" />
+    <ClInclude Include="Dx12_display.h" />
     <ClInclude Include="Engine.h" />
     <ClInclude Include="Graphical_object.h" />
     <ClInclude Include="Graphics_impl.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Primitives.h" />
+    <ClInclude Include="Root_signature.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Shadow_map.h" />
     <ClInclude Include="Text.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="Graphics.h" />
+    <ClInclude Include="View.h" />
     <ClInclude Include="View_controller.h" />
     <ClInclude Include="windefmin.h" />
   </ItemGroup>
