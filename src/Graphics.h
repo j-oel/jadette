@@ -8,15 +8,24 @@
 #pragma once
 
 #include "windefmin.h"
+#include <string>
 
 class Graphics_impl;
 class Input;
+
+struct Config
+{
+    long width;
+    long height;
+    std::string scene_file;
+    bool vsync;
+};
 
 class Graphics
 {
 
 public:
-    Graphics(HWND window, UINT width, UINT height, Input& input);
+    Graphics(HWND window, const Config& config, Input& input);
 
     void update();
     void render();

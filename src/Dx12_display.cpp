@@ -8,12 +8,12 @@
 #include "Dx12_display.h"
 #include "util.h"
 
-Dx12_display::Dx12_display(HWND window, UINT width, UINT height) :
+Dx12_display::Dx12_display(HWND window, UINT width, UINT height, bool vsync) :
     m_device(nullptr),
     m_back_buf_index(0),
     m_width(width),
     m_height(height),
-    m_vsync(false),
+    m_vsync(vsync),
     m_variable_refresh_rate_displays_support(false)
 {
     create_device_and_swap_chain(window);

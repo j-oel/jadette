@@ -24,7 +24,7 @@ using Microsoft::WRL::ComPtr;
 class Dx12_display
 {
 public:
-    Dx12_display(HWND window, UINT width, UINT height);
+    Dx12_display(HWND window, UINT width, UINT height, bool vsync);
     ~Dx12_display();
 
     void begin_render(ComPtr<ID3D12GraphicsCommandList> command_list);

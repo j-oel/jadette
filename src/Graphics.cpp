@@ -15,9 +15,9 @@
 #include <directxmath.h>
 
 
-Graphics::Graphics(HWND window, UINT width, UINT height, Input& input)
+Graphics::Graphics(HWND window, const Config& config, Input& input)
 {
-    static Graphics_impl graphics(window, width, height, input);
+    static Graphics_impl graphics(window, config, input);
     impl = &graphics;
 }
 
@@ -50,24 +50,25 @@ UINT texture_index_for_diffuse_textures()
     return 2;
 }
 
-Graphics_impl::Graphics_impl(HWND window, UINT width, UINT height, Input& input) :
-    m_dx12_display(std::make_shared<Dx12_display>(window, width, height)),
+Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
+    m_dx12_display(std::make_shared<Dx12_display>(window, config.width, config.height, config.vsync)),
     m_device(m_dx12_display->device()),
     m_textures_count(create_texture_descriptor_heap()),
-    m_depth_stencil(m_device, width, height, Bit_depth::bpp32, D3D12_RESOURCE_STATE_DEPTH_WRITE,
+    m_depth_stencil(m_device, config.width, config.height, 
+        Bit_depth::bpp32, D3D12_RESOURCE_STATE_DEPTH_WRITE,
         m_texture_descriptor_heap, texture_index_for_depth_buffer()),
     m_shadow_map(m_device, m_texture_descriptor_heap, texture_index_for_shadow_map()),
     m_root_signature(m_device, m_shadow_map),
-    m_scene(m_device, texture_index_for_diffuse_textures(), m_texture_descriptor_heap, 
-        m_root_signature.m_root_param_index_of_textures),
+    m_scene(m_device, "../resources/" + config.scene_file, texture_index_for_diffuse_textures(),
+        m_texture_descriptor_heap, m_root_signature.m_root_param_index_of_textures),
     m_view_controller(input, window),
-    m_view(width, height, XMVectorSet(0.0f, 0.0f, -10.0f, 1.0f), XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f),
-        1.0f, 4000.0f),
+    m_view(config.width, config.height, XMVectorSet(0.0f, 0.0f, -10.0f, 1.0f), 
+        XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 4000.0f),
     m_commands(create_main_command_list(), &m_depth_stencil, Texture_mapping::enabled,
         &m_view, &m_scene, &m_root_signature, &m_shadow_map),
     m_input(input),
-    m_width(width),
-    m_height(height),
+    m_width(config.width),
+    m_height(config.height),
     m_show_help(false)
 {
     m_depth_stencil.set_debug_names(L"DSV Heap", L"Depth Buffer");

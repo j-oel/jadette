@@ -54,7 +54,7 @@ struct Object_not_defined
     std::string object;
 };
 
-Scene::Scene(ComPtr<ID3D12Device> device, int texture_start_index, 
+Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int texture_start_index,
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures) :
     m_triangles_count(0),
     m_light_position(XMVectorSet(0.0f, 20.0f, 5.0f, 1.0f))
@@ -72,8 +72,6 @@ Scene::Scene(ComPtr<ID3D12Device> device, int texture_start_index,
     constexpr ID3D12PipelineState* initial_pipeline_state = nullptr;
     throw_if_failed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
         command_allocator.Get(), initial_pipeline_state, IID_PPV_ARGS(&command_list)));
-
-    std::string scene_file = "../resources/scene.sce";
 
     auto read_file_thread_function = [&]()
     {
@@ -97,12 +95,12 @@ Scene::Scene(ComPtr<ID3D12Device> device, int texture_start_index,
         }
         catch (Read_error& e)
         {
-            print(("Error reading file: " + scene_file + " unrecognized token: " +
-                e.input).c_str(), "Error");
+            print("Error reading file: " + scene_file + " unrecognized token: " +
+                e.input, "Error");
         }
         catch (Scene_file_open_error&)
         {
-            print(("Could not open scene file: " + scene_file).c_str(), "Error");
+            print("Could not open scene file: " + scene_file, "Error");
         }
         catch (File_open_error& e)
         {
@@ -112,18 +110,18 @@ Scene::Scene(ComPtr<ID3D12Device> device, int texture_start_index,
         }
         catch (Model_not_defined& e)
         {
-            print(("Error reading file: " + scene_file + "\nModel " +
-                e.model + " not defined").c_str(), "Error");
+            print("Error reading file: " + scene_file + "\nModel " +
+                e.model + " not defined", "Error");
         }
         catch (Texture_not_defined& e)
         {
-            print(("Error reading file: " + scene_file + "\nTexture " +
-                e.texture + " not defined").c_str(), "Error");
+            print("Error reading file: " + scene_file + "\nTexture " +
+                e.texture + " not defined", "Error");
         }
         catch (Object_not_defined& e)
         {
-            print(("Error reading file: " + scene_file + "\nObject " +
-                e.object + " not defined").c_str(), "Error");
+            print("Error reading file: " + scene_file + "\nObject " +
+                e.object + " not defined", "Error");
         }
     };
 

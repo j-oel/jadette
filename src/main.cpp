@@ -11,46 +11,94 @@
 #include "util.h"
 
 #include <winuser.h>
-
+#include <fstream>
 
 LRESULT CALLBACK window_procedure(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_param);
 
-struct Size
+
+struct Could_not_open_file
 {
-    long width;
-    long height;
 };
+
+struct Read_error
+{
+    Read_error(const std::string& input_) : input(input_) {}
+    std::string input;
+};
+
+
+Config read_config(const std::string& config_file)
+{
+    std::ifstream file(config_file);
+    if (!file.is_open())
+        throw Could_not_open_file();
+
+    Config config {};
+
+    while (file.is_open() && !file.eof())
+    {
+        std::string input;
+        file >> input;
+
+        if (input == "width")
+        {
+            file >> config.width;
+        }
+        else if (input == "height")
+        {
+            file >> config.height;
+        }
+        else if (input == "scene")
+        {
+            file >> config.scene_file;
+        }
+        else if (input == "vsync")
+        {
+            file >> config.vsync;
+        }
+        else if (input == "")
+        {
+        }
+        else
+            throw Read_error(input);
+    }
+
+    return config;
+}
+
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, int cmd_show)
 {
-    Size size = { 800, 600 };
+    std::string config_file("../resources/init.cfg");
 
-    RECT window_rect = { 0, 0, size.width, size.height };
-    const DWORD window_style = WS_TILEDWINDOW;
-    BOOL use_menu = FALSE;
-    AdjustWindowRect(&window_rect, window_style, use_menu);
-
-    WNDCLASS c {};
-    c.lpfnWndProc = window_procedure;
-    c.hInstance = instance;
-    c.lpszClassName = L"Jadette_Class";
-    c.hCursor = LoadCursor(NULL, IDC_ARROW);
-    auto& window_class = c;
-    RegisterClass(&window_class);
-
-    LPCTSTR title = L"Jadette 3D Engine";
-    HWND parent_window = nullptr;
-    HMENU menu = nullptr;
-    int position_x = 100;
-    int position_y = 30;
-    int window_width = window_rect.right - window_rect.left;
-    int window_height = window_rect.bottom - window_rect.top;
-    
     try
     {
+        Config config = read_config(config_file);
+
+        RECT window_rect = { 0, 0, config.width, config.height };
+        const DWORD window_style = WS_TILEDWINDOW;
+        BOOL use_menu = FALSE;
+        AdjustWindowRect(&window_rect, window_style, use_menu);
+
+        WNDCLASS c {};
+        c.lpfnWndProc = window_procedure;
+        c.hInstance = instance;
+        c.lpszClassName = L"Jadette_Class";
+        c.hCursor = LoadCursor(NULL, IDC_ARROW);
+        auto& window_class = c;
+        RegisterClass(&window_class);
+
+        LPCTSTR title = L"Jadette 3D Engine";
+        HWND parent_window = nullptr;
+        HMENU menu = nullptr;
+        int position_x = 100;
+        int position_y = 30;
+        int window_width = window_rect.right - window_rect.left;
+        int window_height = window_rect.bottom - window_rect.top;
+    
         HWND window = CreateWindow(window_class.lpszClassName, title, window_style,
             position_x, position_y, window_width, window_height,
-            parent_window, menu, instance, &size);
+            parent_window, menu, instance, &config);
 
         ShowWindow(window, cmd_show);
 
@@ -75,6 +123,16 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
         print("Tried to allocate more memory than is available.", "Fatal error.");
         return 1;
     }
+    catch (Could_not_open_file&)
+    {
+        print("Could not open config file: " + config_file);
+        return 1;
+    }
+    catch (Read_error& e)
+    {
+        print("Error reading file: " + config_file + "\nunrecognized token: " +
+            e.input, "Error");
+    }
 }
 
 LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM w_param, LPARAM l_param)
@@ -86,8 +144,8 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM w_param, LPA
         case WM_CREATE:
         {
             LPCREATESTRUCT create_struct = bit_cast<LPCREATESTRUCT>(l_param);
-            Size* size = bit_cast<Size*>(create_struct->lpCreateParams);
-            static Engine the_engine(window, size->width, size->height);
+            auto config = bit_cast<Config*>(create_struct->lpCreateParams);
+            static Engine the_engine(window, *config);
             engine = &the_engine;
             return 0;
         }

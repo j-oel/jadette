@@ -48,7 +48,7 @@ class Graphics_impl
 {
 
 public:
-    Graphics_impl(HWND window, UINT width, UINT height, Input& input);
+    Graphics_impl(HWND window, const Config& config, Input& input);
 
     void update();
     void render();

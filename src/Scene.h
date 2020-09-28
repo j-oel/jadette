@@ -20,7 +20,7 @@ enum class Input_element_model;
 class Scene
 {
 public:
-    Scene(ComPtr<ID3D12Device> device, int texture_start_index, 
+    Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int texture_start_index,
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
         int root_param_index_of_textures);
     ~Scene();
