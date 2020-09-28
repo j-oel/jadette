@@ -8,10 +8,10 @@
 #include "util.h"
 #include "windefmin.h"
 
+#include <stringapiset.h>
 #include <profileapi.h>
 #include <winuser.h>
 #include <sstream>
-
 
 
 LARGE_INTEGER get_frequency()
@@ -20,7 +20,6 @@ LARGE_INTEGER get_frequency()
     QueryPerformanceFrequency(&ticks_per_second);
     return ticks_per_second;
 }
-
 
 double elapsed_seconds_since(const LARGE_INTEGER& start_ticks, LARGE_INTEGER& current_ticks)
 {
@@ -52,6 +51,11 @@ void print(const char* message, const char* title/* = ""*/)
     MessageBoxA(nullptr, message, title, MB_OK);
 }
 
+void print(const std::string& message, const std::string& title/* = ""*/)
+{
+    MessageBoxW(nullptr, widen(message).c_str(), widen(title).c_str(), MB_OK);
+}
+
 void print(int number, const char* title/* = ""*/)
 {
     std::stringstream ss;
@@ -59,6 +63,19 @@ void print(int number, const char* title/* = ""*/)
     print(ss.str().c_str(), title);
 }
 
+std::wstring widen(const std::string& input)
+{
+    const int value_meaning_input_is_null_terminated = -1;
+    const int value_meaning_return_required_buffer_size = 0;
+    DWORD flags = 0;
+    const int required_buffer_size = MultiByteToWideChar(CP_UTF8, flags, input.c_str(),
+        value_meaning_input_is_null_terminated,
+        nullptr, value_meaning_return_required_buffer_size);
+    std::wstring output(required_buffer_size, L'\0');
+    MultiByteToWideChar(CP_UTF8, flags, input.c_str(),
+        value_meaning_input_is_null_terminated, &output[0], required_buffer_size);
+    return output;
+}
 
 class Time_impl
 {

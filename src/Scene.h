@@ -43,10 +43,14 @@ private:
     void draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
         const std::vector<std::shared_ptr<Graphical_object> >& objects,
         Texture_mapping texture_mapping, const Input_element_model& input_element_model) const;
+    void read_file(const std::string& file_name, ComPtr<ID3D12Device> device, 
+        ComPtr<ID3D12GraphicsCommandList>& command_list, int texture_start_index,
+        ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures);
 
     std::vector<std::shared_ptr<Graphical_object> > m_graphical_objects;
     std::vector<std::shared_ptr<Graphical_object> > m_static_objects;
     std::vector<std::shared_ptr<Graphical_object> > m_dynamic_objects;
+    std::vector<std::shared_ptr<Graphical_object> > m_flying_objects;
 
     std::vector<std::shared_ptr<Texture>> m_textures;
 

@@ -18,7 +18,7 @@ class Texture
 public:
     Texture(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
-        const std::wstring& texture_filename, UINT texture_index);
+        const std::string& texture_filename, UINT texture_index);
     void set_texture_for_shader(ComPtr<ID3D12GraphicsCommandList> command_list,
         int root_param_index_of_textures);
     void release_temp_resources();

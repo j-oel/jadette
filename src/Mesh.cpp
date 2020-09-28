@@ -256,6 +256,8 @@ Instance_data::Instance_data(ComPtr<ID3D12Device> device,
     ComPtr<ID3D12GraphicsCommandList>& command_list,
     UINT instance_count, Per_instance_vector_data data)
 {
+    if (instance_count == 0)
+        return;
     construct_instance_data<Per_instance_vector_data>(device, command_list, instance_count,
         m_instance_vertex_buffer, m_upload_resource, m_instance_vertex_buffer_view,
         m_vertex_buffer_size);
@@ -266,6 +268,8 @@ Instance_data::Instance_data(ComPtr<ID3D12Device> device,
     ComPtr<ID3D12GraphicsCommandList>& command_list,
     UINT instance_count, Per_instance_matrix_data data)
 {
+    if (instance_count == 0)
+        return;
     construct_instance_data<Per_instance_matrix_data>(device, command_list, instance_count,
         m_instance_vertex_buffer, m_upload_resource, m_instance_vertex_buffer_view,
         m_vertex_buffer_size);
@@ -279,7 +283,8 @@ void upload_new_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
 {
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(instance_vertex_buffer.Get(),
         D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST);
-    command_list->ResourceBarrier(1, &barrier);
+    UINT barriers_count = 1;
+    command_list->ResourceBarrier(barriers_count, &barrier);
     upload_buffer_to_gpu(instance_data, vertex_buffer_size, instance_vertex_buffer,
         upload_resource, command_list);
 }

@@ -10,7 +10,49 @@
 #include "Primitives.h"
 #include "Root_signature.h" // For Input_element_model
 
+#include <fstream>
+#include <string>
+#include <map>
+#include <thread>
+#include <locale.h>
+
+
 using namespace DirectX;
+
+
+struct Read_error
+{
+    Read_error(const std::string& input_) : input(input_) {}
+    std::string input;
+};
+
+struct Scene_file_open_error
+{
+};
+
+struct File_open_error
+{
+    File_open_error(const std::string& file_name_) : file_name(file_name_) {}
+    std::string file_name;
+};
+
+struct Model_not_defined
+{
+    Model_not_defined(const std::string& model_) : model(model_) {}
+    std::string model;
+};
+
+struct Texture_not_defined
+{
+    Texture_not_defined(const std::string& texture_) : texture(texture_) {}
+    std::string texture;
+};
+
+struct Object_not_defined
+{
+    Object_not_defined(const std::string& object_) : object(object_) {}
+    std::string object;
+};
 
 Scene::Scene(ComPtr<ID3D12Device> device, int texture_start_index, 
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures) :
@@ -31,68 +73,68 @@ Scene::Scene(ComPtr<ID3D12Device> device, int texture_start_index,
     throw_if_failed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
         command_allocator.Get(), initial_pipeline_state, IID_PPV_ARGS(&command_list)));
 
-    int texture_index = texture_start_index;
+    std::string scene_file = "../resources/scene.sce";
 
-    int object_id = 0;
-
-    auto spaceship = std::make_shared<Graphical_object>(device, "../resources/spaceship.obj",
-        XMVectorSet(0.0f, 0.0f, 10.0f, 0.0f), command_list, root_param_index_of_textures,
-        std::make_shared<Texture>(device, command_list, texture_descriptor_heap,
-            L"../resources/spaceship_diff.jpg", texture_index), object_id);
-
-    m_graphical_objects.push_back(spaceship);
-    m_dynamic_objects.push_back(spaceship);
-
-    m_textures.push_back(std::make_shared<Texture>(device, command_list, texture_descriptor_heap,
-        L"../resources/pattern.jpg", ++texture_index));
-    auto& pattern_texture = m_textures[0];
-
-    auto plane = std::make_shared<Graphical_object>(device,
-        Primitive_type::Plane, XMVectorSet(0.0f, -10.0f, 0.0f, 0.0f),
-        command_list, root_param_index_of_textures, pattern_texture, ++object_id);
-
-    m_graphical_objects.push_back(plane);
-    m_static_objects.push_back(plane);
-
-    float offset = 3.0f;
-    std::shared_ptr<Mesh> cube_from_file(new Mesh(device, command_list, "../resources/cube.obj"));
+    auto read_file_thread_function = [&]()
     {
-        int x_count = 3;
-        int y_count = 3;
-        int z_count = 3;
-        int instances = x_count * y_count * z_count;
+        _configthreadlocale(_ENABLE_PER_THREAD_LOCALE);
 
-        for (int x = 0; x < x_count; ++x)
-            for (int y = 0; y < y_count; ++y)
-                for (int z = 0; z < z_count; ++z, --instances)
-                {
-                    auto box = std::make_shared<Graphical_object>(device, cube_from_file,
-                        XMVectorSet(offset * x + 1.0f, offset * y, offset * z, 0.0f), command_list,
-                        root_param_index_of_textures, pattern_texture, ++object_id, instances);
-                    m_graphical_objects.push_back(box);
-                    m_dynamic_objects.push_back(box);
-                }
-    }
+        // The reason to use a UTF-8 locale is basically to allow the scene file to be UTF-8
+        // encoded which is pretty standard for text files, and at same time be able to use
+        // the normal narrow string functions and file open functions in the standard library. 
+        // See https://utf8everywhere.org/ for more background. When that page was written 
+        // the UTF-8 support in Windows was likely less built out than what it is today. See 
+        // https://docs.microsoft.com/en-us/windows/uwp/design/globalizing/use-utf8-code-page
+        // that actually now recommends using UTF-8. However, it describes messing with manifests 
+        // and stuff. I realized that the following also works and it feels cleaner.
+
+        setlocale(LC_ALL, ".utf8");
+
+        try
+        {
+            read_file(scene_file, device, command_list, texture_start_index,
+                texture_descriptor_heap, root_param_index_of_textures);
+        }
+        catch (Read_error& e)
+        {
+            print(("Error reading file: " + scene_file + " unrecognized token: " +
+                e.input).c_str(), "Error");
+        }
+        catch (Scene_file_open_error&)
+        {
+            print(("Could not open scene file: " + scene_file).c_str(), "Error");
+        }
+        catch (File_open_error& e)
+        {
+
+            print("Error reading file: " + scene_file + "\nCould not open file: " +
+                e.file_name, "Error");
+        }
+        catch (Model_not_defined& e)
+        {
+            print(("Error reading file: " + scene_file + "\nModel " +
+                e.model + " not defined").c_str(), "Error");
+        }
+        catch (Texture_not_defined& e)
+        {
+            print(("Error reading file: " + scene_file + "\nTexture " +
+                e.texture + " not defined").c_str(), "Error");
+        }
+        catch (Object_not_defined& e)
+        {
+            print(("Error reading file: " + scene_file + "\nObject " +
+                e.object + " not defined").c_str(), "Error");
+        }
+    };
 
 
-    std::shared_ptr<Mesh> cube(new Cube(device, command_list));
-    {
-        int x_count = 40;
-        int y_count = 40;
-        int z_count = 40;
-        int instances = x_count * y_count * z_count;
-
-        for (int x = 0; x < x_count; ++x)
-            for (int y = 0; y < y_count; ++y)
-                for (int z = 0; z < z_count; ++z, --instances)
-                {
-                    auto box = std::make_shared<Graphical_object>(device, cube, 
-                        XMVectorSet(-x * offset, y * offset, z * offset, 0.0f), command_list, 
-                        root_param_index_of_textures, pattern_texture, ++object_id, instances);
-                    m_graphical_objects.push_back(box);
-                    m_static_objects.push_back(box);
-                }
-    }
+    // The reason to do this in a thread is to be able to use a UTF-8 locale without
+    // setting the locale globally for the program. This is the only way I find out to
+    // be able to do that. The reason why it is undesireable to set it globally is
+    // if someone else in the future would like to use Jadette and use it with a
+    // different locale. The reasons for using UTF-8 is stated in the function.
+    std::thread th(read_file_thread_function);
+    th.join();
 
     m_instance_vector_data = std::make_unique<Instance_data>(device, command_list,
         static_cast<UINT>(m_graphical_objects.size()), Per_instance_vector_data());
@@ -162,18 +204,9 @@ void Scene::update()
         graphical_object->set_model_matrix(new_model_matrix);
     }
 
-    if (m_graphical_objects.size() >= 2)
+    for (auto& ufo : m_flying_objects) // :-)
     {
-        // Do not rotate the plane
-        auto& plane = m_graphical_objects[1];
-        XMMATRIX model_translation_matrix = XMMatrixTranslationFromVector(plane->translation());
-        plane->set_model_matrix(model_translation_matrix);
-    }
-
-    if (!m_graphical_objects.empty())
-    {
-        auto& ship = m_graphical_objects[0];
-        fly_around_in_circle(ship);
+        fly_around_in_circle(ufo);
     }
 }
 
@@ -208,6 +241,180 @@ void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
     }
 }
 
+void throw_if_file_not_openable(const std::string& file_name)
+{
+    std::ifstream file(file_name);
+    if (!file)
+        throw File_open_error(file_name);
+}
+
+// Only performs basic error checking for the moment. Not very robust.
+// You should ensure that the scene file is valid.
+void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device, 
+    ComPtr<ID3D12GraphicsCommandList>& command_list, int texture_start_index,
+    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures)
+{
+    using std::map;
+    using std::shared_ptr;
+    using std::string;
+    using std::ifstream;
+    using DirectX::XMFLOAT3;
+
+    map<string, shared_ptr<Mesh>> meshes;
+    map<string, shared_ptr<Texture>> textures;
+    map<string, shared_ptr<Graphical_object>> objects;
+
+    ifstream file(file_name);
+    if (!file.is_open())
+        throw Scene_file_open_error();
+    int texture_index = texture_start_index;
+    int object_id = 0;
+
+    auto get_mesh = [&](const std::string& model) -> auto
+    {
+        shared_ptr<Mesh> mesh;
+        if (meshes.find(model) != meshes.end())
+            mesh = meshes[model];
+        else
+            throw Model_not_defined(model);
+        return mesh;
+    };
+
+    auto create_object = [&](const string& name, shared_ptr<Mesh> mesh, const string& texture,
+        bool dynamic, XMFLOAT3 position, int instances = 1)
+    {
+        auto object = std::make_shared<Graphical_object>(device,
+            mesh, XMVectorSet(position.x, position.y, position.z, 1.0f),
+            command_list, root_param_index_of_textures, textures[texture], object_id++, instances);
+        m_graphical_objects.push_back(object);
+        if (!name.empty())
+            objects[name] = object;
+        if (dynamic)
+            m_dynamic_objects.push_back(object);
+        else
+            m_static_objects.push_back(object);
+    };
+
+    while (file.is_open() && !file.eof())
+    {
+        string input;
+        file >> input;
+
+        if (input == "object")
+        {
+            string name;
+            file >> name;
+            string static_dynamic;
+            file >> static_dynamic;
+            if (static_dynamic != "static" && static_dynamic != "dynamic")
+                throw Read_error(static_dynamic);
+            string model;
+            file >> model;
+            string texture;
+            file >> texture;
+            XMFLOAT3 position;
+            file >> position.x;
+            file >> position.y;
+            file >> position.z;
+
+            auto mesh = get_mesh(model);
+            if (textures.find(texture) == textures.end())
+                throw Texture_not_defined(texture);
+            bool dynamic = static_dynamic == "dynamic" ? true : false;
+            create_object(name, mesh, texture, dynamic, position);
+        }
+        else if (input == "texture")
+        {
+            string name;
+            file >> name;
+            string texture_file;
+            file >> texture_file;
+            string texture_file_path = "../resources/" + texture_file;
+            throw_if_file_not_openable(texture_file_path);
+            shared_ptr<Texture> texture(new Texture(device, command_list,
+                texture_descriptor_heap, texture_file_path, texture_index++));
+            textures[name] = texture;
+        }
+        else if (input == "model")
+        {
+            string name;
+            file >> name;
+            string model;
+            file >> model;
+
+            shared_ptr<Mesh> mesh;
+
+            if (model == "cube")
+                mesh = std::make_shared<Cube>(device, command_list);
+            else if (model == "plane")
+                mesh = std::make_shared<Plane>(device, command_list);
+            else
+            {
+                string model_file = "../resources/" + model;
+                throw_if_file_not_openable(model_file);
+                mesh = std::make_shared<Mesh>(device, command_list, model_file);
+            }
+
+            meshes[name] = mesh;
+        }
+        else if (input == "array")
+        {
+            string static_dynamic;
+            file >> static_dynamic;
+            if (static_dynamic != "static" && static_dynamic != "dynamic")
+                throw Read_error(static_dynamic);
+            string model;
+            file >> model;
+            string texture;
+            file >> texture;
+            XMFLOAT3 pos;
+            file >> pos.x;
+            file >> pos.y;
+            file >> pos.z;
+            XMINT3 count;
+            file >> count.x;
+            file >> count.y;
+            file >> count.z;
+            XMFLOAT3 offset;
+            file >> offset.x;
+            file >> offset.y;
+            file >> offset.z;
+
+            int instances = count.x * count.y * count.z;
+
+            auto mesh = get_mesh(model);
+
+            if (textures.find(texture) == textures.end())
+                throw Texture_not_defined(texture);
+
+            bool dynamic = static_dynamic == "dynamic" ? true : false;
+
+            for (int x = 0; x < count.x; ++x)
+                for (int y = 0; y < count.y; ++y)
+                    for (int z = 0; z < count.z; ++z, --instances)
+                    {
+                        XMFLOAT3 position = XMFLOAT3(pos.x + offset.x * x, pos.y + offset.y * y,
+                            pos.z + offset.z * z);
+                        create_object(dynamic? "arrayobject" + std::to_string(object_id) :"", 
+                            mesh, texture, dynamic, position, instances);
+                    }
+        }
+        else if (input == "fly")
+        {
+            string object;
+            file >> object;
+            if (!objects.count(object))
+                throw Object_not_defined(object);
+            m_flying_objects.push_back(objects[object]);
+        }
+        else if (input == "")
+        {
+        }
+        else
+            throw Read_error(input);
+    }
+}
+
 void Scene::draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
     Texture_mapping texture_mapping) const
 {
@@ -222,8 +429,10 @@ void Scene::draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list
 
 void Scene::upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
-    upload_instance_vector_data(command_list);
-    upload_instance_matrix_data(command_list, m_dynamic_objects);
+    if (!m_graphical_objects.empty())
+        upload_instance_vector_data(command_list);
+    if (!m_dynamic_objects.empty())
+        upload_instance_matrix_data(command_list, m_dynamic_objects);
 }
 
 void Scene::upload_instance_vector_data(ComPtr<ID3D12GraphicsCommandList>& command_list)

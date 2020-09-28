@@ -9,6 +9,7 @@
 
 #include <winerror.h>
 #include <exception>
+#include <string>
 
 #if defined(_DEBUG)
 #define SET_DEBUG_NAME(object, name) object->SetName(name)
@@ -50,7 +51,11 @@ private:
 
 double elapsed_time_in_seconds();
 
+
+std::wstring widen(const std::string& input);
+
 void print(const char* message, const char* title = "");
+void print(const std::string& message, const std::string& title = "");
 void print(int number, const char* title = "");
 
 

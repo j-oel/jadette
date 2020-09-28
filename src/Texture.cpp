@@ -13,12 +13,12 @@
 using namespace DirectX;
 
 Texture::Texture(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list, 
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, const std::wstring& texture_filename, 
+    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, const std::string& texture_filename, 
     UINT texture_index)
 {
     std::unique_ptr<uint8_t[]> decoded_data;
     D3D12_SUBRESOURCE_DATA subresource;
-    throw_if_failed(LoadWICTextureFromFile(device.Get(), texture_filename.c_str(),
+    throw_if_failed(LoadWICTextureFromFile(device.Get(), widen(texture_filename).c_str(),
         m_texture.ReleaseAndGetAddressOf(), decoded_data, subresource));
 
 
