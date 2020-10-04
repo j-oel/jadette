@@ -52,7 +52,7 @@ public:
 
     void update();
     void render();
-
+    void scaling_changed(float dpi);
 private:
     void record_frame_rendering_commands_in_command_list();
     void set_and_clear_render_target();

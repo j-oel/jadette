@@ -158,16 +158,37 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     return 1;
 }
 
+
+void scaling_changed(HWND window, uint16_t dpi, Engine* engine, Config* config)
+{
+    engine->graphics.scaling_changed(dpi);
+    RECT window_rect = { 0, 0, config->width, config->height };
+    if (!config->borderless_windowed_fullscreen)
+    {
+        const DWORD window_style = WS_TILEDWINDOW;
+        const BOOL use_menu = FALSE;
+        const DWORD ex_style = 0;
+        AdjustWindowRectExForDpi(&window_rect, window_style, use_menu, ex_style, dpi);
+        UINT width = window_rect.right - window_rect.left;
+        UINT height = window_rect.bottom - window_rect.top;
+        const HWND not_used = nullptr;
+        const UINT dont_move = 0;
+        SetWindowPos(window, not_used, dont_move, dont_move, width, height,
+            SWP_NOCOPYBITS | SWP_NOMOVE | SWP_NOOWNERZORDER);
+    }
+}
+
 LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM w_param, LPARAM l_param)
 {
     static Engine* engine = nullptr;
-    
+    static Config* config = nullptr;
+
     switch (message)
     {
         case WM_CREATE:
         {
             LPCREATESTRUCT create_struct = bit_cast<LPCREATESTRUCT>(l_param);
-            auto config = bit_cast<Config*>(create_struct->lpCreateParams);
+            config = bit_cast<Config*>(create_struct->lpCreateParams);
             static Engine the_engine(window, *config);
             engine = &the_engine;
             return 0;
@@ -204,6 +225,16 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM w_param, LPA
                 engine->input.mouse_move(l_param);
             }
             break;
+
+        case WM_DPICHANGED:
+        {
+            uint16_t dpi = HIWORD(w_param);
+            if (engine)
+            {
+                scaling_changed(window, dpi, engine, config);
+            }
+            break;
+        }
 
         case WM_DESTROY:
             PostQuitMessage(0);

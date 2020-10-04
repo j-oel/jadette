@@ -27,6 +27,7 @@ public:
     Text(float font_size = 14.0f, const WCHAR* font_family = L"Arial", const WCHAR* locale = L"en_us");
     void init(HWND window, std::shared_ptr<Dx12_display> dx12_display);
     void draw(std::wstring text, float x, float y, UINT back_buf_index);
+    void scaling_changed(float dpi);
 private:
     ComPtr<ID3D11On12Device> m_d3d11_on_12_device;
     ComPtr<ID3D11DeviceContext> m_d3d11_device_context;
@@ -38,5 +39,8 @@ private:
     ComPtr<ID2D1SolidColorBrush> m_brush;
     std::vector<ComPtr<ID3D11Resource>> m_wrapped_render_targets;
     std::vector<ComPtr<ID2D1Bitmap1>> m_d2d_render_targets;
+    std::wstring m_font_family;
+    std::wstring m_locale;
     float m_font_size;
+    float m_scaling;
 };

@@ -31,6 +31,11 @@ void Graphics::render()
     impl->render();
 }
 
+void Graphics::scaling_changed(float dpi)
+{
+    impl->scaling_changed(dpi);
+}
+
 
 using DirectX::XMVectorSet;
 
@@ -99,6 +104,11 @@ void Graphics_impl::render()
     render_2d_text();
 
     m_dx12_display->end_render();
+}
+
+void Graphics_impl::scaling_changed(float dpi)
+{
+    m_text.scaling_changed(dpi);
 }
 
 

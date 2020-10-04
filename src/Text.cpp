@@ -8,17 +8,18 @@
 #include "Text.h"
 #include "util.h"
 
-Text::Text(float font_size/* = 14*/, const WCHAR* font_family/* = L"Arial"*/, 
+Text::Text(float font_size/* = 14*/, const WCHAR* font_family/* = L"Arial"*/,
     const WCHAR* locale/* = L"en_us"*/) :
-    m_font_size(font_size)
+    m_font_family(font_family),
+    m_locale(locale),
+    m_font_size(font_size),
+    m_scaling(0.0f)
 {
     D2D1_FACTORY_OPTIONS options {};
     throw_if_failed(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory3), 
         &options, &m_d2d_factory));
     throw_if_failed(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory),
         &m_dwrite_factory));
-    throw_if_failed(m_dwrite_factory->CreateTextFormat(font_family, nullptr, DWRITE_FONT_WEIGHT_NORMAL,
-        DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, font_size, locale, &m_text_format));
 }
 
 
@@ -53,6 +54,8 @@ void Text::init(HWND window, std::shared_ptr<Dx12_display> dx12_display)
         D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
         D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED), dpi, dpi);
 
+    scaling_changed(dpi);
+
     auto swap_chain_buffer_count = dx12_display->swap_chain_buffer_count();
     m_wrapped_render_targets.resize(swap_chain_buffer_count);
     m_d2d_render_targets.resize(swap_chain_buffer_count);
@@ -79,8 +82,8 @@ void Text::draw(std::wstring text, float x, float y, UINT back_buf_index)
         m_wrapped_render_targets[back_buf_index].GetAddressOf(), resource_count);
     m_d2d_device_context->SetTarget(m_d2d_render_targets[back_buf_index].Get());
     m_d2d_device_context->BeginDraw();
-    float width = m_font_size * text.size();
-    float height = m_font_size;
+    float width = m_scaling * m_font_size * text.size();
+    float height = m_scaling * m_font_size;
     D2D1_RECT_F layout = D2D1::RectF(x, y, x + width, y + height);
     m_d2d_device_context->DrawTextW(text.c_str(), static_cast<UINT32>(text.size()), m_text_format.Get(),
         layout, m_brush.Get());
@@ -88,4 +91,14 @@ void Text::draw(std::wstring text, float x, float y, UINT back_buf_index)
     m_d3d11_on_12_device->ReleaseWrappedResources(
         m_wrapped_render_targets[back_buf_index].GetAddressOf(), resource_count);
     m_d3d11_device_context->Flush();
+}
+
+void Text::scaling_changed(float dpi)
+{
+    const float standard_dpi = 96.0f;
+    m_scaling = dpi / standard_dpi;
+
+    throw_if_failed(m_dwrite_factory->CreateTextFormat(m_font_family.c_str(), nullptr,
+        DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
+        m_font_size * m_scaling, m_locale.c_str(), &m_text_format));
 }

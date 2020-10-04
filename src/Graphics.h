@@ -30,7 +30,7 @@ public:
 
     void update();
     void render();
-
+    void scaling_changed(float dpi);
 private:
     Graphics_impl* impl;
 };
