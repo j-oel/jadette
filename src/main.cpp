@@ -99,8 +99,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
         else
         {
             window_rect = { 0, 0, config.width, config.height };
-            AdjustWindowRect(&window_rect, window_style, use_menu);
             window_style = WS_TILEDWINDOW;
+            AdjustWindowRect(&window_rect, window_style, use_menu);
             position_x = 100;
             position_y = 30;
         }
