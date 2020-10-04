@@ -12,6 +12,7 @@
 
 #include <winuser.h>
 #include <fstream>
+#include <vector>
 
 LRESULT CALLBACK window_procedure(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_param);
 
@@ -26,6 +27,21 @@ struct Read_error
     std::string input;
 };
 
+struct Monitor_number_too_small
+{
+    Monitor_number_too_small(int requested_monitor_, int monitor_count_) :
+        requested_monitor(requested_monitor_), monitor_count(monitor_count_) {}
+    int requested_monitor;
+    int monitor_count;
+};
+
+struct Monitor_number_too_big
+{
+    Monitor_number_too_big(int requested_monitor_, int monitor_count_) :
+        requested_monitor(requested_monitor_), monitor_count(monitor_count_) {}
+    int requested_monitor;
+    int monitor_count;
+};
 
 Config read_config(const std::string& config_file)
 {
@@ -34,6 +50,7 @@ Config read_config(const std::string& config_file)
         throw Could_not_open_file();
 
     Config config {};
+    config.monitor = 1;
 
     while (file.is_open() && !file.eof())
     {
@@ -60,6 +77,10 @@ Config read_config(const std::string& config_file)
         {
             file >> config.vsync;
         }
+        else if (input == "monitor")
+        {
+            file >> config.monitor;
+        }
         else if (input == "")
         {
         }
@@ -67,9 +88,28 @@ Config read_config(const std::string& config_file)
             throw Read_error(input);
     }
 
+    int monitor_count = GetSystemMetrics(SM_CMONITORS); // Only count real visible monitors.
+    if (config.monitor > monitor_count)
+        throw Monitor_number_too_big(config.monitor, monitor_count);
+    else if (config.monitor < 1)
+        throw Monitor_number_too_small(config.monitor, monitor_count);
+
     return config;
 }
 
+struct Monitor
+{
+    HMONITOR monitor;
+    RECT rect;
+};
+
+BOOL monitor_enum_proc(HMONITOR h_monitor, HDC hdc, LPRECT monitor_rect, LPARAM data)
+{
+    auto monitors = bit_cast<std::vector<Monitor>*>(data);
+    Monitor monitor = { h_monitor, *monitor_rect };
+    monitors->push_back(monitor);
+    return TRUE;
+}
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, int cmd_show)
 {
@@ -81,28 +121,30 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     {
         Config config = read_config(config_file);
 
+        std::vector<Monitor> monitors;
+        EnumDisplayMonitors(nullptr, nullptr, monitor_enum_proc, bit_cast<LPARAM>(&monitors));
+
         BOOL use_menu = FALSE;
         RECT window_rect;
         DWORD window_style = WS_POPUP;
         int position_x = 0;
         int position_y = 0;
+        RECT& monitor_rect = monitors.at(static_cast<size_t>(config.monitor) - 1).rect;
         if (config.borderless_windowed_fullscreen)
         {
-            HMONITOR monitor = MonitorFromPoint({0, 0}, MONITOR_DEFAULTTOPRIMARY);
-            MONITORINFO monitor_info {};
-            monitor_info.cbSize = sizeof(MONITORINFO);
-            GetMonitorInfo(monitor, &monitor_info);
-            window_rect = monitor_info.rcMonitor;
-            config.width = window_rect.right;
-            config.height = window_rect.bottom;
+            window_rect = monitor_rect;
+            config.width = monitor_rect.right - monitor_rect.left;
+            config.height = monitor_rect.bottom - monitor_rect.top;
+            position_x = monitor_rect.left;
+            position_y = monitor_rect.top;
         }
         else
         {
             window_rect = { 0, 0, config.width, config.height };
             window_style = WS_TILEDWINDOW;
             AdjustWindowRect(&window_rect, window_style, use_menu);
-            position_x = 100;
-            position_y = 30;
+            position_x = 100 + monitor_rect.left;
+            position_y = 30 + monitor_rect.top;
         }
 
         WNDCLASS c {};
@@ -154,6 +196,21 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     {
         print("Error reading file: " + config_file + "\nunrecognized token: " +
             e.input, "Error");
+    }
+    catch (Monitor_number_too_big& e)
+    {
+        print("Error in config file: " + config_file + "\nRequested monitor number " +
+            std::to_string(e.requested_monitor) + (e.monitor_count == 1 ? 
+                ", but it has to be 1, as there is only " : ", but there are only ") + 
+            std::to_string(e.monitor_count) + " monitor" + (e.monitor_count > 1 ? "s": "") +
+            " connected to this computer.");
+    }
+    catch (Monitor_number_too_small& e)
+    {
+        print("Error in config file: " + config_file + "\nRequested monitor number " +
+            std::to_string(e.requested_monitor) + ", but it has to be " +
+            (e.monitor_count == 1 ? "1.": "\nat least 1 and maximum " + 
+                std::to_string(e.monitor_count) + "."));
     }
     return 1;
 }
