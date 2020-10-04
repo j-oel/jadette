@@ -52,6 +52,10 @@ Config read_config(const std::string& config_file)
         {
             file >> config.scene_file;
         }
+        else if (input == "borderless_windowed_fullscreen")
+        {
+            file >> config.borderless_windowed_fullscreen;
+        }
         else if (input == "vsync")
         {
             file >> config.vsync;
@@ -69,16 +73,37 @@ Config read_config(const std::string& config_file)
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, int cmd_show)
 {
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    
     std::string config_file("../resources/init.cfg");
 
     try
     {
         Config config = read_config(config_file);
 
-        RECT window_rect = { 0, 0, config.width, config.height };
-        const DWORD window_style = WS_TILEDWINDOW;
         BOOL use_menu = FALSE;
-        AdjustWindowRect(&window_rect, window_style, use_menu);
+        RECT window_rect;
+        DWORD window_style = WS_POPUP;
+        int position_x = 0;
+        int position_y = 0;
+        if (config.borderless_windowed_fullscreen)
+        {
+            HMONITOR monitor = MonitorFromPoint({0, 0}, MONITOR_DEFAULTTOPRIMARY);
+            MONITORINFO monitor_info {};
+            monitor_info.cbSize = sizeof(MONITORINFO);
+            GetMonitorInfo(monitor, &monitor_info);
+            window_rect = monitor_info.rcMonitor;
+            config.width = window_rect.right;
+            config.height = window_rect.bottom;
+        }
+        else
+        {
+            window_rect = { 0, 0, config.width, config.height };
+            AdjustWindowRect(&window_rect, window_style, use_menu);
+            window_style = WS_TILEDWINDOW;
+            position_x = 100;
+            position_y = 30;
+        }
 
         WNDCLASS c {};
         c.lpfnWndProc = window_procedure;
@@ -91,16 +116,15 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
         LPCTSTR title = L"Jadette 3D Engine";
         HWND parent_window = nullptr;
         HMENU menu = nullptr;
-        int position_x = 100;
-        int position_y = 30;
         int window_width = window_rect.right - window_rect.left;
         int window_height = window_rect.bottom - window_rect.top;
-    
+
         HWND window = CreateWindow(window_class.lpszClassName, title, window_style,
             position_x, position_y, window_width, window_height,
             parent_window, menu, instance, &config);
 
         ShowWindow(window, cmd_show);
+        SetFocus(window);
 
         const HWND value_indicating_all_messages = NULL;
         const UINT filter_min = 0; // If this and
@@ -121,18 +145,17 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     catch (std::bad_alloc&)
     {
         print("Tried to allocate more memory than is available.", "Fatal error.");
-        return 1;
     }
     catch (Could_not_open_file&)
     {
         print("Could not open config file: " + config_file);
-        return 1;
     }
     catch (Read_error& e)
     {
         print("Error reading file: " + config_file + "\nunrecognized token: " +
             e.input, "Error");
     }
+    return 1;
 }
 
 LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM w_param, LPARAM l_param)
@@ -174,7 +197,6 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM w_param, LPA
                 engine->input.key_up(w_param);
             }
             return 0;
-
 
         case WM_MOUSEMOVE:
             if (engine)

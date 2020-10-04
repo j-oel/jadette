@@ -18,6 +18,7 @@ struct Config
     long width;
     long height;
     std::string scene_file;
+    bool borderless_windowed_fullscreen;
     bool vsync;
 };
 
