@@ -137,7 +137,8 @@ void Graphics_impl::render_2d_text()
        << "Number of triangles: " << m_scene.triangles_count() << "\n\n";
 
     if (m_show_help)
-        ss << "Press F1 to hide help\n"
+        ss << "Press F1 to hide help\n\n"
+              "Press Esc to exit.\n"
               "Controls: Arrow keys or WASD keys to move.\n"
               "Shift moves down, space moves up.\n"
               "Mouse look.";
