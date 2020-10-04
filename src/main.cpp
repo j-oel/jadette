@@ -190,7 +190,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     }
     catch (Could_not_open_file&)
     {
-        print("Could not open config file: " + config_file);
+        print("Could not open config file: " + config_file, "Error");
     }
     catch (Read_error& e)
     {
@@ -203,14 +203,14 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
             std::to_string(e.requested_monitor) + (e.monitor_count == 1 ? 
                 ", but it has to be 1, as there is only " : ", but there are only ") + 
             std::to_string(e.monitor_count) + " monitor" + (e.monitor_count > 1 ? "s": "") +
-            " connected to this computer.");
+            " connected to this computer.", "Error");
     }
     catch (Monitor_number_too_small& e)
     {
         print("Error in config file: " + config_file + "\nRequested monitor number " +
             std::to_string(e.requested_monitor) + ", but it has to be " +
             (e.monitor_count == 1 ? "1.": "\nat least 1 and maximum " + 
-                std::to_string(e.monitor_count) + "."));
+                std::to_string(e.monitor_count) + "."), "Error");
     }
     return 1;
 }
