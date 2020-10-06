@@ -12,18 +12,6 @@
 
 using namespace DirectX;
 
-Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, const std::string& mesh_filename, 
-    DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list,
-    int root_param_index_of_textures, std::shared_ptr<Texture> texture, int id) :
-    m_mesh(std::make_shared<Mesh>(device, command_list, mesh_filename)), 
-    m_model_matrix(nullptr), m_translation(nullptr),
-    m_texture(texture),
-    m_root_param_index_of_textures(root_param_index_of_textures),
-    m_id(id),
-    m_instances(1)
-{
-    init(translation);
-}
 
 Mesh* new_primitive(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
     Primitive_type primitive_type)
@@ -46,21 +34,29 @@ Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, Primitive_type p
     m_texture(texture),
     m_root_param_index_of_textures(root_param_index_of_textures),
     m_id(id),
-    m_instances(1)
+    m_instances(1),
+    m_normal_mapped(false)
 {
     init(translation);
 }
 
-Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh, 
-    DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list, 
+Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh,
+    DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list,
     int root_param_index_of_textures, std::shared_ptr<Texture> texture, 
+    int root_param_index_of_values, int root_param_index_of_normal_maps,
+    int normal_map_flag_offset,
+    std::shared_ptr<Texture> normal_map,
     int id, int instances/* = 1*/) :
     m_mesh(mesh),
     m_model_matrix(nullptr), m_translation(nullptr),
-    m_texture(texture),
+    m_texture(texture), m_normal_map(normal_map),
     m_root_param_index_of_textures(root_param_index_of_textures),
+    m_root_param_index_of_values(root_param_index_of_values),
+    m_root_param_index_of_normal_maps(root_param_index_of_normal_maps),
+    m_normal_map_flag_offset(normal_map_flag_offset),
     m_id(id),
-    m_instances(instances)
+    m_instances(instances),
+    m_normal_mapped(normal_map != nullptr)
 {
     init(translation);
 }
@@ -80,7 +76,14 @@ void Graphical_object::draw(ComPtr<ID3D12GraphicsCommandList> command_list,
 void Graphical_object::draw_textured(ComPtr<ID3D12GraphicsCommandList> command_list,
     D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view)
 {
+    constexpr UINT size_in_words_of_value = 1;
+    command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
+        size_in_words_of_value, &m_normal_mapped, m_normal_map_flag_offset);
+
     m_texture->set_texture_for_shader(command_list, m_root_param_index_of_textures);
+    if (m_normal_mapped)
+        m_normal_map->set_texture_for_shader(command_list, m_root_param_index_of_normal_maps);
+
     draw(command_list, instance_vertex_buffer_view);
 }
 

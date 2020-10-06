@@ -22,11 +22,13 @@ ConstantBuffer<vectors_struct> vectors : register(b1);
 struct values_struct
 {
     int shadow_map_size;
+    int normal_mapped;
 };
 ConstantBuffer<values_struct> values : register(b2);
 
 Texture2D<float4> tex : register(t0);
 Texture2D<float> shadow_map : register(t1);
+Texture2D<float4> normal_map : register(t2);
 
 sampler texture_sampler : register(s0);
 SamplerComparisonState shadow_sampler : register(s1);
@@ -90,7 +92,11 @@ float4 pixel_shader(pixel_shader_input input) : SV_TARGET
 {
     float shadow = shadow_value(input);
 
-    const float3 normal = input.normal;
+    float3 normal;
+    if (!values.normal_mapped)
+        normal = input.normal;
+    else
+        normal = normal_map.Sample(texture_sampler, input.texcoord).xyz;
     const float3 eye = vectors.eye_position.xyz;
     const float3 light_unorm = vectors.light_position.xyz - input.position.xyz;
     const float3 light = normalize(light_unorm);

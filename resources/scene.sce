@@ -2,9 +2,12 @@ model spaceship_model spaceship.obj
 texture spaceship_diff spaceship_diff.jpg
 object spaceship dynamic spaceship_model spaceship_diff 0 0 10
 
+
+texture normal_map plane_normal_map.jpg
 texture pattern pattern.jpg
 model plane_model plane
-object the_plane static plane_model pattern 0 -10 0
+normal_mapped_object plane1 static plane_model pattern -20 -10 0 normal_map
+normal_mapped_object plane2 static plane_model pattern 10 -8 0 normal_map
 
 model cube_from_file cube.obj
 

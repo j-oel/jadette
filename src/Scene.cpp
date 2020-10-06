@@ -55,7 +55,9 @@ struct Object_not_defined
 };
 
 Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int texture_start_index,
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures) :
+    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures,
+    int root_param_index_of_values, int root_param_index_of_normal_maps, 
+    int normal_map_flag_offset) :
     m_triangles_count(0),
     m_light_position(XMVectorSet(0.0f, 20.0f, 5.0f, 1.0f))
 {
@@ -91,7 +93,9 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
         try
         {
             read_file(scene_file, device, command_list, texture_start_index,
-                texture_descriptor_heap, root_param_index_of_textures);
+                texture_descriptor_heap, root_param_index_of_textures,
+                root_param_index_of_values, root_param_index_of_normal_maps,
+                normal_map_flag_offset);
         }
         catch (Read_error& e)
         {
@@ -250,7 +254,9 @@ void throw_if_file_not_openable(const std::string& file_name)
 // You should ensure that the scene file is valid.
 void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device, 
     ComPtr<ID3D12GraphicsCommandList>& command_list, int texture_start_index,
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures)
+    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures,
+    int root_param_index_of_values, int root_param_index_of_normal_maps,
+    int normal_map_flag_offset)
 {
     using std::map;
     using std::shared_ptr;
@@ -279,11 +285,19 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
     };
 
     auto create_object = [&](const string& name, shared_ptr<Mesh> mesh, const string& texture,
-        bool dynamic, XMFLOAT3 position, int instances = 1)
+        bool dynamic, XMFLOAT3 position, int instances = 1, const string& normal_map = "")
     {
-        auto object = std::make_shared<Graphical_object>(device,
+        std::shared_ptr<Graphical_object> object;
+        std::shared_ptr<Texture> normal_map_tex = nullptr;
+        if (!normal_map.empty())
+            normal_map_tex = textures[normal_map];
+
+        object = std::make_shared<Graphical_object>(device,
             mesh, XMVectorSet(position.x, position.y, position.z, 1.0f),
-            command_list, root_param_index_of_textures, textures[texture], object_id++, instances);
+            command_list, root_param_index_of_textures, textures[texture], 
+            root_param_index_of_values, root_param_index_of_normal_maps, normal_map_flag_offset,
+            normal_map_tex, object_id++, instances);
+
         m_graphical_objects.push_back(object);
         if (!name.empty())
             objects[name] = object;
@@ -298,7 +312,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
         string input;
         file >> input;
 
-        if (input == "object")
+        if (input == "object" || input == "normal_mapped_object")
         {
             string name;
             file >> name;
@@ -319,7 +333,17 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             if (textures.find(texture) == textures.end())
                 throw Texture_not_defined(texture);
             bool dynamic = static_dynamic == "dynamic" ? true : false;
-            create_object(name, mesh, texture, dynamic, position);
+
+            if (input == "normal_mapped_object")
+            {
+                string normal_map;
+                file >> normal_map;
+                if (textures.find(normal_map) == textures.end())
+                    throw Texture_not_defined(normal_map);
+                create_object(name, mesh, texture, dynamic, position, 1, normal_map);
+            }
+            else
+                create_object(name, mesh, texture, dynamic, position);
         }
         else if (input == "texture")
         {

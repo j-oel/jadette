@@ -40,6 +40,7 @@ public:
     const int m_root_param_index_of_vectors = 2;
     const int m_root_param_index_of_shadow_map = 3;
     const int m_root_param_index_of_values = 4;
+    const int m_root_param_index_of_normal_maps = 5;
 };
 
 

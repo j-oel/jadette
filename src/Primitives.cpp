@@ -62,9 +62,9 @@ Cube::Cube(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& comma
 std::vector<Vertex> plane_vertices =
 {
         { { -0.5f, 0.5f, 0.5f },   { 0.0f, 1.0f, 0.0f },  { 0.0f, 0.0f } },
-        { { 0.5f, 0.5f, 0.5f },    { 0.0f, 1.0f, 0.0f },  { 1.0f, 0.0f } },
-        { { 0.5f, 0.5f, -0.5f },   { 0.0f, 1.0f, 0.0f },  { 1.0f, 1.0f } },
-        { { -0.5f, 0.5f, -0.5f },  { 0.0f, 1.0f, 0.0f },  { 0.0f, 1.0f } },
+        { { 0.5f, 0.5f, 0.5f },    { 0.0f, 1.0f, 0.0f },  { 3.0f, 0.0f } },
+        { { 0.5f, 0.5f, -0.5f },   { 0.0f, 1.0f, 0.0f },  { 3.0f, 3.0f } },
+        { { -0.5f, 0.5f, -0.5f },  { 0.0f, 1.0f, 0.0f },  { 0.0f, 3.0f } },
 };
 
 std::vector<Vertex> scale_vertices(const std::vector<Vertex>& vertices, float scale)
