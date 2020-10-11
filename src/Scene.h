@@ -35,6 +35,7 @@ public:
     int triangles_count() const { return m_triangles_count; }
     size_t objects_count() const { return m_graphical_objects.size(); }
     DirectX::XMVECTOR light_position() const { return m_light_position; }
+    DirectX::XMVECTOR light_focus_point() const { return m_light_focus_point; }
 private:
     void upload_resources_to_gpu(ComPtr<ID3D12Device> device,
         ComPtr<ID3D12GraphicsCommandList>& command_list);
@@ -58,6 +59,7 @@ private:
     std::vector<std::shared_ptr<Texture>> m_textures;
 
     DirectX::XMVECTOR m_light_position;
+    DirectX::XMVECTOR m_light_focus_point;
 
     std::vector<Per_instance_vector_data> m_translations;
     std::unique_ptr<Instance_data> m_instance_vector_data;

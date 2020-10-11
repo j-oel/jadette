@@ -71,9 +71,9 @@ void set_render_target(ComPtr<ID3D12GraphicsCommandList> command_list,
 void Shadow_map::record_shadow_map_generation_commands_in_command_list(Scene& scene,
     ComPtr<ID3D12GraphicsCommandList> command_list)
 {
-    // This is a shadow map for a kind of spotlight, with a fixed light direction, for now.
-    const XMVECTOR focus_position = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
-    DirectX::XMVECTOR light_position = scene.light_position();
+    // This is a shadow map for a kind of spotlight.
+    const XMVECTOR focus_position = scene.light_focus_point();
+    const XMVECTOR light_position = scene.light_position();
     constexpr float near_z = 1.0f;
     constexpr float far_z = 100.0f;
     View view(m_size, m_size, light_position, focus_position, near_z, far_z);

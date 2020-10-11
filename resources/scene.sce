@@ -18,6 +18,8 @@ array static cube_model pattern 0 0 0 40 40 40 -3.0 3.0 3.0
 model platform_model platform.obj
 object platform static platform_model not_used 20 -7 4
 
+light 0 20 5 0 0 0
+
 fly spaceship
 fly arrayobject11
 fly arrayobject20

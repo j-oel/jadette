@@ -511,6 +511,20 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                 throw Object_not_defined(object);
             m_flying_objects.push_back(objects[object]);
         }
+        else if (input == "light")
+        {
+            XMFLOAT3 pos;
+            file >> pos.x;
+            file >> pos.y;
+            file >> pos.z;
+            XMFLOAT3 focus_point;
+            file >> focus_point.x;
+            file >> focus_point.y;
+            file >> focus_point.z;
+
+            m_light_position = XMVectorSet(pos.x, pos.y, pos.z, 1.0f);
+            m_light_focus_point = XMVectorSet(focus_point.x, focus_point.y, focus_point.z, 1.0f);
+        }
         else if (input == "")
         {
         }
