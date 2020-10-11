@@ -15,6 +15,9 @@ array dynamic cube_from_file pattern 1 0 0 3 3 3 3.0 3.0 3.0
 model cube_model cube
 array static cube_model pattern 0 0 0 40 40 40 -3.0 3.0 3.0
 
+model platform_model platform.obj
+object platform static platform_model not_used 20 -7 4
+
 fly spaceship
 fly arrayobject11
 fly arrayobject20

@@ -28,10 +28,10 @@ Mesh* new_primitive(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandLis
 
 Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, Primitive_type primitive_type, 
     DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list,
-    int root_param_index_of_textures, std::shared_ptr<Texture> texture, int id) :
+    int root_param_index_of_textures, std::shared_ptr<Texture> diffuse_map, int id) :
     m_mesh(new_primitive(device, command_list, primitive_type)),
     m_model_matrix(nullptr), m_translation(nullptr),
-    m_texture(texture),
+    m_diffuse_map(diffuse_map),
     m_root_param_index_of_textures(root_param_index_of_textures),
     m_id(id),
     m_instances(1),
@@ -42,14 +42,14 @@ Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, Primitive_type p
 
 Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh,
     DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list,
-    int root_param_index_of_textures, std::shared_ptr<Texture> texture, 
+    int root_param_index_of_textures, std::shared_ptr<Texture> diffuse_map, 
     int root_param_index_of_values, int root_param_index_of_normal_maps,
     int normal_map_flag_offset,
     std::shared_ptr<Texture> normal_map,
     int id, int instances/* = 1*/) :
     m_mesh(mesh),
     m_model_matrix(nullptr), m_translation(nullptr),
-    m_texture(texture), m_normal_map(normal_map),
+    m_diffuse_map(diffuse_map), m_normal_map(normal_map),
     m_root_param_index_of_textures(root_param_index_of_textures),
     m_root_param_index_of_values(root_param_index_of_values),
     m_root_param_index_of_normal_maps(root_param_index_of_normal_maps),
@@ -80,7 +80,7 @@ void Graphical_object::draw_textured(ComPtr<ID3D12GraphicsCommandList> command_l
     command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
         size_in_words_of_value, &m_normal_mapped, m_normal_map_flag_offset);
 
-    m_texture->set_texture_for_shader(command_list, m_root_param_index_of_textures);
+    m_diffuse_map->set_texture_for_shader(command_list, m_root_param_index_of_textures);
     if (m_normal_mapped)
         m_normal_map->set_texture_for_shader(command_list, m_root_param_index_of_normal_maps);
 
@@ -89,7 +89,7 @@ void Graphical_object::draw_textured(ComPtr<ID3D12GraphicsCommandList> command_l
 
 void Graphical_object::release_temp_resources()
 {
-    m_texture->release_temp_resources();
+    m_diffuse_map->release_temp_resources();
     m_mesh->release_temp_resources();
 }
 

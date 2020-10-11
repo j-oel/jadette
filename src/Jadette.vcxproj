@@ -183,6 +183,7 @@
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="Wavefront_obj_file.cpp" />
     <ClCompile Include="Primitives.cpp" />
     <ClCompile Include="Root_signature.cpp" />
     <ClCompile Include="Scene.cpp" />
@@ -206,6 +207,7 @@
     <ClInclude Include="Graphics_impl.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="Mesh.h" />
+    <ClInclude Include="Wavefront_obj_file.h" />
     <ClInclude Include="Primitives.h" />
     <ClInclude Include="Root_signature.h" />
     <ClInclude Include="Scene.h" />

@@ -42,9 +42,6 @@ public:
 
 private:
 
-    void read_obj(const std::string& filename, std::vector<Vertex>& vertices, 
-        std::vector<int>& indices);
-
     void create_and_fill_vertex_buffer(const std::vector<Vertex>& vertices, 
         ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list);
     void create_and_fill_index_buffer(const std::vector<int>& indices, ComPtr<ID3D12Device> device, 

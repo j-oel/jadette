@@ -7,8 +7,8 @@
 
 #include "Mesh.h"
 #include "util.h"
+#include "Wavefront_obj_file.h"
 
-#include <fstream>
 #include <vector>
 
 
@@ -18,7 +18,7 @@ Mesh::Mesh(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& comma
     std::vector<Vertex> vertices;
     std::vector<int> indices;
 
-    read_obj(filename, vertices, indices);
+    read_obj_file(filename, vertices, indices);
 
     create_and_fill_vertex_buffer(vertices, device, command_list);
     create_and_fill_index_buffer(indices, device, command_list);
@@ -154,85 +154,6 @@ void Mesh::create_and_fill_index_buffer(const std::vector<int>& indices,
     SET_DEBUG_NAME(m_index_buffer, L"Index Buffer");
 
     m_index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
-}
-
-
-void Mesh::read_obj(const std::string& filename, std::vector<Vertex>& vertices, 
-    std::vector<int>& indices)
-{
-    using std::vector;
-    using std::string;
-    using std::ifstream;
-    using DirectX::XMFLOAT3;
-    using DirectX::XMFLOAT2;
-
-    ifstream file(filename);
-    string input;
-
-    vector<XMFLOAT3> input_vertices;
-    vector<XMFLOAT3> normals;
-    vector<DirectX::PackedVector::XMHALF2> texture_coords;
-
-    while (file.is_open() && !file.eof())
-    {
-        file >> input;
-
-        if (input == "v")
-        {
-            XMFLOAT3 v;
-            file >> v.x;
-            file >> v.y;
-            file >> v.z;
-            input_vertices.push_back(v);
-        }
-        else if (input == "vn")
-        {
-            XMFLOAT3 vn;
-            file >> vn.x;
-            file >> vn.y;
-            file >> vn.z;
-            normals.push_back(vn);
-        }
-        else if (input == "vt")
-        {
-            DirectX::PackedVector::XMHALF2 vt;
-            float f;
-            file >> f;
-            vt.x = DirectX::PackedVector::XMConvertFloatToHalf(f);
-            file >> f;
-            f = 1.0f - f; // Obj files seems to use an inverted v-axis.
-            vt.y = DirectX::PackedVector::XMConvertFloatToHalf(f);
-            texture_coords.push_back(vt);
-        }
-        else if (input == "f")
-        {
-            for (int i = 0; i < 3; ++i)
-            {
-                string s;
-                file >> s;
-                if (s.empty())
-                    break;
-                const size_t first_slash = s.find('/');
-                const size_t second_slash = s.find('/', first_slash + 1);
-
-                const string index_string = s.substr(0, first_slash);
-                const int vertex_index = atoi(index_string.c_str());
-
-                const size_t uv_index_start = first_slash + 1;
-                const string uv_string = s.substr(uv_index_start, second_slash - uv_index_start);
-                const size_t uv_index = atoi(uv_string.c_str());
-
-                const string normal_string = s.substr(second_slash + 1);
-                const int normal_index = atoi(normal_string.c_str());
-
-                indices.push_back(static_cast<int>(indices.size()));
-
-                const Vertex vertex{ input_vertices[vertex_index - 1], normals[normal_index - 1], 
-                    texture_coords[uv_index - 1] };
-                vertices.push_back(vertex);
-            }
-        }
-    }
 }
 
 

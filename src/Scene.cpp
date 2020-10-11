@@ -9,6 +9,7 @@
 #include "util.h"
 #include "Primitives.h"
 #include "Root_signature.h" // For Input_element_model
+#include "Wavefront_obj_file.h"
 
 #include <fstream>
 #include <string>
@@ -54,6 +55,14 @@ struct Object_not_defined
     std::string object;
 };
 
+struct Material_not_defined
+{
+    Material_not_defined(const std::string& material_, const std::string& object_) : 
+        material(material_), object(object_) {}
+    std::string material;
+    std::string object;
+};
+
 Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int texture_start_index,
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures,
     int root_param_index_of_values, int root_param_index_of_normal_maps, 
@@ -74,6 +83,8 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
     constexpr ID3D12PipelineState* initial_pipeline_state = nullptr;
     throw_if_failed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
         command_allocator.Get(), initial_pipeline_state, IID_PPV_ARGS(&command_list)));
+
+    std::exception_ptr exc = nullptr;
 
     auto read_file_thread_function = [&]()
     {
@@ -97,36 +108,11 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
                 root_param_index_of_values, root_param_index_of_normal_maps,
                 normal_map_flag_offset);
         }
-        catch (Read_error& e)
+        catch (...)
         {
-            print("Error reading file: " + scene_file + " unrecognized token: " +
-                e.input, "Error");
+            exc = std::current_exception();
         }
-        catch (Scene_file_open_error&)
-        {
-            print("Could not open scene file: " + scene_file, "Error");
-        }
-        catch (File_open_error& e)
-        {
 
-            print("Error reading file: " + scene_file + "\nCould not open file: " +
-                e.file_name, "Error");
-        }
-        catch (Model_not_defined& e)
-        {
-            print("Error reading file: " + scene_file + "\nModel " +
-                e.model + " not defined", "Error");
-        }
-        catch (Texture_not_defined& e)
-        {
-            print("Error reading file: " + scene_file + "\nTexture " +
-                e.texture + " not defined", "Error");
-        }
-        catch (Object_not_defined& e)
-        {
-            print("Error reading file: " + scene_file + "\nObject " +
-                e.object + " not defined", "Error");
-        }
     };
 
 
@@ -137,6 +123,47 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
     // different locale. The reasons for using UTF-8 is stated in the function.
     std::thread th(read_file_thread_function);
     th.join();
+
+    try
+    {
+        if (exc)
+            std::rethrow_exception(exc);
+    }
+    catch (Read_error& e)
+    {
+        print("Error reading file: " + scene_file + " unrecognized token: " +
+            e.input, "Error");
+    }
+    catch (Scene_file_open_error&)
+    {
+        print("Could not open scene file: " + scene_file, "Error");
+    }
+    catch (File_open_error& e)
+    {
+        print("Error reading file: " + scene_file + "\nCould not open file: " +
+            e.file_name, "Error");
+    }
+    catch (Model_not_defined& e)
+    {
+        print("Error reading file: " + scene_file + "\nModel " +
+            e.model + " not defined", "Error");
+    }
+    catch (Texture_not_defined& e)
+    {
+        print("Error reading file: " + scene_file + "\nTexture " +
+            e.texture + " not defined", "Error");
+    }
+    catch (Object_not_defined& e)
+    {
+        print("Error reading file: " + scene_file + "\nObject " +
+            e.object + " not defined", "Error");
+    }
+    catch (Material_not_defined& e)
+    {
+        print("Error reading file: " + scene_file + "\nMaterial " +
+            e.material + " referenced by " + e.object + " not defined", "Error");
+        return;
+    }
 
     m_instance_vector_data = std::make_unique<Instance_data>(device, command_list,
         static_cast<UINT>(m_graphical_objects.size()), Per_instance_vector_data());
@@ -265,7 +292,9 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
     using DirectX::XMFLOAT3;
 
     map<string, shared_ptr<Mesh>> meshes;
+    map<string, shared_ptr<Model_collection>> model_collections;
     map<string, shared_ptr<Texture>> textures;
+    map<string, string> texture_files;
     map<string, shared_ptr<Graphical_object>> objects;
 
     ifstream file(file_name);
@@ -274,29 +303,34 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
     int texture_index = texture_start_index;
     int object_id = 0;
 
-    auto get_mesh = [&](const std::string& model) -> auto
+    auto get_texture = [&](const string& name) -> auto
     {
-        shared_ptr<Mesh> mesh;
-        if (meshes.find(model) != meshes.end())
-            mesh = meshes[model];
+        shared_ptr<Texture> texture;
+        bool texture_not_already_created = textures.find(name) == textures.end();
+        if (texture_not_already_created)
+        {
+            if (texture_files.find(name) == texture_files.end())
+                throw Texture_not_defined(name);
+
+            texture = std::make_shared<Texture>(device, command_list,
+                texture_descriptor_heap, texture_files[name], texture_index++);
+            textures[name] = texture;
+        }
         else
-            throw Model_not_defined(model);
-        return mesh;
+            texture = textures[name];
+
+        return texture;
     };
 
-    auto create_object = [&](const string& name, shared_ptr<Mesh> mesh, const string& texture,
-        bool dynamic, XMFLOAT3 position, int instances = 1, const string& normal_map = "")
+    auto create_object = [&](const string& name, shared_ptr<Mesh> mesh,
+        shared_ptr<Texture> diffuse_map, bool dynamic, XMFLOAT3 position, int instances = 1,
+        shared_ptr<Texture> normal_map = nullptr)
     {
-        std::shared_ptr<Graphical_object> object;
-        std::shared_ptr<Texture> normal_map_tex = nullptr;
-        if (!normal_map.empty())
-            normal_map_tex = textures[normal_map];
-
-        object = std::make_shared<Graphical_object>(device,
+        auto object = std::make_shared<Graphical_object>(device,
             mesh, XMVectorSet(position.x, position.y, position.z, 1.0f),
-            command_list, root_param_index_of_textures, textures[texture], 
+            command_list, root_param_index_of_textures, diffuse_map, 
             root_param_index_of_values, root_param_index_of_normal_maps, normal_map_flag_offset,
-            normal_map_tex, object_id++, instances);
+            normal_map, object_id++, instances);
 
         m_graphical_objects.push_back(object);
         if (!name.empty())
@@ -306,6 +340,8 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
         else
             m_static_objects.push_back(object);
     };
+
+    auto subdir = "../resources/";
 
     while (file.is_open() && !file.eof())
     {
@@ -322,28 +358,53 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                 throw Read_error(static_dynamic);
             string model;
             file >> model;
-            string texture;
-            file >> texture;
+            string diffuse_map;
+            file >> diffuse_map;
             XMFLOAT3 position;
             file >> position.x;
             file >> position.y;
             file >> position.z;
 
-            auto mesh = get_mesh(model);
-            if (textures.find(texture) == textures.end())
-                throw Texture_not_defined(texture);
             bool dynamic = static_dynamic == "dynamic" ? true : false;
 
+            string normal_map = "";
             if (input == "normal_mapped_object")
-            {
-                string normal_map;
                 file >> normal_map;
-                if (textures.find(normal_map) == textures.end())
-                    throw Texture_not_defined(normal_map);
-                create_object(name, mesh, texture, dynamic, position, 1, normal_map);
+
+            if (meshes.find(model) != meshes.end())
+            {
+                auto mesh = meshes[model];
+
+                shared_ptr<Texture> normal_map_tex = nullptr;
+                if (!normal_map.empty())
+                    normal_map_tex = get_texture(normal_map);
+                auto diffuse_map_tex = get_texture(diffuse_map);
+                create_object(name, mesh, diffuse_map_tex, dynamic, position, 1, normal_map_tex);
             }
             else
-                create_object(name, mesh, texture, dynamic, position);
+            {
+                if (model_collections.find(model) == model_collections.end())
+                    throw Model_not_defined(model);
+                auto& model_collection = model_collections[model];
+
+                for (auto& m : model_collection->models)
+                {
+                    if (m.material != "")
+                    {
+                        auto material_iter = model_collection->materials.find(m.material);
+                        if (material_iter == model_collection->materials.end())
+                            throw Material_not_defined(m.material, model);
+                        auto& material = material_iter->second;
+                        diffuse_map = material.diffuse_map;
+                        normal_map = material.normal_map;
+                    }
+                    shared_ptr<Texture> normal_map_tex = nullptr;
+                    if (!normal_map.empty())
+                        normal_map_tex = get_texture(normal_map);
+                    auto diffuse_map_tex = get_texture(diffuse_map);
+                    create_object(name, m.mesh, diffuse_map_tex, dynamic, position, 1, normal_map_tex);
+                }
+            }
         }
         else if (input == "texture")
         {
@@ -351,11 +412,9 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             file >> name;
             string texture_file;
             file >> texture_file;
-            string texture_file_path = "../resources/" + texture_file;
+            string texture_file_path = subdir + texture_file;
             throw_if_file_not_openable(texture_file_path);
-            shared_ptr<Texture> texture(new Texture(device, command_list,
-                texture_descriptor_heap, texture_file_path, texture_index++));
-            textures[name] = texture;
+            texture_files[name] = texture_file_path;
         }
         else if (input == "model")
         {
@@ -364,20 +423,34 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             string model;
             file >> model;
 
-            shared_ptr<Mesh> mesh;
-
             if (model == "cube")
-                mesh = std::make_shared<Cube>(device, command_list);
+                meshes[name] = std::make_shared<Cube>(device, command_list);
             else if (model == "plane")
-                mesh = std::make_shared<Plane>(device, command_list);
+                meshes[name] = std::make_shared<Plane>(device, command_list);
             else
             {
-                string model_file = "../resources/" + model;
+                string model_file = subdir + model;
                 throw_if_file_not_openable(model_file);
-                mesh = std::make_shared<Mesh>(device, command_list, model_file);
-            }
 
-            meshes[name] = mesh;
+                auto collection = read_obj_file(model_file, device, command_list);
+                model_collections[name] = collection;
+
+                auto add_texture = [&](const string& file_name)
+                {
+                    if (!file_name.empty())
+                    {
+                        string texture_file_path = subdir + file_name;
+                        throw_if_file_not_openable(texture_file_path);
+                        texture_files[file_name] = texture_file_path;
+                    }
+                };
+
+                for (auto m : collection->materials)
+                {
+                    add_texture(m.second.diffuse_map);
+                    add_texture(m.second.normal_map);
+                }
+            }
         }
         else if (input == "array")
         {
@@ -387,8 +460,8 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                 throw Read_error(static_dynamic);
             string model;
             file >> model;
-            string texture;
-            file >> texture;
+            string diffuse_map;
+            file >> diffuse_map;
             XMFLOAT3 pos;
             file >> pos.x;
             file >> pos.y;
@@ -403,13 +476,22 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             file >> offset.z;
 
             int instances = count.x * count.y * count.z;
-
-            auto mesh = get_mesh(model);
-
-            if (textures.find(texture) == textures.end())
-                throw Texture_not_defined(texture);
-
             bool dynamic = static_dynamic == "dynamic" ? true : false;
+            m_graphical_objects.reserve(instances);
+            if (dynamic)
+                m_dynamic_objects.reserve(instances);
+            else
+                m_static_objects.reserve(instances);
+
+            shared_ptr<Mesh> mesh;
+            if (meshes.find(model) != meshes.end())
+                mesh = meshes[model];
+            else if (model_collections.find(model) != model_collections.end())
+                mesh = model_collections[model]->models.front().mesh;
+            else
+                throw Model_not_defined(model);
+
+            auto diffuse_map_tex = get_texture(diffuse_map);
 
             for (int x = 0; x < count.x; ++x)
                 for (int y = 0; y < count.y; ++y)
@@ -418,7 +500,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                         XMFLOAT3 position = XMFLOAT3(pos.x + offset.x * x, pos.y + offset.y * y,
                             pos.z + offset.z * z);
                         create_object(dynamic? "arrayobject" + std::to_string(object_id) :"", 
-                            mesh, texture, dynamic, position, instances);
+                            mesh, diffuse_map_tex, dynamic, position, instances);
                     }
         }
         else if (input == "fly")

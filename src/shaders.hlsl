@@ -72,7 +72,7 @@ pixel_shader_input vertex_shader_model_vector(float4 position : POSITION, float3
 
 float sample_shadow_map(pixel_shader_input input, float2 offset)
 {
-    const float bias = 0.001f;
+    const float bias = 0.0005f;
     float2 coord = input.position_in_shadow_map_space.xy + offset * (1.0f / values.shadow_map_size);
     return shadow_map.SampleCmp(shadow_sampler, coord,
         input.position_in_shadow_map_space.z - bias);

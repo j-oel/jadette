@@ -69,6 +69,9 @@
     <ClCompile Include="Root_signature.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Wavefront_obj_file.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mesh.h">
@@ -135,6 +138,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Root_signature.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Wavefront_obj_file.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

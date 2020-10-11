@@ -24,11 +24,11 @@ class Graphical_object
 public:
     Graphical_object(ComPtr<ID3D12Device> device, Primitive_type primitive_type,
         DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list,
-        int m_root_param_index_of_textures, std::shared_ptr<Texture> texture, int id);
+        int m_root_param_index_of_textures, std::shared_ptr<Texture> diffuse_map, int id);
 
     Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh,
         DirectX::XMVECTOR translation, ComPtr<ID3D12GraphicsCommandList>& command_list,
-        int m_root_param_index_of_textures, std::shared_ptr<Texture> texture,
+        int m_root_param_index_of_textures, std::shared_ptr<Texture> diffuse_map,
         int root_param_index_of_values, int root_param_index_of_normal_maps,
         int normal_map_flag_offset, std::shared_ptr<Texture> normal_map, int id,
         int instances = 1);
@@ -52,7 +52,7 @@ private:
     std::shared_ptr<Mesh> m_mesh;
     DirectX::XMMATRIX* m_model_matrix;
     DirectX::XMVECTOR* m_translation;
-    std::shared_ptr<Texture> m_texture;
+    std::shared_ptr<Texture> m_diffuse_map;
     std::shared_ptr<Texture> m_normal_map;
     int m_root_param_index_of_textures;
     int m_root_param_index_of_values;
