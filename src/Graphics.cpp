@@ -116,7 +116,9 @@ void Graphics_impl::render()
 
 void Graphics_impl::scaling_changed(float dpi)
 {
+#ifndef NO_TEXT
     m_text.scaling_changed(dpi);
+#endif
 }
 
 
