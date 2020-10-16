@@ -1,5 +1,5 @@
 newmtl Material.001
-map_Kd spaceship_diff.jpg
+map_Kd pattern2.dds
 
 newmtl Material.002
 map_Kd pattern.jpg

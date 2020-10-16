@@ -5,9 +5,10 @@ object spaceship dynamic spaceship_model spaceship_diff 0 0 10
 
 texture normal_map plane_normal_map.jpg
 texture pattern pattern.jpg
+texture pattern2 pattern2.dds
 model plane_model plane
-normal_mapped_object plane1 static plane_model pattern -20 -10 0 normal_map
-normal_mapped_object plane2 static plane_model pattern 10 -8 0 normal_map
+normal_mapped_object plane1 static plane_model pattern2 -20 -10 0 normal_map
+normal_mapped_object plane2 static plane_model pattern2 10 -8 0 normal_map
 
 model cube_from_file cube.obj
 

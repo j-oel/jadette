@@ -53,8 +53,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings">
-  </ImportGroup>
+  <ImportGroup Label="ExtensionSettings" />
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -175,6 +174,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\MS\DDSTextureLoader12.cpp" />
     <ClCompile Include="..\MS\WICTextureLoader12.cpp" />
     <ClCompile Include="Commands.cpp" />
     <ClCompile Include="Depth_stencil.cpp" />
@@ -197,6 +197,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\MS\d3dx12.h" />
+    <ClInclude Include="..\MS\DDSTextureLoader12.h" />
     <ClInclude Include="..\MS\WICTextureLoader12.h" />
     <ClInclude Include="Commands.h" />
     <ClInclude Include="Depth_stencil.h" />
@@ -221,6 +222,5 @@
     <ClInclude Include="windefmin.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets" />
 </Project>

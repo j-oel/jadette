@@ -96,7 +96,10 @@ float4 pixel_shader(pixel_shader_input input) : SV_TARGET
     if (!values.normal_mapped)
         normal = input.normal;
     else
+    {
         normal = normal_map.Sample(texture_sampler, input.texcoord).xyz;
+        normal = normalize(normal);
+    }
     const float3 eye = vectors.eye_position.xyz;
     const float3 light_unorm = vectors.light_position.xyz - input.position.xyz;
     const float3 light = normalize(light_unorm);
