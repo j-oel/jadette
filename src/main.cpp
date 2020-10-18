@@ -49,10 +49,9 @@ Config read_config(const std::string& config_file)
     if (!file.is_open())
         throw Could_not_open_file();
 
-    Config config {};
-    config.monitor = 1;
+    Config config;
 
-    while (file.is_open() && !file.eof())
+    while (file)
     {
         std::string input;
         file >> input;
@@ -80,6 +79,10 @@ Config read_config(const std::string& config_file)
         else if (input == "monitor")
         {
             file >> config.monitor;
+        }
+        else if (!input.empty() && input[0] == '#')
+        {
+            std::getline(file, input);
         }
         else if (input == "")
         {

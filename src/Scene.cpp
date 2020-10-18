@@ -343,7 +343,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
 
     auto subdir = "../resources/";
 
-    while (file.is_open() && !file.eof())
+    while (file)
     {
         string input;
         file >> input;
@@ -524,6 +524,10 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
 
             m_light_position = XMVectorSet(pos.x, pos.y, pos.z, 1.0f);
             m_light_focus_point = XMVectorSet(focus_point.x, focus_point.y, focus_point.z, 1.0f);
+        }
+        else if (!input.empty() && input[0] == '#')
+        {
+            std::getline(file, input);
         }
         else if (input == "")
         {

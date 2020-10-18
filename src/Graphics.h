@@ -15,6 +15,8 @@ class Input;
 
 struct Config
 {
+    Config() : width(800), height(600), monitor(1), borderless_windowed_fullscreen(false),
+        vsync(false) {}
     long width;
     long height;
     std::string scene_file;
