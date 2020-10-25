@@ -100,22 +100,20 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
         { "TRANSLATION", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 }
     };
 
-    D3D12_INPUT_ELEMENT_DESC input_element_desc_model_matrix[] =
+    D3D12_INPUT_ELEMENT_DESC input_element_desc_model_trans_rot[] =
     {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         { "TEXCOORD", 0, DXGI_FORMAT_R16G16_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "MODEL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-        { "MODEL", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-        { "MODEL", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
-        { "MODEL", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 }
+        { "TRANSLATION", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+        { "ROTATION", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 }
     };
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC s {};
     if (input_element_model == Input_element_model::translation)
         s.InputLayout = { input_element_desc_translation, _countof(input_element_desc_translation) };
-    else if (input_element_model == Input_element_model::matrix)
-        s.InputLayout = { input_element_desc_model_matrix, _countof(input_element_desc_model_matrix) };
+    else if (input_element_model == Input_element_model::trans_rot)
+        s.InputLayout = { input_element_desc_model_trans_rot, _countof(input_element_desc_model_trans_rot) };
     s.pRootSignature = root_signature.Get();
     s.VS = CD3DX12_SHADER_BYTECODE(vertex_shader.Get());
     s.PS = CD3DX12_SHADER_BYTECODE(pixel_shader.Get());

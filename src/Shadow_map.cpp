@@ -33,7 +33,7 @@ Shadow_map::Shadow_map(ComPtr<ID3D12Device> device,
     SET_DEBUG_NAME(m_pipeline_state_model_vector, L"Shadow Pipeline State Object Model Vector");
     create_pipeline_state(device, m_pipeline_state_model_matrix, m_root_signature.get(),
         "shadow_vertex_shader_model_matrix", "shadow_pixel_shader",
-        m_depth_stencil.dsv_format(), render_targets_count, Input_element_model::matrix);
+        m_depth_stencil.dsv_format(), render_targets_count, Input_element_model::trans_rot);
     SET_DEBUG_NAME(m_pipeline_state_model_matrix, L"Shadow Pipeline State Object Model Matrix");
 }
 

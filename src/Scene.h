@@ -17,6 +17,12 @@
 enum class Texture_mapping { enabled, disabled };
 enum class Input_element_model;
 
+struct Dynamic_object
+{
+    std::shared_ptr<Graphical_object> object;
+    int transform_ref;
+};
+
 class Scene
 {
 public:
@@ -39,8 +45,8 @@ public:
 private:
     void upload_resources_to_gpu(ComPtr<ID3D12Device> device,
         ComPtr<ID3D12GraphicsCommandList>& command_list);
-    void upload_instance_vector_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
-    void upload_instance_matrix_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    void upload_instance_translation_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
+    void upload_instance_trans_rot_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
         const std::vector<std::shared_ptr<Graphical_object> >& objects);
     void draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
         const std::vector<std::shared_ptr<Graphical_object> >& objects,
@@ -54,16 +60,18 @@ private:
     std::vector<std::shared_ptr<Graphical_object> > m_graphical_objects;
     std::vector<std::shared_ptr<Graphical_object> > m_static_objects;
     std::vector<std::shared_ptr<Graphical_object> > m_dynamic_objects;
-    std::vector<std::shared_ptr<Graphical_object> > m_flying_objects;
+    std::vector<Dynamic_object> m_flying_objects;
 
     std::vector<std::shared_ptr<Texture>> m_textures;
 
     DirectX::XMVECTOR m_light_position;
     DirectX::XMVECTOR m_light_focus_point;
 
-    std::vector<Per_instance_vector_data> m_translations;
+    std::vector<DirectX::XMVECTOR> m_trans;
+    std::vector<Per_instance_translation_data> m_translations;
+    std::vector<Per_instance_trans_rot> m_model_transforms;
     std::unique_ptr<Instance_data> m_instance_vector_data;
-    std::unique_ptr<Instance_data> m_instance_matrix_data;
+    std::unique_ptr<Instance_data> m_instance_trans_rot_data;
 
     int m_triangles_count;
 };

@@ -60,15 +60,16 @@ private:
 };
 
 
-struct Per_instance_vector_data
+struct Per_instance_translation_data
 {
     DirectX::PackedVector::XMHALF4 model;
 };
 
 
-struct Per_instance_matrix_data
+struct Per_instance_trans_rot
 {
-    DirectX::XMFLOAT4X4 model;
+    DirectX::PackedVector::XMHALF4 translation;
+    DirectX::PackedVector::XMHALF4 rotation;
 };
 
 
@@ -76,13 +77,13 @@ class Instance_data
 {
 public:
     Instance_data(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
-        UINT instance_count, Per_instance_vector_data data);
+        UINT instance_count, Per_instance_translation_data data);
     Instance_data(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
-        UINT instance_count, Per_instance_matrix_data data);
-    void upload_new_vector_data(ComPtr<ID3D12GraphicsCommandList>& command_list, 
-        const std::vector<Per_instance_vector_data>& instance_data);
-    void upload_new_matrix_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
-        const std::vector<Per_instance_matrix_data>& instance_data);
+        UINT instance_count, Per_instance_trans_rot data);
+    void upload_new_translation_data(ComPtr<ID3D12GraphicsCommandList>& command_list, 
+        const std::vector<Per_instance_translation_data>& instance_data);
+    void upload_new_trans_rot_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
+        const std::vector<Per_instance_trans_rot>& instance_data);
     D3D12_VERTEX_BUFFER_VIEW buffer_view() { return m_instance_vertex_buffer_view; }
 private:
     ComPtr<ID3D12Resource> m_instance_vertex_buffer;

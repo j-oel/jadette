@@ -194,7 +194,7 @@ void Graphics_impl::create_pipeline_states()
 
     create_pipeline_state(m_device, m_pipeline_state_model_matrix, m_root_signature.get(),
         "vertex_shader_model_matrix", "pixel_shader", DXGI_FORMAT_D32_FLOAT,
-        render_targets_count, Input_element_model::matrix);
+        render_targets_count, Input_element_model::trans_rot);
     SET_DEBUG_NAME(m_pipeline_state_model_matrix, L"Pipeline State Object Model Matrix");
 }
 

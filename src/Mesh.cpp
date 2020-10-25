@@ -175,11 +175,11 @@ void construct_instance_data(ComPtr<ID3D12Device> device,
 
 Instance_data::Instance_data(ComPtr<ID3D12Device> device,
     ComPtr<ID3D12GraphicsCommandList>& command_list,
-    UINT instance_count, Per_instance_vector_data data)
+    UINT instance_count, Per_instance_translation_data data)
 {
     if (instance_count == 0)
         return;
-    construct_instance_data<Per_instance_vector_data>(device, command_list, instance_count,
+    construct_instance_data<Per_instance_translation_data>(device, command_list, instance_count,
         m_instance_vertex_buffer, m_upload_resource, m_instance_vertex_buffer_view,
         m_vertex_buffer_size);
     SET_DEBUG_NAME(m_instance_vertex_buffer, L"Vector Instance Buffer");
@@ -187,11 +187,11 @@ Instance_data::Instance_data(ComPtr<ID3D12Device> device,
 
 Instance_data::Instance_data(ComPtr<ID3D12Device> device,
     ComPtr<ID3D12GraphicsCommandList>& command_list,
-    UINT instance_count, Per_instance_matrix_data data)
+    UINT instance_count, Per_instance_trans_rot data)
 {
     if (instance_count == 0)
         return;
-    construct_instance_data<Per_instance_matrix_data>(device, command_list, instance_count,
+    construct_instance_data<Per_instance_trans_rot>(device, command_list, instance_count,
         m_instance_vertex_buffer, m_upload_resource, m_instance_vertex_buffer_view,
         m_vertex_buffer_size);
     SET_DEBUG_NAME(m_instance_vertex_buffer, L"Matrix Instance Buffer");
@@ -210,15 +210,15 @@ void upload_new_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
         upload_resource, command_list);
 }
 
-void Instance_data::upload_new_vector_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    const std::vector<Per_instance_vector_data>& instance_data)
+void Instance_data::upload_new_translation_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    const std::vector<Per_instance_translation_data>& instance_data)
 {
     upload_new_data(command_list, instance_data, m_instance_vertex_buffer, m_upload_resource,
         m_vertex_buffer_size);
 }
 
-void Instance_data::upload_new_matrix_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    const std::vector<Per_instance_matrix_data>& instance_data)
+void Instance_data::upload_new_trans_rot_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    const std::vector<Per_instance_trans_rot>& instance_data)
 {
     upload_new_data(command_list, instance_data, m_instance_vertex_buffer, m_upload_resource,
         m_vertex_buffer_size);

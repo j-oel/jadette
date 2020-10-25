@@ -42,10 +42,64 @@ struct pixel_shader_input
     half2 texcoord : TEXCOORD;
 };
 
+// Converts a unit quaternion representing a rotation to a rotation matrix.
+half4x4 quaternion_to_matrix(half4 q)
+{
+    // DirectX quaternions has the scalar in w:
+    // q = w + xi + yj + zk
+
+    half qwqx = q.w * q.x;
+    half qwqy = q.w * q.y;
+    half qwqz = q.w * q.z;
+    half qx_2 = q.x * q.x;
+    half qxqy = q.x * q.y;
+    half qxqz = q.x * q.z;
+    half qy_2 = q.y * q.y;
+    half qyqz = q.y * q.z;
+    half qz_2 = q.z * q.z;
+
+    half4x4 mat;
+
+    mat._11 = 1 - 2 * qy_2 - 2 * qz_2;
+    mat._12 = 2 * qxqy - 2 * qwqz;
+    mat._13 = 2 * qxqz + 2 * qwqy;
+
+    mat._21 = 2 * qxqy + 2 * qwqz;
+    mat._22 = 1 - 2 * qx_2 - 2 * qz_2;
+    mat._23 = 2 * qyqz - 2 * qwqx;
+
+    mat._31 = 2 * qxqz - 2 * qwqy;
+    mat._32 = 2 * qyqz + 2 * qwqx;
+    mat._33 = 1 - 2 * qx_2 - 2 * qy_2;
+
+    mat._14 = 0;
+    mat._24 = 0;
+    mat._34 = 0;
+    mat._44 = 1;
+
+    mat._41 = 0;
+    mat._42 = 0;
+    mat._43 = 0;
+
+    return mat;
+}
+
+half4x4 to_model_matrix(half4 translation, half4 rotation)
+{
+    half4x4 model = quaternion_to_matrix(rotation);
+    model._14 = translation.x;
+    model._24 = translation.y;
+    model._34 = translation.z;
+    model._44 = translation.w;
+    return model;
+}
+
 pixel_shader_input vertex_shader_model_matrix(float4 position : POSITION, float3 normal : NORMAL,
-    float2 texcoord : TEXCOORD, float4x4 model : MODEL)
+    float2 texcoord : TEXCOORD, half4 translation : TRANSLATION, half4 rotation : ROTATION)
 {
     pixel_shader_input result;
+
+    half4x4 model = to_model_matrix(translation, rotation);
 
     float4x4 model_view_projection = mul(matrices.view_projection, model);
     result.sv_position = mul(model_view_projection, position);
@@ -62,11 +116,7 @@ pixel_shader_input vertex_shader_model_matrix(float4 position : POSITION, float3
 pixel_shader_input vertex_shader_model_vector(float4 position : POSITION, float3 normal : NORMAL,
     float2 texcoord : TEXCOORD, half4 translation : TRANSLATION)
 {
-    float4x4 model = { 1, 0, 0, translation.x,
-                   0, 1, 0 , translation.y,
-                   0, 0, 1, translation.z,
-                   0, 0, 0, 1 };
-    return vertex_shader_model_matrix(position, normal, texcoord, model);
+    return vertex_shader_model_matrix(position, normal, texcoord, translation, half4(0, 0, 0, 1));
 }
 
 
@@ -121,9 +171,11 @@ struct shadow_pixel_shader_input
 
 
 shadow_pixel_shader_input shadow_vertex_shader_model_matrix(float4 position : POSITION,
-    float3 normal : NORMAL, float2 texcoord : TEXCOORD, float4x4 model : MODEL)
+    float3 normal : NORMAL, float2 texcoord : TEXCOORD, half4 translation : TRANSLATION, 
+    half4 rotation : ROTATION)
 {
     shadow_pixel_shader_input result;
+    half4x4 model = to_model_matrix(translation, rotation);
     float4x4 model_view_projection = mul(matrices.view_projection, model);
     result.sv_position = mul(model_view_projection, position);
     return result;
@@ -133,11 +185,7 @@ shadow_pixel_shader_input shadow_vertex_shader_model_matrix(float4 position : PO
 shadow_pixel_shader_input shadow_vertex_shader_model_vector(float4 position : POSITION,
     float3 normal : NORMAL, float2 texcoord : TEXCOORD, half4 translation : TRANSLATION)
 {
-    float4x4 model = { 1, 0, 0, translation.x,
-                   0, 1, 0 , translation.y,
-                   0, 0, 1, translation.z,
-                   0, 0, 0, 1 };
-    return shadow_vertex_shader_model_matrix(position, normal, texcoord, model);
+    return shadow_vertex_shader_model_matrix(position, normal, texcoord, translation, half4(0, 0, 0, 1));
 }
 
 void shadow_pixel_shader(shadow_pixel_shader_input input)

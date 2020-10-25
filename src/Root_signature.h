@@ -34,7 +34,7 @@ protected:
 };
 
 
-enum class Input_element_model { translation, matrix };
+enum class Input_element_model { translation, trans_rot };
 
 void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineState>& pipeline_state,
     ComPtr<ID3D12RootSignature> root_signature,
