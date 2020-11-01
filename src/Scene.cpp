@@ -74,9 +74,10 @@ void convert_vector_to_half4(DirectX::PackedVector::XMHALF4& half4, const Direct
 Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int texture_start_index,
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures,
     int root_param_index_of_values, int root_param_index_of_normal_maps, 
-    int normal_map_flag_offset) :
-    m_triangles_count(0),
-    m_light_position(XMVectorSet(0.0f, 20.0f, 5.0f, 1.0f))
+    int normal_map_flag_offset, int descriptor_index_of_instance_data) :
+    m_light_position(XMVectorSet(0.0f, 20.0f, 5.0f, 1.0f)),
+    m_root_param_index_of_values(root_param_index_of_values),
+    m_triangles_count(0)
 {
 
     // Initialize COM, needed by Windows Imaging Component (WIC)
@@ -176,7 +177,8 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
     m_instance_vector_data = std::make_unique<Instance_data>(device, command_list,
         static_cast<UINT>(m_graphical_objects.size()), Per_instance_translation_data());
     m_instance_trans_rot_data = std::make_unique<Instance_data>(device, command_list,
-        static_cast<UINT>(m_dynamic_objects.size()), Per_instance_trans_rot());
+        static_cast<UINT>(m_dynamic_objects.size()), Per_instance_trans_rot(), texture_descriptor_heap,
+        descriptor_index_of_instance_data);
 
     upload_resources_to_gpu(device, command_list);
     for (auto& g : m_graphical_objects)
@@ -274,18 +276,94 @@ void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
         }
         else if (input_element_model == Input_element_model::trans_rot)
         {
+            D3D12_VERTEX_BUFFER_VIEW v {};
+            constexpr UINT offset = 0;
+            constexpr UINT size_in_words_of_value = 1;
+            command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
+                size_in_words_of_value, &i, offset);
             if (texture_mapping == Texture_mapping::enabled)
-                graphical_object->draw_textured(command_list,
-                    m_instance_trans_rot_data->buffer_view(), static_cast<int>(i));
+                graphical_object->draw_textured(command_list, v, static_cast<int>(i));
             else
-                graphical_object->draw(command_list, m_instance_trans_rot_data->buffer_view(),
-                    static_cast<int>(i));
+                graphical_object->draw(command_list, v, static_cast<int>(i));
         }
 
         // If instances() returns more than 1, those additional instances were already drawn
         // by the last draw call and the corresponding graphical objects should hence be skipped.
         i += graphical_object->instances();
     }
+}
+
+void Scene::draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    Texture_mapping texture_mapping) const
+{
+    draw_objects(command_list, m_static_objects, texture_mapping, Input_element_model::translation);
+}
+
+void Scene::draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    Texture_mapping texture_mapping) const
+{
+    draw_objects(command_list, m_dynamic_objects, texture_mapping, Input_element_model::trans_rot);
+}
+
+void Scene::upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
+{
+    if (!m_graphical_objects.empty())
+        upload_instance_translation_data(command_list);
+    if (!m_dynamic_objects.empty())
+        upload_instance_trans_rot_data(command_list, m_dynamic_objects);
+}
+
+void Scene::upload_instance_translation_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
+{
+    static bool first = true;
+    if (first)
+    {
+        m_instance_vector_data->upload_new_translation_data(command_list, m_translations);
+        first = false;
+    }
+}
+
+void Scene::upload_instance_trans_rot_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    const std::vector<std::shared_ptr<Graphical_object> >& objects)
+{
+    m_instance_trans_rot_data->upload_new_trans_rot_data(command_list, m_model_transforms);
+}
+
+void Scene::set_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    int root_param_index_of_instance_data)
+{
+    command_list->SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
+        m_instance_trans_rot_data->srv_gpu_handle());
+}
+
+void Scene::upload_resources_to_gpu(ComPtr<ID3D12Device> device,
+    ComPtr<ID3D12GraphicsCommandList>& command_list)
+{
+    D3D12_COMMAND_QUEUE_DESC desc{};
+    desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    ComPtr<ID3D12CommandQueue> command_queue;
+    throw_if_failed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&command_queue)));
+
+    ComPtr<ID3D12Fence> fence;
+    enum Resources_uploaded { not_done, done };
+    throw_if_failed(device->CreateFence(Resources_uploaded::not_done, D3D12_FENCE_FLAG_NONE,
+        IID_PPV_ARGS(&fence)));
+    constexpr BOOL manual_reset = FALSE;
+    constexpr BOOL initial_state = FALSE;
+    constexpr LPSECURITY_ATTRIBUTES attributes = nullptr;
+    HANDLE resources_uploaded = CreateEvent(attributes, manual_reset, initial_state,
+        L"Resources Uploaded");
+
+    throw_if_failed(fence->SetEventOnCompletion(Resources_uploaded::done, resources_uploaded));
+
+    throw_if_failed(command_list->Close());
+    ID3D12CommandList* const list = command_list.Get();
+    constexpr UINT command_list_count = 1;
+    command_queue->ExecuteCommandLists(command_list_count, &list);
+    command_queue->Signal(fence.Get(), Resources_uploaded::done);
+
+    constexpr DWORD time_to_wait = 2000; // ms
+    WaitForSingleObject(resources_uploaded, time_to_wait);
 }
 
 void throw_if_file_not_openable(const std::string& file_name)
@@ -562,68 +640,5 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
     }
 }
 
-void Scene::draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    Texture_mapping texture_mapping) const
-{
-    draw_objects(command_list, m_static_objects, texture_mapping, Input_element_model::translation);
-}
 
-void Scene::draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    Texture_mapping texture_mapping) const
-{
-    draw_objects(command_list, m_dynamic_objects, texture_mapping, Input_element_model::trans_rot);
-}
 
-void Scene::upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
-{
-    if (!m_graphical_objects.empty())
-        upload_instance_translation_data(command_list);
-    if (!m_dynamic_objects.empty())
-        upload_instance_trans_rot_data(command_list, m_dynamic_objects);
-}
-
-void Scene::upload_instance_translation_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
-{
-    static bool first = true;
-    if (first)
-    {
-        m_instance_vector_data->upload_new_translation_data(command_list, m_translations);
-        first = false;
-    }
-}
-
-void Scene::upload_instance_trans_rot_data(ComPtr<ID3D12GraphicsCommandList>& command_list, 
-    const std::vector<std::shared_ptr<Graphical_object> >& objects)
-{
-    m_instance_trans_rot_data->upload_new_trans_rot_data(command_list, m_model_transforms);
-}
-
-void Scene::upload_resources_to_gpu(ComPtr<ID3D12Device> device, 
-    ComPtr<ID3D12GraphicsCommandList>& command_list)
-{
-    D3D12_COMMAND_QUEUE_DESC desc {};
-    desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-    ComPtr<ID3D12CommandQueue> command_queue;
-    throw_if_failed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&command_queue)));
-
-    ComPtr<ID3D12Fence> fence;
-    enum Resources_uploaded { not_done, done };
-    throw_if_failed(device->CreateFence(Resources_uploaded::not_done, D3D12_FENCE_FLAG_NONE,
-        IID_PPV_ARGS(&fence)));
-    constexpr BOOL manual_reset = FALSE;
-    constexpr BOOL initial_state = FALSE;
-    constexpr LPSECURITY_ATTRIBUTES attributes = nullptr;
-    HANDLE resources_uploaded = CreateEvent(attributes, manual_reset, initial_state,
-        L"Resources Uploaded");
-
-    throw_if_failed(fence->SetEventOnCompletion(Resources_uploaded::done, resources_uploaded));
-
-    throw_if_failed(command_list->Close());
-    ID3D12CommandList* const list = command_list.Get();
-    constexpr UINT command_list_count = 1;
-    command_queue->ExecuteCommandLists(command_list_count, &list);
-    command_queue->Signal(fence.Get(), Resources_uploaded::done);
-
-    constexpr DWORD time_to_wait = 2000; // ms
-    WaitForSingleObject(resources_uploaded, time_to_wait);
-}

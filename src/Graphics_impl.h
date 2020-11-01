@@ -35,14 +35,14 @@ public:
     virtual void set_constants(ComPtr<ID3D12GraphicsCommandList> command_list, 
         Scene* scene, View* view, Shadow_map* shadow_map);
 
-    const int m_root_param_index_of_matrices = 0;
-    const int m_root_param_index_of_textures = 1;
-    const int m_root_param_index_of_vectors = 2;
-    const int m_root_param_index_of_shadow_map = 3;
-    const int m_root_param_index_of_values = 4;
+    const int m_root_param_index_of_values = 0;
+    const int m_root_param_index_of_matrices = 1;
+    const int m_root_param_index_of_textures = 2;
+    const int m_root_param_index_of_vectors = 3;
+    const int m_root_param_index_of_shadow_map = 4;
     const int m_root_param_index_of_normal_maps = 5;
+    const int m_root_param_index_of_instance_data = 6;
 };
-
 
 
 class Graphics_impl
@@ -68,7 +68,7 @@ private:
     ComPtr<ID3D12DescriptorHeap> m_texture_descriptor_heap;
     int m_textures_count;
     Depth_stencil m_depth_stencil;
-    ComPtr<ID3D12PipelineState> m_pipeline_state_model_matrix;
+    ComPtr<ID3D12PipelineState> m_pipeline_state_srv_instance_data;
     ComPtr<ID3D12PipelineState> m_pipeline_state_model_vector;
 
     Shadow_map m_shadow_map;

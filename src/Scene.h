@@ -29,7 +29,8 @@ public:
     Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int texture_start_index,
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
         int root_param_index_of_textures, int root_param_index_of_values,
-        int root_param_index_of_normal_maps, int normal_map_flag_offset);
+        int root_param_index_of_normal_maps, int normal_map_flag_offset,
+        int descriptor_index_of_instance_data);
     ~Scene();
     void update();
 
@@ -42,6 +43,8 @@ public:
     size_t objects_count() const { return m_graphical_objects.size(); }
     DirectX::XMVECTOR light_position() const { return m_light_position; }
     DirectX::XMVECTOR light_focus_point() const { return m_light_focus_point; }
+    void set_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+        int root_param_index_of_instance_data);
 private:
     void upload_resources_to_gpu(ComPtr<ID3D12Device> device,
         ComPtr<ID3D12GraphicsCommandList>& command_list);
@@ -72,6 +75,8 @@ private:
     std::vector<Per_instance_trans_rot> m_model_transforms;
     std::unique_ptr<Instance_data> m_instance_vector_data;
     std::unique_ptr<Instance_data> m_instance_trans_rot_data;
+
+    int m_root_param_index_of_values;
 
     int m_triangles_count;
 };

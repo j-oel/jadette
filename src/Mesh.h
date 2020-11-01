@@ -34,7 +34,7 @@ public:
 
     void release_temp_resources();
 
-    void draw(ComPtr<ID3D12GraphicsCommandList> commandList, 
+    void draw(ComPtr<ID3D12GraphicsCommandList> command_list, 
         D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view, int instance_id,
         int draw_instances_count);
 
@@ -79,16 +79,18 @@ public:
     Instance_data(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
         UINT instance_count, Per_instance_translation_data data);
     Instance_data(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
-        UINT instance_count, Per_instance_trans_rot data);
+        UINT instance_count, Per_instance_trans_rot data,
+        ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index);
     void upload_new_translation_data(ComPtr<ID3D12GraphicsCommandList>& command_list, 
         const std::vector<Per_instance_translation_data>& instance_data);
     void upload_new_trans_rot_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
         const std::vector<Per_instance_trans_rot>& instance_data);
+    D3D12_GPU_DESCRIPTOR_HANDLE srv_gpu_handle() { return m_structured_buffer_gpu_descriptor_handle; }
     D3D12_VERTEX_BUFFER_VIEW buffer_view() { return m_instance_vertex_buffer_view; }
 private:
     ComPtr<ID3D12Resource> m_instance_vertex_buffer;
     ComPtr<ID3D12Resource> m_upload_resource;
     D3D12_VERTEX_BUFFER_VIEW m_instance_vertex_buffer_view;
+    D3D12_GPU_DESCRIPTOR_HANDLE m_structured_buffer_gpu_descriptor_handle;
     UINT m_vertex_buffer_size;
 };
-

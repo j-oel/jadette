@@ -29,7 +29,7 @@ protected:
     void init_descriptor_table(CD3DX12_ROOT_PARAMETER1& root_parameter, 
         CD3DX12_DESCRIPTOR_RANGE1& descriptor_range, UINT base_register);
     void init_matrices(CD3DX12_ROOT_PARAMETER1& root_parameter, UINT count, 
-        UINT shader_register = 0);
+        UINT shader_register);
     ComPtr<ID3D12RootSignature> m_root_signature;
 };
 

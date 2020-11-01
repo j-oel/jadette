@@ -50,14 +50,19 @@ UINT texture_index_for_shadow_map()
     return 1;
 }
 
-UINT texture_index_for_diffuse_textures()
+UINT descriptor_index_for_instance_data()
 {
     return 2;
 }
 
+UINT texture_index_for_diffuse_textures()
+{
+    return 3;
+}
+
 UINT value_offset_for_shadow_mapping_flag()
 {
-    return 1;
+    return 2;
 }
 
 Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
@@ -73,7 +78,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
         m_texture_descriptor_heap, m_root_signature.m_root_param_index_of_textures,
         m_root_signature.m_root_param_index_of_values,
         m_root_signature.m_root_param_index_of_normal_maps,
-        value_offset_for_shadow_mapping_flag()),
+        value_offset_for_shadow_mapping_flag(), descriptor_index_for_instance_data()),
     m_view_controller(input, window),
     m_view(config.width, config.height, XMVectorSet(0.0f, 0.0f, -10.0f, 1.0f), 
         XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 0.1f, 4000.0f),
@@ -192,10 +197,11 @@ void Graphics_impl::create_pipeline_states()
         render_targets_count, Input_element_model::translation);
     SET_DEBUG_NAME(m_pipeline_state_model_vector, L"Pipeline State Object Model Vector");
 
-    create_pipeline_state(m_device, m_pipeline_state_model_matrix, m_root_signature.get(),
-        "vertex_shader_model_matrix", "pixel_shader", DXGI_FORMAT_D32_FLOAT,
+    create_pipeline_state(m_device, m_pipeline_state_srv_instance_data, m_root_signature.get(),
+        "vertex_shader_srv_instance_data", "pixel_shader", DXGI_FORMAT_D32_FLOAT,
         render_targets_count, Input_element_model::trans_rot);
-    SET_DEBUG_NAME(m_pipeline_state_model_matrix, L"Pipeline State Object Model Matrix");
+
+    SET_DEBUG_NAME(m_pipeline_state_srv_instance_data, L"Pipeline State Object SRV instance data");
 }
 
 ComPtr<ID3D12GraphicsCommandList> Graphics_impl::create_main_command_list()
@@ -219,14 +225,14 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
 {
     Commands& c = m_commands;
     c.upload_instance_data();
+    c.set_descriptor_heap(m_texture_descriptor_heap);
     c.record_shadow_map_generation_commands_in_command_list();
     c.set_root_signature();
     set_and_clear_render_target();
     c.clear_depth_stencil();
-    c.set_descriptor_heap(m_texture_descriptor_heap);
     c.set_shader_constants();
     c.draw_static_objects(m_pipeline_state_model_vector);
-    c.draw_dynamic_objects(m_pipeline_state_model_matrix);
+    c.draw_dynamic_objects(m_pipeline_state_srv_instance_data);
 
     // If text is enabled, the text object takes care of the render target state transition.
 #ifdef NO_TEXT
@@ -240,33 +246,38 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
 Main_root_signature::Main_root_signature(ComPtr<ID3D12Device> device,
     const Shadow_map& shadow_map)
 {
-    constexpr int root_parameters_count = 6;
+    constexpr int root_parameters_count = 7;
     CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count] {};
 
-    constexpr int matrices_count = 2;
+    constexpr int values_count = 3;
     UINT shader_register = 0;
-    init_matrices(root_parameters[m_root_param_index_of_matrices], matrices_count, shader_register);
-
-    constexpr int vectors_count = 2;
     constexpr int register_space = 0;
+    root_parameters[m_root_param_index_of_values].InitAsConstants(
+        values_count, shader_register, register_space, D3D12_SHADER_VISIBILITY_ALL);
+
+    constexpr int matrices_count = 2;
+    ++shader_register;
+    init_matrices(root_parameters[m_root_param_index_of_matrices], matrices_count, shader_register);
+    constexpr int vectors_count = 2;
     ++shader_register;
     root_parameters[m_root_param_index_of_vectors].InitAsConstants(
         vectors_count * size_in_words_of_XMVECTOR, shader_register, register_space,
         D3D12_SHADER_VISIBILITY_PIXEL);
 
-    constexpr int values_count = 2;
-    ++shader_register;
-    root_parameters[m_root_param_index_of_values].InitAsConstants(
-        values_count, shader_register, register_space, D3D12_SHADER_VISIBILITY_PIXEL);
-
     UINT base_register = 0;
-    CD3DX12_DESCRIPTOR_RANGE1 descriptor_range1, descriptor_range2, descriptor_range3;
+    CD3DX12_DESCRIPTOR_RANGE1 descriptor_range1, descriptor_range2, descriptor_range3,
+        descriptor_range4;
     init_descriptor_table(root_parameters[m_root_param_index_of_textures], 
         descriptor_range1, base_register);
     init_descriptor_table(root_parameters[m_root_param_index_of_shadow_map], 
         descriptor_range2, ++base_register);
     init_descriptor_table(root_parameters[m_root_param_index_of_normal_maps],
         descriptor_range3, ++base_register);
+    init_descriptor_table(root_parameters[m_root_param_index_of_instance_data],
+        descriptor_range4, ++base_register);
+
+    root_parameters[m_root_param_index_of_instance_data].ShaderVisibility = 
+        D3D12_SHADER_VISIBILITY_VERTEX;
 
     UINT sampler_shader_register = 0;
     CD3DX12_STATIC_SAMPLER_DESC texture_sampler_description;
@@ -302,4 +313,6 @@ void Main_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> comman
         m_root_param_index_of_values, m_root_param_index_of_matrices, shadow_transform_offset);
 
     view->set_view(command_list, m_root_param_index_of_matrices);
+
+    scene->set_instance_data_shader_constant(command_list, m_root_param_index_of_instance_data);
 }

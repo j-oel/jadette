@@ -111,7 +111,7 @@ void Dx12_display::create_device_and_swap_chain(HWND window)
     add_debug_settings(dxgi_factory_flags);
 #endif
 
-    ComPtr<IDXGIFactory7> dxgi_factory;
+    ComPtr<IDXGIFactory5> dxgi_factory;
     throw_if_failed(CreateDXGIFactory2(dxgi_factory_flags, IID_PPV_ARGS(&dxgi_factory)));
 
     create_device(dxgi_factory);
@@ -122,7 +122,7 @@ void Dx12_display::create_device_and_swap_chain(HWND window)
     throw_if_failed(dxgi_factory->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
 }
 
-void Dx12_display::create_device(ComPtr<IDXGIFactory7> dxgi_factory)
+void Dx12_display::create_device(ComPtr<IDXGIFactory5> dxgi_factory)
 {
     ComPtr<IDXGIAdapter1> adapter = nullptr;
 
@@ -146,7 +146,7 @@ void Dx12_display::create_device(ComPtr<IDXGIFactory7> dxgi_factory)
     }
 }
 
-void Dx12_display::create_swap_chain(HWND window, ComPtr<IDXGIFactory7> dxgi_factory)
+void Dx12_display::create_swap_chain(HWND window, ComPtr<IDXGIFactory5> dxgi_factory)
 {
     BOOL allow_tearing = FALSE;
     HRESULT hr = dxgi_factory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING,

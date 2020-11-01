@@ -31,19 +31,35 @@ Shadow_map::Shadow_map(ComPtr<ID3D12Device> device,
         "shadow_vertex_shader_model_vector", "shadow_pixel_shader",
         m_depth_stencil.dsv_format(), render_targets_count, Input_element_model::translation);
     SET_DEBUG_NAME(m_pipeline_state_model_vector, L"Shadow Pipeline State Object Model Vector");
-    create_pipeline_state(device, m_pipeline_state_model_matrix, m_root_signature.get(),
-        "shadow_vertex_shader_model_matrix", "shadow_pixel_shader",
+
+    create_pipeline_state(device, m_pipeline_state_srv_instance_data, m_root_signature.get(),
+        "shadow_vertex_shader_srv_instance_data", "shadow_pixel_shader",
         m_depth_stencil.dsv_format(), render_targets_count, Input_element_model::trans_rot);
-    SET_DEBUG_NAME(m_pipeline_state_model_matrix, L"Shadow Pipeline State Object Model Matrix");
+    SET_DEBUG_NAME(m_pipeline_state_srv_instance_data,
+        L"Shadow Pipeline State Object SRV instance data");
 }
 
 Shadow_map_root_signature::Shadow_map_root_signature(ComPtr<ID3D12Device> device)
 {
-    constexpr int root_parameters_count = 1;
+    constexpr int root_parameters_count = 3;
     CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count] {};
 
+    constexpr int values_count = 3;
+    UINT shader_register = 0;
+    constexpr int register_space = 0;
+    root_parameters[m_root_param_index_of_values].InitAsConstants(
+        values_count, shader_register, register_space, D3D12_SHADER_VISIBILITY_ALL);
+
+    ++shader_register;
     constexpr int matrices_count = 1;
-    init_matrices(root_parameters[m_root_param_index_of_matrices], matrices_count);
+    init_matrices(root_parameters[m_root_param_index_of_matrices], matrices_count, shader_register);
+
+    UINT base_register = 3;
+    CD3DX12_DESCRIPTOR_RANGE1 descriptor_range;
+    init_descriptor_table(root_parameters[m_root_param_index_of_instance_data],
+        descriptor_range, base_register);
+    root_parameters[m_root_param_index_of_instance_data].ShaderVisibility =
+        D3D12_SHADER_VISIBILITY_VERTEX;
 
     constexpr int samplers_count = 0;
     create(device, root_parameters, _countof(root_parameters), nullptr, samplers_count);
@@ -55,6 +71,8 @@ void Shadow_map_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> 
     Scene* scene, View* view, Shadow_map* shadow_map)
 {
     view->set_view(command_list, m_root_param_index_of_matrices);
+    scene->set_instance_data_shader_constant(command_list,
+        m_root_param_index_of_instance_data);
 }
 
 void set_render_target(ComPtr<ID3D12GraphicsCommandList> command_list,
@@ -89,7 +107,7 @@ void Shadow_map::record_shadow_map_generation_commands_in_command_list(Scene& sc
     set_render_target(command_list, m_depth_stencil);
     c.clear_depth_stencil();
     c.draw_static_objects(m_pipeline_state_model_vector);
-    c.draw_dynamic_objects(m_pipeline_state_model_matrix);
+    c.draw_dynamic_objects(m_pipeline_state_srv_instance_data);
 
     m_depth_stencil.barrier_transition(command_list, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
@@ -102,11 +120,10 @@ void Shadow_map::set_shadow_map_for_shader(ComPtr<ID3D12GraphicsCommandList> com
 {
     command_list->SetGraphicsRootDescriptorTable(root_param_index_of_shadow_map,
         m_depth_stencil.gpu_handle());
-    constexpr UINT offset = 0;
+    constexpr UINT offset = 1;
     constexpr UINT size_in_words_of_value = 1;
     command_list->SetGraphicsRoot32BitConstants(root_param_index_of_values,
         size_in_words_of_value, &m_size, offset);
-
     command_list->SetGraphicsRoot32BitConstants(root_param_index_of_matrices,
         size_in_words_of_XMMATRIX, &m_shadow_transform, shadow_transform_offset);
 }

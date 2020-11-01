@@ -36,9 +36,10 @@ model cube_from_file cube.obj
 # Then <object_count_x> * <object_count_y> * <object_count_z> instanced objects
 # will be created.
 
+
 array dynamic cube_from_file pattern 1 0 0 3 3 3 3.0 3.0 3.0
 model cube_model cube
-array static cube_model pattern 0 0 0 40 40 40 -3.0 3.0 3.0
+array dynamic cube_model pattern 0 0 0 40 40 40 -3.0 3.0 3.0
 
 model platform_model platform.obj
 

@@ -6,7 +6,7 @@
 
 
 #pragma once
-
+//#define NO_TEXT
 
 #include "dx12min.h"
 
@@ -43,8 +43,8 @@ public:
     UINT back_buf_index() { return m_back_buf_index; }
 private:
     void create_device_and_swap_chain(HWND window);
-    void create_device(ComPtr<IDXGIFactory7> dxgi_factory);
-    void create_swap_chain(HWND window, ComPtr<IDXGIFactory7> dxgi_factory);
+    void create_device(ComPtr<IDXGIFactory5> dxgi_factory);
+    void create_swap_chain(HWND window, ComPtr<IDXGIFactory5> dxgi_factory);
     void create_command_queue();
     void create_per_swap_chain_buffer_objects();
 

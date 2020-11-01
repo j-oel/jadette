@@ -5,30 +5,40 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
+struct values_struct
+{
+    uint object_id;
+    int shadow_map_size;
+    int normal_mapped;
+};
+ConstantBuffer<values_struct> values : register(b0);
+
 struct matrices_struct
 {
     float4x4 view_projection;
     float4x4 transform_to_shadow_map_space;
 };
-ConstantBuffer<matrices_struct> matrices : register(b0);
+ConstantBuffer<matrices_struct> matrices : register(b1);
 
 struct vectors_struct
 {
     float4 eye_position;
     float4 light_position;
 };
-ConstantBuffer<vectors_struct> vectors : register(b1);
+ConstantBuffer<vectors_struct> vectors : register(b2);
 
-struct values_struct
-{
-    int shadow_map_size;
-    int normal_mapped;
-};
-ConstantBuffer<values_struct> values : register(b2);
 
 Texture2D<float4> tex : register(t0);
 Texture2D<float> shadow_map : register(t1);
 Texture2D<float4> normal_map : register(t2);
+
+struct instance_trans_rot_struct
+{
+    uint4 value;
+};
+
+StructuredBuffer<instance_trans_rot_struct> instance : register(t3);
+
 
 sampler texture_sampler : register(s0);
 SamplerComparisonState shadow_sampler : register(s1);
@@ -94,12 +104,11 @@ half4x4 to_model_matrix(half4 translation, half4 rotation)
     return model;
 }
 
+
 pixel_shader_input vertex_shader_model_matrix(float4 position : POSITION, float3 normal : NORMAL,
-    float2 texcoord : TEXCOORD, half4 translation : TRANSLATION, half4 rotation : ROTATION)
+    float2 texcoord : TEXCOORD, half4x4 model : MODEL)
 {
     pixel_shader_input result;
-
-    half4x4 model = to_model_matrix(translation, rotation);
 
     float4x4 model_view_projection = mul(matrices.view_projection, model);
     result.sv_position = mul(model_view_projection, position);
@@ -113,10 +122,33 @@ pixel_shader_input vertex_shader_model_matrix(float4 position : POSITION, float3
     return result;
 }
 
+
+pixel_shader_input vertex_shader_srv_instance_data(uint instance_id : SV_InstanceID, 
+    float4 position : POSITION, float3 normal : NORMAL,
+    float2 texcoord : TEXCOORD)
+{
+    const uint index = values.object_id + instance_id; 
+    uint4 v = instance[index].value;
+
+    float4 translation = float4(f16tof32(v.x), f16tof32(v.x >> 16), f16tof32(v.y), f16tof32(v.y >> 16));
+    float4 rotation = float4(f16tof32(v.z), f16tof32(v.z >> 16), f16tof32(v.w), f16tof32(v.w >> 16));
+
+    half4x4 model = to_model_matrix(translation, rotation);
+
+    return vertex_shader_model_matrix(position, normal, texcoord, model);
+}
+
+pixel_shader_input vertex_shader_model_trans_rot(float4 position : POSITION, float3 normal : NORMAL,
+    float2 texcoord : TEXCOORD, half4 translation : TRANSLATION, half4 rotation : ROTATION)
+{
+    half4x4 model = to_model_matrix(translation, rotation);
+    return vertex_shader_model_matrix(position, normal, texcoord, model);
+}
+
 pixel_shader_input vertex_shader_model_vector(float4 position : POSITION, float3 normal : NORMAL,
     float2 texcoord : TEXCOORD, half4 translation : TRANSLATION)
 {
-    return vertex_shader_model_matrix(position, normal, texcoord, translation, half4(0, 0, 0, 1));
+    return vertex_shader_model_trans_rot(position, normal, texcoord, translation, half4(0, 0, 0, 1));
 }
 
 
@@ -170,7 +202,7 @@ struct shadow_pixel_shader_input
 };
 
 
-shadow_pixel_shader_input shadow_vertex_shader_model_matrix(float4 position : POSITION,
+shadow_pixel_shader_input shadow_vertex_shader_model_trans_rot(float4 position : POSITION,
     float3 normal : NORMAL, float2 texcoord : TEXCOORD, half4 translation : TRANSLATION, 
     half4 rotation : ROTATION)
 {
@@ -181,11 +213,23 @@ shadow_pixel_shader_input shadow_vertex_shader_model_matrix(float4 position : PO
     return result;
 }
 
+shadow_pixel_shader_input shadow_vertex_shader_srv_instance_data(uint instance_id : SV_InstanceID,
+    float4 position : POSITION, float3 normal : NORMAL, float2 texcoord : TEXCOORD)
+{
+    const uint index = values.object_id + instance_id;
+    uint4 v = instance[index].value;
+
+    float4 translation = float4(f16tof32(v.x), f16tof32(v.x >> 16), f16tof32(v.y), f16tof32(v.y >> 16));
+    float4 rotation = float4(f16tof32(v.z), f16tof32(v.z >> 16), f16tof32(v.w), f16tof32(v.w >> 16));
+
+    return shadow_vertex_shader_model_trans_rot(position, normal, texcoord, translation, rotation);
+}
+
 
 shadow_pixel_shader_input shadow_vertex_shader_model_vector(float4 position : POSITION,
     float3 normal : NORMAL, float2 texcoord : TEXCOORD, half4 translation : TRANSLATION)
 {
-    return shadow_vertex_shader_model_matrix(position, normal, texcoord, translation, half4(0, 0, 0, 1));
+    return shadow_vertex_shader_model_trans_rot(position, normal, texcoord, translation, half4(0, 0, 0, 1));
 }
 
 void shadow_pixel_shader(shadow_pixel_shader_input input)
