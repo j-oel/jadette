@@ -70,8 +70,9 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     m_device(m_dx12_display->device()),
     m_textures_count(create_texture_descriptor_heap()),
     m_depth_stencil(m_device, config.width, config.height, 
-        Bit_depth::bpp32, D3D12_RESOURCE_STATE_DEPTH_WRITE,
+        Bit_depth::bpp16, D3D12_RESOURCE_STATE_DEPTH_WRITE,
         m_texture_descriptor_heap, texture_index_for_depth_buffer()),
+    m_depth_pass(m_device, m_depth_stencil.dsv_format()),
     m_shadow_map(m_device, m_texture_descriptor_heap, texture_index_for_shadow_map()),
     m_root_signature(m_device, m_shadow_map),
     m_scene(m_device, "../resources/" + config.scene_file, texture_index_for_diffuse_textures(),
@@ -83,7 +84,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     m_view(config.width, config.height, XMVectorSet(0.0f, 0.0f, -10.0f, 1.0f), 
         XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 0.1f, 4000.0f),
     m_commands(create_main_command_list(), &m_depth_stencil, Texture_mapping::enabled,
-        &m_view, &m_scene, &m_root_signature, &m_shadow_map),
+        &m_view, &m_scene, &m_depth_pass, &m_root_signature, &m_shadow_map),
     m_input(input),
     m_width(config.width),
     m_height(config.height),
@@ -193,13 +194,13 @@ void Graphics_impl::create_pipeline_states()
     UINT render_targets_count = 1;
 
     create_pipeline_state(m_device, m_pipeline_state_model_vector, m_root_signature.get(),
-        "vertex_shader_model_vector", "pixel_shader", DXGI_FORMAT_D32_FLOAT,
-        render_targets_count, Input_element_model::translation);
+        "vertex_shader_model_vector", "pixel_shader", DXGI_FORMAT_D16_UNORM,
+        render_targets_count, Input_element_model::translation, Depth_write::disabled);
     SET_DEBUG_NAME(m_pipeline_state_model_vector, L"Pipeline State Object Model Vector");
 
     create_pipeline_state(m_device, m_pipeline_state_srv_instance_data, m_root_signature.get(),
-        "vertex_shader_srv_instance_data", "pixel_shader", DXGI_FORMAT_D32_FLOAT,
-        render_targets_count, Input_element_model::trans_rot);
+        "vertex_shader_srv_instance_data", "pixel_shader", DXGI_FORMAT_D16_UNORM,
+        render_targets_count, Input_element_model::trans_rot, Depth_write::disabled);
 
     SET_DEBUG_NAME(m_pipeline_state_srv_instance_data, L"Pipeline State Object SRV instance data");
 }
@@ -227,9 +228,9 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     c.upload_instance_data();
     c.set_descriptor_heap(m_texture_descriptor_heap);
     c.record_shadow_map_generation_commands_in_command_list();
+    c.early_z_pass();
     c.set_root_signature();
     set_and_clear_render_target();
-    c.clear_depth_stencil();
     c.set_shader_constants();
     c.draw_static_objects(m_pipeline_state_model_vector);
     c.draw_dynamic_objects(m_pipeline_state_srv_instance_data);
@@ -297,7 +298,7 @@ Main_root_signature::Main_root_signature(ComPtr<ID3D12Device> device,
 }
 
 void Main_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> command_list, 
-    Scene* scene, View* view, Shadow_map* shadow_map)
+    Scene* scene, const View* view, Shadow_map* shadow_map)
 {
     int offset = 0;
     command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_vectors,

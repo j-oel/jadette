@@ -37,12 +37,12 @@ void View::update()
     constexpr float fov = 90.0f;
     m_projection_matrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(fov),
         aspect_ratio, m_near_z, m_far_z);
+    m_view_projection_matrix = XMMatrixMultiply(m_view_matrix, m_projection_matrix);
 }
 
 void View::set_view(ComPtr<ID3D12GraphicsCommandList> command_list,
-    int root_param_index_of_matrices)
+    int root_param_index_of_matrices) const
 {
-    m_view_projection_matrix = XMMatrixMultiply(m_view_matrix, m_projection_matrix);
     constexpr int view_projection_offset = 0;
     command_list->SetGraphicsRoot32BitConstants(root_param_index_of_matrices,
         size_in_words_of_XMMATRIX, &m_view_projection_matrix, view_projection_offset);

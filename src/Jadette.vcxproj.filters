@@ -75,6 +75,9 @@
     <ClCompile Include="..\MS\DDSTextureLoader12.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Depth_pass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mesh.h">
@@ -147,6 +150,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\MS\DDSTextureLoader12.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Depth_pass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

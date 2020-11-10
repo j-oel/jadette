@@ -67,7 +67,8 @@ void Root_signature::init_matrices(CD3DX12_ROOT_PARAMETER1& root_parameter,
 void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineState>& pipeline_state,
     ComPtr<ID3D12RootSignature> root_signature,
     const char* vertex_shader_entry_function, const char* pixel_shader_entry_function,
-    DXGI_FORMAT dsv_format, UINT render_targets_count, Input_element_model input_element_model)
+    DXGI_FORMAT dsv_format, UINT render_targets_count, Input_element_model input_element_model,
+    Depth_write depth_write/* = Depth_write::enabled*/)
 {
 
 #if defined(_DEBUG)
@@ -88,9 +89,12 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
     handle_errors(hr, error_messages);
 
     ComPtr<ID3DBlob> pixel_shader;
-    hr = D3DCompileFromFile(shader_path, defines, include, pixel_shader_entry_function,
-        "ps_5_1", compile_flags, flags2_not_used, &pixel_shader, &error_messages);
-    handle_errors(hr, error_messages);
+    if (!(pixel_shader_entry_function == ""))
+    {
+        hr = D3DCompileFromFile(shader_path, defines, include, pixel_shader_entry_function,
+            "ps_5_1", compile_flags, flags2_not_used, &pixel_shader, &error_messages);
+        handle_errors(hr, error_messages);
+    }
 
     D3D12_INPUT_ELEMENT_DESC input_element_desc_translation[] =
     {
@@ -114,11 +118,20 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
         s.InputLayout = { input_element_desc_model_trans_rot, _countof(input_element_desc_model_trans_rot) };
     s.pRootSignature = root_signature.Get();
     s.VS = CD3DX12_SHADER_BYTECODE(vertex_shader.Get());
-    s.PS = CD3DX12_SHADER_BYTECODE(pixel_shader.Get());
+    if (pixel_shader_entry_function == "")
+        s.PS = { 0, 0 };
+    else
+        s.PS = CD3DX12_SHADER_BYTECODE(pixel_shader.Get());
     s.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
     s.SampleMask = UINT_MAX; // Sample mask for blend state
     s.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-    s.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+    auto d = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+    if (depth_write == Depth_write::disabled)
+    {
+        d.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+        d.DepthFunc = D3D12_COMPARISON_FUNC_EQUAL;
+    }
+    s.DepthStencilState = d;
     s.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     s.NumRenderTargets = render_targets_count;
     s.DSVFormat = dsv_format;

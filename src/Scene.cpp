@@ -332,8 +332,9 @@ void Scene::upload_instance_trans_rot_data(ComPtr<ID3D12GraphicsCommandList>& co
 void Scene::set_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
     int root_param_index_of_instance_data)
 {
-    command_list->SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
-        m_instance_trans_rot_data->srv_gpu_handle());
+    if (!m_dynamic_objects.empty())
+        command_list->SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
+            m_instance_trans_rot_data->srv_gpu_handle());
 }
 
 void Scene::upload_resources_to_gpu(ComPtr<ID3D12Device> device,

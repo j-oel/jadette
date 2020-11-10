@@ -177,6 +177,7 @@
     <ClCompile Include="..\MS\DDSTextureLoader12.cpp" />
     <ClCompile Include="..\MS\WICTextureLoader12.cpp" />
     <ClCompile Include="Commands.cpp" />
+    <ClCompile Include="Depth_pass.cpp" />
     <ClCompile Include="Depth_stencil.cpp" />
     <ClCompile Include="Dx12_display.cpp" />
     <ClCompile Include="Graphical_object.cpp" />
@@ -200,6 +201,7 @@
     <ClInclude Include="..\MS\DDSTextureLoader12.h" />
     <ClInclude Include="..\MS\WICTextureLoader12.h" />
     <ClInclude Include="Commands.h" />
+    <ClInclude Include="Depth_pass.h" />
     <ClInclude Include="Depth_stencil.h" />
     <ClInclude Include="dx12min.h" />
     <ClInclude Include="Dx12_display.h" />

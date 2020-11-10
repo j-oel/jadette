@@ -33,7 +33,7 @@ class Main_root_signature : public Root_signature
 public:
     Main_root_signature(ComPtr<ID3D12Device> device, const Shadow_map& shadow_map);
     virtual void set_constants(ComPtr<ID3D12GraphicsCommandList> command_list, 
-        Scene* scene, View* view, Shadow_map* shadow_map);
+        Scene* scene, const View* view, Shadow_map* shadow_map);
 
     const int m_root_param_index_of_values = 0;
     const int m_root_param_index_of_matrices = 1;
@@ -71,6 +71,7 @@ private:
     ComPtr<ID3D12PipelineState> m_pipeline_state_srv_instance_data;
     ComPtr<ID3D12PipelineState> m_pipeline_state_model_vector;
 
+    Depth_pass m_depth_pass;
     Shadow_map m_shadow_map;
     Main_root_signature m_root_signature;
     Scene m_scene;

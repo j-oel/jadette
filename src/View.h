@@ -19,10 +19,11 @@ public:
     View(UINT width, UINT height, DirectX::XMVECTOR eye_position, DirectX::XMVECTOR focus_point,
         float near_z, float far_z);
     void update();
+    const DirectX::XMVECTOR& eye_position() const { return m_eye_position; }
     DirectX::XMVECTOR& eye_position() { return m_eye_position; }
     DirectX::XMVECTOR& focus_point() { return m_focus_point; }
     void set_view(ComPtr<ID3D12GraphicsCommandList> command_list, 
-        int root_param_index_of_matrices);
+        int root_param_index_of_matrices) const;
     const DirectX::XMMATRIX& view_projection_matrix() const { return m_view_projection_matrix; }
 private:
     DirectX::XMMATRIX m_view_matrix;

@@ -14,11 +14,12 @@
 
 Commands::Commands(ComPtr<ID3D12GraphicsCommandList> command_list, 
     Depth_stencil* depth_stencil, Texture_mapping texture_mapping,
-    View* view, Scene* scene, Root_signature* root_signature, Shadow_map* shadow_map/* = nullptr*/) :
+    const View* view, Scene* scene, Depth_pass* depth_pass, Root_signature* root_signature,
+    Shadow_map* shadow_map/* = nullptr*/) :
     m_command_list(command_list),
     m_texture_mapping(texture_mapping), m_depth_stencil(depth_stencil),
-    m_view(view), m_scene(scene), m_root_signature(root_signature), m_shadow_map(shadow_map),
-    m_dsv_handle(m_depth_stencil->cpu_handle())
+    m_scene(scene), m_view(view), m_depth_pass(depth_pass), m_root_signature(root_signature), 
+    m_shadow_map(shadow_map), m_dsv_handle(m_depth_stencil->cpu_handle())
 {
 }
 
@@ -32,7 +33,14 @@ void Commands::record_shadow_map_generation_commands_in_command_list()
 {
     assert(m_shadow_map);
     assert(m_scene);
-    m_shadow_map->record_shadow_map_generation_commands_in_command_list(*m_scene, m_command_list);
+    m_shadow_map->record_shadow_map_generation_commands_in_command_list(*m_scene, *m_depth_pass, 
+        m_command_list);
+}
+
+void Commands::early_z_pass()
+{
+    assert(m_depth_pass);
+    m_depth_pass->record_commands(*m_scene, *m_view, *m_depth_stencil, m_command_list);
 }
 
 void Commands::set_root_signature()

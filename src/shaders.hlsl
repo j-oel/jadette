@@ -196,24 +196,23 @@ float4 pixel_shader(pixel_shader_input input) : SV_TARGET
     return result;
 }
 
-struct shadow_pixel_shader_input
+struct depths_vertex_shader_output
 {
     float4 sv_position : SV_POSITION;
 };
 
-
-shadow_pixel_shader_input shadow_vertex_shader_model_trans_rot(float4 position : POSITION,
+depths_vertex_shader_output depths_vertex_shader_model_trans_rot(float4 position : POSITION,
     float3 normal : NORMAL, float2 texcoord : TEXCOORD, half4 translation : TRANSLATION, 
     half4 rotation : ROTATION)
 {
-    shadow_pixel_shader_input result;
+    depths_vertex_shader_output result;
     half4x4 model = to_model_matrix(translation, rotation);
     float4x4 model_view_projection = mul(matrices.view_projection, model);
     result.sv_position = mul(model_view_projection, position);
     return result;
 }
 
-shadow_pixel_shader_input shadow_vertex_shader_srv_instance_data(uint instance_id : SV_InstanceID,
+depths_vertex_shader_output depths_vertex_shader_srv_instance_data(uint instance_id : SV_InstanceID,
     float4 position : POSITION, float3 normal : NORMAL, float2 texcoord : TEXCOORD)
 {
     const uint index = values.object_id + instance_id;
@@ -222,16 +221,13 @@ shadow_pixel_shader_input shadow_vertex_shader_srv_instance_data(uint instance_i
     float4 translation = float4(f16tof32(v.x), f16tof32(v.x >> 16), f16tof32(v.y), f16tof32(v.y >> 16));
     float4 rotation = float4(f16tof32(v.z), f16tof32(v.z >> 16), f16tof32(v.w), f16tof32(v.w >> 16));
 
-    return shadow_vertex_shader_model_trans_rot(position, normal, texcoord, translation, rotation);
+    return depths_vertex_shader_model_trans_rot(position, normal, texcoord, translation, rotation);
 }
 
 
-shadow_pixel_shader_input shadow_vertex_shader_model_vector(float4 position : POSITION,
+depths_vertex_shader_output depths_vertex_shader_model_vector(float4 position : POSITION,
     float3 normal : NORMAL, float2 texcoord : TEXCOORD, half4 translation : TRANSLATION)
 {
-    return shadow_vertex_shader_model_trans_rot(position, normal, texcoord, translation, half4(0, 0, 0, 1));
-}
-
-void shadow_pixel_shader(shadow_pixel_shader_input input)
-{
+    return depths_vertex_shader_model_trans_rot(position, normal, texcoord, translation, 
+        half4(0, 0, 0, 1));
 }
