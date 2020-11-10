@@ -106,7 +106,7 @@ struct Monitor
     RECT rect;
 };
 
-BOOL monitor_enum_proc(HMONITOR h_monitor, HDC hdc, LPRECT monitor_rect, LPARAM data)
+BOOL CALLBACK monitor_enum_proc(HMONITOR h_monitor, HDC, LPRECT monitor_rect, LPARAM data)
 {
     auto monitors = bit_cast<std::vector<Monitor>*>(data);
     Monitor monitor = { h_monitor, *monitor_rect };
@@ -114,7 +114,7 @@ BOOL monitor_enum_proc(HMONITOR h_monitor, HDC hdc, LPRECT monitor_rect, LPARAM 
     return TRUE;
 }
 
-int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, int cmd_show)
+int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int cmd_show)
 {
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     
@@ -123,7 +123,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR cmd_line, 
     try
     {
         Config config = read_config(config_file);
-
         std::vector<Monitor> monitors;
         EnumDisplayMonitors(nullptr, nullptr, monitor_enum_proc, bit_cast<LPARAM>(&monitors));
 

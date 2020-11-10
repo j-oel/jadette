@@ -17,8 +17,8 @@ struct Config
 {
     Config() : width(800), height(600), monitor(1), borderless_windowed_fullscreen(false),
         vsync(false) {}
-    long width;
-    long height;
+    int width;
+    int height;
     std::string scene_file;
     int monitor;
     bool borderless_windowed_fullscreen;

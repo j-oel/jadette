@@ -17,7 +17,7 @@ Depth_pass::Depth_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format) :
 m_root_signature(device), m_dsv_format(dsv_format)
 {
     UINT render_targets_count = 0;
-    auto empty_pixel_shader = "";
+    const char* empty_pixel_shader = nullptr;
     create_pipeline_state(device, m_pipeline_state_model_vector, m_root_signature.get(),
         "depths_vertex_shader_model_vector", empty_pixel_shader,
         dsv_format, render_targets_count, Input_element_model::translation);
@@ -37,8 +37,9 @@ void set_render_target(ComPtr<ID3D12GraphicsCommandList> command_list,
     const int render_targets_count = 0;
     BOOL contiguous_descriptors = FALSE; // This is not important when we only have one descriptor.
     D3D12_CPU_DESCRIPTOR_HANDLE* render_target_view = nullptr;
+    auto dsv = depth_stencil.cpu_handle();
     command_list->OMSetRenderTargets(render_targets_count, render_target_view,
-        contiguous_descriptors, &depth_stencil.cpu_handle());
+        contiguous_descriptors, &dsv);
 }
 
 void Depth_pass::record_commands(Scene& scene, const View& view, Depth_stencil& depth_stencil,

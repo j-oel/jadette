@@ -70,7 +70,6 @@ private:
     DirectX::XMVECTOR m_light_position;
     DirectX::XMVECTOR m_light_focus_point;
 
-    std::vector<DirectX::XMVECTOR> m_trans;
     std::vector<Per_instance_translation_data> m_translations;
     std::vector<Per_instance_trans_rot> m_model_transforms;
     std::unique_ptr<Instance_data> m_instance_vector_data;

@@ -89,7 +89,7 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
     handle_errors(hr, error_messages);
 
     ComPtr<ID3DBlob> pixel_shader;
-    if (!(pixel_shader_entry_function == ""))
+    if (pixel_shader_entry_function)
     {
         hr = D3DCompileFromFile(shader_path, defines, include, pixel_shader_entry_function,
             "ps_5_1", compile_flags, flags2_not_used, &pixel_shader, &error_messages);
@@ -118,10 +118,10 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
         s.InputLayout = { input_element_desc_model_trans_rot, _countof(input_element_desc_model_trans_rot) };
     s.pRootSignature = root_signature.Get();
     s.VS = CD3DX12_SHADER_BYTECODE(vertex_shader.Get());
-    if (pixel_shader_entry_function == "")
-        s.PS = { 0, 0 };
-    else
+    if (pixel_shader_entry_function)
         s.PS = CD3DX12_SHADER_BYTECODE(pixel_shader.Get());
+    else
+        s.PS = { 0, 0 };
     s.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
     s.SampleMask = UINT_MAX; // Sample mask for blend state
     s.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);

@@ -63,13 +63,33 @@ struct Material_not_defined
     std::string object;
 };
 
-void convert_vector_to_half4(DirectX::PackedVector::XMHALF4& half4, const DirectX::XMVECTOR& vec)
+void convert_vector_to_half4(DirectX::PackedVector::XMHALF4& half4, DirectX::XMVECTOR vec)
 {
     half4.x = DirectX::PackedVector::XMConvertFloatToHalf(vec.m128_f32[0]);
     half4.y = DirectX::PackedVector::XMConvertFloatToHalf(vec.m128_f32[1]);
     half4.z = DirectX::PackedVector::XMConvertFloatToHalf(vec.m128_f32[2]);
     half4.w = DirectX::PackedVector::XMConvertFloatToHalf(vec.m128_f32[3]);
 }
+
+DirectX::XMVECTOR convert_half4_to_vector(DirectX::PackedVector::XMHALF4 half4)
+{
+    DirectX::XMVECTOR vec = XMVectorSet(DirectX::PackedVector::XMConvertHalfToFloat(half4.x),
+                                        DirectX::PackedVector::XMConvertHalfToFloat(half4.y),
+                                        DirectX::PackedVector::XMConvertHalfToFloat(half4.z),
+                                        DirectX::PackedVector::XMConvertHalfToFloat(half4.w));
+    return vec;
+}
+
+DirectX::PackedVector::XMHALF4 convert_float3_point_to_half4(const XMFLOAT3& pos)
+{
+    DirectX::PackedVector::XMHALF4 half4;
+    half4.x = DirectX::PackedVector::XMConvertFloatToHalf(pos.x);
+    half4.y = DirectX::PackedVector::XMConvertFloatToHalf(pos.y);
+    half4.z = DirectX::PackedVector::XMConvertFloatToHalf(pos.z);
+    half4.w = DirectX::PackedVector::XMConvertFloatToHalf(1.0f);
+    return half4;
+}
+
 
 Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int texture_start_index,
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures,
@@ -182,17 +202,9 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
 
     upload_resources_to_gpu(device, command_list);
     for (auto& g : m_graphical_objects)
-        g->release_temp_resources();
-
-    int i = 0;
-    for (auto& g : m_graphical_objects)
     {
+        g->release_temp_resources();
         m_triangles_count += g->triangles_count();
-
-        Per_instance_translation_data data;
-        convert_vector_to_half4(data.model, m_trans[i]);
-        m_translations.push_back(data);
-        ++i;
     }
 }
 
@@ -202,7 +214,7 @@ Scene::~Scene()
 }
 
 XMMATRIX fly_around_in_circle(std::shared_ptr<Graphical_object>& object,
-    const std::vector<DirectX::XMVECTOR>& translations)
+    const std::vector<Per_instance_translation_data>& translations)
 {
     XMVECTOR rotation_axis = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
     const float angle = XMConvertToRadians(static_cast<float>(elapsed_time_in_seconds() * 100.0));
@@ -214,18 +226,20 @@ XMMATRIX fly_around_in_circle(std::shared_ptr<Graphical_object>& object,
         current_rotation_point_around_the_radius);
     XMMATRIX orient_the_ship = XMMatrixRotationAxis(rotation_axis,
         angle + XMConvertToRadians(-90.0f));
+
+    auto translation = convert_half4_to_vector(translations[object->id()].model);
     XMMATRIX translate_to_the_point_on_which_to_rotate_around =
-        XMMatrixTranslationFromVector(translations[object->id()]);
+        XMMatrixTranslationFromVector(translation);
     XMMATRIX new_model_matrix = orient_the_ship * go_in_a_circle *
         translate_to_the_point_on_which_to_rotate_around;
 
     return new_model_matrix;
 }
 
-void set_instance_data(Per_instance_trans_rot& trans_rot, const DirectX::XMVECTOR& translation,
+void set_instance_data(Per_instance_trans_rot& trans_rot, DirectX::PackedVector::XMHALF4 translation,
     const DirectX::XMVECTOR& rotation)
 {
-    convert_vector_to_half4(trans_rot.translation, translation);
+    trans_rot.translation = translation;
     convert_vector_to_half4(trans_rot.rotation, rotation);
 }
 
@@ -244,16 +258,18 @@ void Scene::update()
     int i = 0;
     for (auto& object : m_dynamic_objects)
     {
-        set_instance_data(m_model_transforms[i], m_trans[object->id()], quaternion);
+        set_instance_data(m_model_transforms[i], m_translations[object->id()].model, quaternion);
         ++i;
     }
 
     for (auto& ufo : m_flying_objects) // :-)
     {
-        XMMATRIX new_model_matrix = fly_around_in_circle(ufo.object, m_trans);
+        XMMATRIX new_model_matrix = fly_around_in_circle(ufo.object, m_translations);
         XMVECTOR quaternion = XMQuaternionRotationMatrix(new_model_matrix);
         XMVECTOR translation = new_model_matrix.r[3];
-        set_instance_data(m_model_transforms[ufo.transform_ref], translation, quaternion);
+        DirectX::PackedVector::XMHALF4 translation_half4;
+        convert_vector_to_half4(translation_half4, translation);
+        set_instance_data(m_model_transforms[ufo.transform_ref], translation_half4, quaternion);
     }
 }
 
@@ -424,7 +440,8 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
         shared_ptr<Texture> diffuse_map, bool dynamic, XMFLOAT3 position, int instances = 1,
         shared_ptr<Texture> normal_map = nullptr)
     {
-        m_trans.push_back(XMVectorSet(position.x, position.y, position.z, 1.0f));
+        Per_instance_translation_data translation = { convert_float3_point_to_half4(position) };
+        m_translations.push_back(translation);
         auto object = std::make_shared<Graphical_object>(device, mesh,
             command_list, root_param_index_of_textures, diffuse_map, 
             root_param_index_of_values, root_param_index_of_normal_maps, normal_map_flag_offset,
