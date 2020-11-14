@@ -61,9 +61,12 @@ void Depth_pass::record_commands(Scene& scene, const View& view, Depth_stencil& 
 Depth_pass_root_signature::Depth_pass_root_signature(ComPtr<ID3D12Device> device)
 {
     constexpr int root_parameters_count = 3;
-    CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count]{};
+    CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count] {};
 
-    constexpr int values_count = 3;
+    constexpr int values_count = 4; // Needs to be a multiple of 4, because constant buffers are
+                                    // viewed as sets of 4x32-bit values, see:
+// https://docs.microsoft.com/en-us/windows/win32/direct3d12/using-constants-directly-in-the-root-signature
+
     UINT shader_register = 0;
     constexpr int register_space = 0;
     root_parameters[m_root_param_index_of_values].InitAsConstants(
