@@ -12,16 +12,22 @@
 
 using namespace std;
 
-void read_mtl_file(const std::string file_name, std::map<std::string, Material>& materials);
+using DirectX::PackedVector::XMHALF4;
+using DirectX::PackedVector::XMHALF2;
+using std::vector;
+using std::map;
+using std::string;
 
-bool read_obj_file(std::ifstream& file, std::vector<Vertex>& vertices,
-    std::vector<int>& indices, std::vector<DirectX::XMFLOAT3>& input_vertices,
-    std::vector<DirectX::XMFLOAT3>& input_normals,
-    std::vector<DirectX::PackedVector::XMHALF2>& input_texture_coords, std::string& material,
-    std::map<std::string, Material>* materials)
+
+void read_mtl_file(const string file_name, map<string, Material>& materials);
+
+
+bool read_obj_file(std::ifstream& file, vector<Vertex>& vertices, vector<int>& indices, 
+    vector<XMHALF4>& input_vertices, vector<XMHALF4>& input_normals,
+    vector<XMHALF2>& input_texture_coords, string& material,
+    map<string, Material>* materials)
 {
-    using DirectX::XMFLOAT3;
-    using DirectX::XMFLOAT2;
+    using DirectX::PackedVector::XMConvertFloatToHalf;
 
     string input;
 
@@ -34,29 +40,39 @@ bool read_obj_file(std::ifstream& file, std::vector<Vertex>& vertices,
 
         if (input == "v")
         {
-            XMFLOAT3 v;
-            file >> v.x;
-            file >> v.y;
-            file >> v.z;
+            XMHALF4 v;
+            float f;
+            file >> f;
+            v.x = XMConvertFloatToHalf(f);
+            file >> f;
+            v.y = XMConvertFloatToHalf(f);
+            file >> f;
+            v.z = XMConvertFloatToHalf(f);
+            v.w = XMConvertFloatToHalf(1);
             input_vertices.push_back(v);
         }
         else if (input == "vn")
         {
-            XMFLOAT3 vn;
-            file >> vn.x;
-            file >> vn.y;
-            file >> vn.z;
+            XMHALF4 vn;
+            float f;
+            file >> f;
+            vn.x = XMConvertFloatToHalf(f);
+            file >> f;
+            vn.y = XMConvertFloatToHalf(f);
+            file >> f;
+            vn.z = XMConvertFloatToHalf(f);
+            vn.w = XMConvertFloatToHalf(0);
             input_normals.push_back(vn);
         }
         else if (input == "vt")
         {
-            DirectX::PackedVector::XMHALF2 vt;
+            XMHALF2 vt;
             float f;
             file >> f;
-            vt.x = DirectX::PackedVector::XMConvertFloatToHalf(f);
+            vt.x = XMConvertFloatToHalf(f);
             file >> f;
             f = 1.0f - f; // Obj files seems to use an inverted v-axis.
-            vt.y = DirectX::PackedVector::XMConvertFloatToHalf(f);
+            vt.y = XMConvertFloatToHalf(f);
             input_texture_coords.push_back(vt);
         }
         else if (input == "f")
@@ -82,8 +98,13 @@ bool read_obj_file(std::ifstream& file, std::vector<Vertex>& vertices,
 
                 indices.push_back(static_cast<int>(indices.size()));
 
-                const Vertex vertex{ input_vertices[vertex_index - 1],
-                    input_normals[normal_index - 1], input_texture_coords[uv_index - 1] };
+                XMHALF4 position_plus_u = input_vertices[vertex_index - 1];
+                position_plus_u.w = input_texture_coords[uv_index - 1].x;
+
+                XMHALF4 normal_plus_v = input_normals[normal_index - 1];
+                normal_plus_v.w = input_texture_coords[uv_index - 1].y;
+
+                const Vertex vertex{ position_plus_u, normal_plus_v };
                 vertices.push_back(vertex);
             }
         }
@@ -111,12 +132,11 @@ bool read_obj_file(std::ifstream& file, std::vector<Vertex>& vertices,
     return more_objects;
 }
 
-void read_obj_file(const std::string& filename, std::vector<Vertex>& vertices, std::vector<int>& indices)
+void read_obj_file(const string& filename, vector<Vertex>& vertices, vector<int>& indices)
 {
-    using DirectX::XMFLOAT3;
-    vector<XMFLOAT3> input_vertices;
-    vector<XMFLOAT3> input_normals;
-    vector<DirectX::PackedVector::XMHALF2> input_texture_coords;
+    vector<XMHALF4> input_vertices;
+    vector<XMHALF4> input_normals;
+    vector<XMHALF2> input_texture_coords;
 
     string not_used;
     ifstream file(filename);
@@ -124,16 +144,14 @@ void read_obj_file(const std::string& filename, std::vector<Vertex>& vertices, s
         not_used, nullptr);
 }
 
-std::shared_ptr<Model_collection> read_obj_file(const std::string& filename, ComPtr<ID3D12Device> device,
-    ComPtr<ID3D12GraphicsCommandList>& command_list)
+std::shared_ptr<Model_collection> read_obj_file(const string& filename, 
+    ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
-    using DirectX::XMFLOAT3;
-
     std::ifstream file(filename);
 
-    vector<XMFLOAT3> input_vertices;
-    vector<XMFLOAT3> input_normals;
-    vector<DirectX::PackedVector::XMHALF2> input_texture_coords;
+    vector<XMHALF4> input_vertices;
+    vector<XMHALF4> input_normals;
+    vector<XMHALF2> input_texture_coords;
 
     auto collection = std::make_shared<Model_collection>();
     bool more_objects = true;
@@ -141,7 +159,7 @@ std::shared_ptr<Model_collection> read_obj_file(const std::string& filename, Com
     {
         vector<Vertex> vertices;
         vector<int> indices;
-        std::string material;
+        string material;
         more_objects = read_obj_file(file, vertices, indices, input_vertices,
             input_normals, input_texture_coords, material, &collection->materials);
         collection->models.push_back({ std::make_shared<Mesh>(device,
@@ -152,7 +170,7 @@ std::shared_ptr<Model_collection> read_obj_file(const std::string& filename, Com
 }
 
 
-void read_mtl_file(const std::string file_name, std::map<std::string, Material>& materials)
+void read_mtl_file(const string file_name, map<string, Material>& materials)
 {
     ifstream file(file_name);
     string input;

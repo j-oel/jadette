@@ -19,9 +19,8 @@ using Microsoft::WRL::ComPtr;
 
 struct Vertex
 {
-    DirectX::XMFLOAT3 position;
-    DirectX::XMFLOAT3 normal;
-    DirectX::PackedVector::XMHALF2 uv;
+    DirectX::PackedVector::XMHALF4 position;
+    DirectX::PackedVector::XMHALF4 normal;
 };
 
 class Mesh

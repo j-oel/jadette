@@ -10,7 +10,14 @@
 namespace {
 
 
-    std::vector<Vertex> cube_vertices =
+    struct Float_vertex
+    {
+        DirectX::XMFLOAT3 position;
+        DirectX::XMFLOAT3 normal;
+        DirectX::PackedVector::XMHALF2 uv;
+    };
+
+    std::vector<Float_vertex> cube_vertices =
     {
         { { -0.5f, -0.5f, 0.5f },  { 0.0f, 0.0f, 1.0f },  { 0.0f, 0.0f } },
         { { 0.5f, -0.5f, 0.5f },   { 0.0f, 0.0f, 1.0f },  { 1.0f, 0.0f } },
@@ -54,12 +61,28 @@ namespace {
 
 }
 
+std::vector<Vertex> convert_to_packed_vertices(const std::vector<Float_vertex>& input_vertices)
+{
+    using DirectX::PackedVector::XMConvertFloatToHalf;
+    std::vector<Vertex> vertices;
+    for (const auto& i_v : input_vertices)
+    {
+        Vertex v;
+        v.position = { XMConvertFloatToHalf(i_v.position.x), XMConvertFloatToHalf(i_v.position.y),
+        XMConvertFloatToHalf(i_v.position.z), i_v.uv.x };
+        v.normal = { XMConvertFloatToHalf(i_v.normal.x), XMConvertFloatToHalf(i_v.normal.y),
+        XMConvertFloatToHalf(i_v.normal.z), i_v.uv.y };
+        vertices.push_back(v);
+    }
+    return vertices;
+}
+
 Cube::Cube(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list) : 
-    Mesh(device, command_list, cube_vertices, cube_indices)
+    Mesh(device, command_list, convert_to_packed_vertices(cube_vertices), cube_indices)
 { 
 }
 
-std::vector<Vertex> plane_vertices =
+std::vector<Float_vertex> plane_vertices =
 {
         { { -0.5f, 0.5f, 0.5f },   { 0.0f, 1.0f, 0.0f },  { 0.0f, 0.0f } },
         { { 0.5f, 0.5f, 0.5f },    { 0.0f, 1.0f, 0.0f },  { 3.0f, 0.0f } },
@@ -67,9 +90,9 @@ std::vector<Vertex> plane_vertices =
         { { -0.5f, 0.5f, -0.5f },  { 0.0f, 1.0f, 0.0f },  { 0.0f, 3.0f } },
 };
 
-std::vector<Vertex> scale_vertices(const std::vector<Vertex>& vertices, float scale)
+std::vector<Float_vertex> scale_vertices(const std::vector<Float_vertex>& vertices, float scale)
 {
-    std::vector<Vertex> scaled_vertices;
+    std::vector<Float_vertex> scaled_vertices;
     for (auto& vertex : vertices)
     {
         scaled_vertices.push_back({ DirectX::XMFLOAT3(scale * vertex.position.x,
@@ -81,6 +104,7 @@ std::vector<Vertex> scale_vertices(const std::vector<Vertex>& vertices, float sc
 std::vector<int> plane_indices = { 0, 1, 2, 2, 3, 0 };
 
 Plane::Plane(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list) :
-    Mesh(device, command_list, scale_vertices(plane_vertices, 30.0f), plane_indices)
+    Mesh(device, command_list, convert_to_packed_vertices(scale_vertices(plane_vertices, 30.0f)),
+        plane_indices)
 {
 }
