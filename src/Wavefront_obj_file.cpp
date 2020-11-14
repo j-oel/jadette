@@ -91,6 +91,7 @@ bool read_obj_file(std::ifstream& file, vector<Vertex>& vertices, vector<int>& i
 
                 const size_t uv_index_start = first_slash + 1;
                 const string uv_string = s.substr(uv_index_start, second_slash - uv_index_start);
+                bool uvs = !uv_string.empty();
                 const size_t uv_index = atoi(uv_string.c_str());
 
                 const string normal_string = s.substr(second_slash + 1);
@@ -99,10 +100,12 @@ bool read_obj_file(std::ifstream& file, vector<Vertex>& vertices, vector<int>& i
                 indices.push_back(static_cast<int>(indices.size()));
 
                 XMHALF4 position_plus_u = input_vertices[vertex_index - 1];
-                position_plus_u.w = input_texture_coords[uv_index - 1].x;
-
                 XMHALF4 normal_plus_v = input_normals[normal_index - 1];
-                normal_plus_v.w = input_texture_coords[uv_index - 1].y;
+                if (uvs)
+                {
+                    position_plus_u.w = input_texture_coords[uv_index - 1].x;
+                    normal_plus_v.w = input_texture_coords[uv_index - 1].y;
+                }
 
                 const Vertex vertex{ position_plus_u, normal_plus_v };
                 vertices.push_back(vertex);
