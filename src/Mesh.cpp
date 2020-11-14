@@ -202,9 +202,12 @@ Instance_data::Instance_data(ComPtr<ID3D12Device> device,
     UINT instance_count, Per_instance_trans_rot data,
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index)
 {
-    if (instance_count == 0)
-        return;
-    construct_instance_data<Per_instance_trans_rot>(device, command_list, instance_count,
+    // Handle the case of zero dynamic objects. With this way, no special cases
+    // are needed at other places.
+    UINT adjusted_instance_count = instance_count == 0 ? 1 : instance_count;
+    
+    construct_instance_data<Per_instance_trans_rot>(device, command_list, 
+        adjusted_instance_count,
         m_instance_vertex_buffer, m_upload_resource, m_instance_vertex_buffer_view,
         m_vertex_buffer_size, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
     SET_DEBUG_NAME(m_instance_vertex_buffer, L"Translation Rotation Instance Buffer");
@@ -220,7 +223,7 @@ Instance_data::Instance_data(ComPtr<ID3D12Device> device,
         texture_descriptor_heap->GetCPUDescriptorHandleForHeapStart(),
         texture_position_in_descriptor_heap);
 
-    D3D12_BUFFER_SRV srv = { 0, instance_count, sizeof(Per_instance_trans_rot),
+    D3D12_BUFFER_SRV srv = { 0, adjusted_instance_count, sizeof(Per_instance_trans_rot),
         D3D12_BUFFER_SRV_FLAG_NONE };
     D3D12_SHADER_RESOURCE_VIEW_DESC s = { DXGI_FORMAT_UNKNOWN, D3D12_SRV_DIMENSION_BUFFER,
                                           D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, srv };
