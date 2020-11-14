@@ -6,19 +6,25 @@
 # texture <texture_name> <filename>
 #
 # And to define a graphical object that will be part of the scene:
-# object <object_name> static|dynamic <previously_defined_model_name> <previously_defined_texture_name> <x-coordinate> <y-coordinate> <z-coordinate>
 #
+# object <object_name> static|dynamic <model_name> <texture_name> <x> <y> <z> <scale>
+#
+# where <model_name> and <texture_name> should refer to an already defined model
+# and texture respectively.
 # Use "static" for objects that shouldn't be able to move and "dynamic" for
-# objects that can move. 
+# objects that can move.
+# <x> <y> <z> are three floating point numbers that define the position of the object.
+
 
 model spaceship_model spaceship.obj
 texture spaceship_diff spaceship_diff.jpg
-object spaceship dynamic spaceship_model spaceship_diff 0 0 10
+object spaceship dynamic spaceship_model spaceship_diff 0 0 10 1
 
 texture normal_map plane_normal_map.jpg
 texture pattern pattern.jpg
 texture pattern2 pattern2.dds
 model plane_model plane
+
 
 # The syntax for a graphical object that has a normal map defined is the same
 # as for object above, except that it's "normal_mapped_object" instead of 
@@ -26,33 +32,40 @@ model plane_model plane
 # <texture_name> referencing the normal map that should be a previously 
 # defined texture.
 
-normal_mapped_object plane1 static plane_model pattern2 -20 -10 0 normal_map
-normal_mapped_object plane2 static plane_model pattern2 10 -8 0 normal_map
+normal_mapped_object plane1 static plane_model pattern2 -20 -10 0 30 normal_map
+normal_mapped_object plane2 static plane_model pattern2 10 -8 0 30 normal_map
 
 model cube_from_file cube.obj
 
+
 # To define multiple object at the same time use array:
-# array static|dynamic <model_name> <texture_name> <position_x> <position_y> <position_z> <object_count_x> <object_count_y> <object_count_z> <offset_increment_x> <offset_increment_y> <offset_increment_z>
-# Then <object_count_x> * <object_count_y> * <object_count_z> instanced objects
-# will be created.
+# array static|dynamic <name> <texture_name> <x> <y> <z> <c_x> <c_y> <c_z> <i_x> <i_y> <i_z> <scale>
+#
+# Then <c_x> * <c_y> * <c_z> instanced objects will be created.
+# <i_x>, <i_y> and <i_z> are the offset increment distances in each axis.
 
-
-array dynamic cube_from_file pattern 1 0 0 3 3 3 3.0 3.0 3.0
+array dynamic cube_from_file pattern 1 0 0 3 3 3 3.0 3.0 3.0 1
 model cube_model cube
-array dynamic cube_model pattern 0 0 0 40 40 40 -3.0 3.0 3.0
+array dynamic cube_model pattern 0 0 0 40 40 40 -3.0 3.0 3.0 0.4
 
 model platform_model platform.obj
 
+
 # If a model file (.obj file) references materials defined in an .mtl file, 
-# the <texture_name> argument is ignored.
-object platform static platform_model not_used 20 -7 4
+# the <texture_name> argument is ignored:
+
+object platform static platform_model pattern 20 -7 4 1
+
 
 # To define a light:
 # light <position_x> <position_y> <position_z> <focus_point_x> <focus_point_y> <focus_point_z>
+
 light 0 20 5 0 0 0
+
 
 # To animate an object flying around in a circle:
 # fly <previously_defined_dynamic_object>
+
 fly spaceship
 fly arrayobject11
 fly arrayobject20

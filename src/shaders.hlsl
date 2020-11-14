@@ -94,32 +94,64 @@ half4x4 quaternion_to_matrix(half4 q)
     return mat;
 }
 
-half4x4 to_model_matrix(half4 translation, half4 rotation)
+
+half4x4 scaling(float scale_factor)
 {
-    half4x4 model = quaternion_to_matrix(rotation);
+    half4x4 mat = { scale_factor, 0,            0,            0,
+                    0,            scale_factor, 0,            0,
+                    0,            0,            scale_factor, 0,
+                    0,            0,            0,            1 };
+
+    return mat;
+}
+
+
+half4x4 translate(half4x4 model, half4 translation)
+{
     model._14 = translation.x;
     model._24 = translation.y;
     model._34 = translation.z;
-    model._44 = translation.w;
+    model._44 = 1.0f;
+
+    return model;
+}
+
+
+half4x4 to_scaled_model_matrix(half4 translation, half4 rotation)
+{
+    half4x4 model = mul(scaling(translation.w), quaternion_to_matrix(rotation));
+    model = translate(model, translation);
     return model;
 }
 
 
 pixel_shader_input vertex_shader_model_matrix(float4 position : POSITION, float3 normal : NORMAL,
-    float2 texcoord : TEXCOORD, half4x4 model : MODEL)
+    float2 texcoord : TEXCOORD, half4x4 model : MODEL, half4x4 scaled_model : SCALED_MODEL)
 {
     pixel_shader_input result;
 
-    float4x4 model_view_projection = mul(matrices.view_projection, model);
+    float4x4 model_view_projection = mul(matrices.view_projection, scaled_model);
     result.sv_position = mul(model_view_projection, position);
-    result.position = mul(model, position);
-    float4x4 transform_to_shadow_map_space = mul(matrices.transform_to_shadow_map_space, model);
+    result.position = mul(scaled_model, position);
+    float4x4 transform_to_shadow_map_space = mul(matrices.transform_to_shadow_map_space, scaled_model);
     result.position_in_shadow_map_space = mul(transform_to_shadow_map_space, position);
     result.position_in_shadow_map_space /= result.position_in_shadow_map_space.w;
     result.normal = mul(model, float4(normal, 0.0f)).xyz;
     result.texcoord = texcoord;
 
     return result;
+}
+
+
+pixel_shader_input vertex_shader_model_trans_rot(float4 position : POSITION, float3 normal : NORMAL,
+    float2 texcoord : TEXCOORD, half4 translation : TRANSLATION, half4 rotation : ROTATION)
+{
+    half4x4 rotation_matrix = quaternion_to_matrix(rotation);
+    half4x4 model = rotation_matrix;
+    model = translate(model, translation);
+    half4x4 scaled_model = mul(scaling(translation.w), rotation_matrix);
+    scaled_model = translate(scaled_model, translation);
+    return vertex_shader_model_matrix(position, normal, texcoord, model, scaled_model);
 }
 
 
@@ -132,18 +164,11 @@ pixel_shader_input vertex_shader_srv_instance_data(uint instance_id : SV_Instanc
     float4 translation = float4(f16tof32(v.x), f16tof32(v.x >> 16), f16tof32(v.y), f16tof32(v.y >> 16));
     float4 rotation = float4(f16tof32(v.z), f16tof32(v.z >> 16), f16tof32(v.w), f16tof32(v.w >> 16));
 
-    half4x4 model = to_model_matrix(translation, rotation);
-
     float2 texcoord = float2(position.w, normal.w);
-    return vertex_shader_model_matrix(float4(position.xyz, 1), normal.xyz, texcoord, model);
+    return vertex_shader_model_trans_rot(float4(position.xyz, 1), normal.xyz, texcoord, 
+        translation, rotation);
 }
 
-pixel_shader_input vertex_shader_model_trans_rot(float4 position : POSITION, float3 normal : NORMAL,
-    float2 texcoord : TEXCOORD, half4 translation : TRANSLATION, half4 rotation : ROTATION)
-{
-    half4x4 model = to_model_matrix(translation, rotation);
-    return vertex_shader_model_matrix(position, normal, texcoord, model);
-}
 
 pixel_shader_input vertex_shader_model_vector(float4 position : POSITION, float4 normal : NORMAL,
     half4 translation : TRANSLATION)
@@ -208,7 +233,7 @@ depths_vertex_shader_output depths_vertex_shader_model_trans_rot(float4 position
     half4 rotation : ROTATION)
 {
     depths_vertex_shader_output result;
-    half4x4 model = to_model_matrix(translation, rotation);
+    half4x4 model = to_scaled_model_matrix(translation, rotation);
     float4x4 model_view_projection = mul(matrices.view_projection, model);
     result.sv_position = mul(model_view_projection, position);
     return result;

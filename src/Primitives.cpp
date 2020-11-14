@@ -84,27 +84,15 @@ Cube::Cube(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& comma
 
 std::vector<Float_vertex> plane_vertices =
 {
-        { { -0.5f, 0.5f, 0.5f },   { 0.0f, 1.0f, 0.0f },  { 0.0f, 0.0f } },
-        { { 0.5f, 0.5f, 0.5f },    { 0.0f, 1.0f, 0.0f },  { 3.0f, 0.0f } },
-        { { 0.5f, 0.5f, -0.5f },   { 0.0f, 1.0f, 0.0f },  { 3.0f, 3.0f } },
-        { { -0.5f, 0.5f, -0.5f },  { 0.0f, 1.0f, 0.0f },  { 0.0f, 3.0f } },
+        { { -0.5f, 0.0f, 0.5f },   { 0.0f, 1.0f, 0.0f },  { 0.0f, 0.0f } },
+        { { 0.5f, 0.0f, 0.5f },    { 0.0f, 1.0f, 0.0f },  { 3.0f, 0.0f } },
+        { { 0.5f, 0.0f, -0.5f },   { 0.0f, 1.0f, 0.0f },  { 3.0f, 3.0f } },
+        { { -0.5f, 0.0f, -0.5f },  { 0.0f, 1.0f, 0.0f },  { 0.0f, 3.0f } },
 };
-
-std::vector<Float_vertex> scale_vertices(const std::vector<Float_vertex>& vertices, float scale)
-{
-    std::vector<Float_vertex> scaled_vertices;
-    for (auto& vertex : vertices)
-    {
-        scaled_vertices.push_back({ DirectX::XMFLOAT3(scale * vertex.position.x,
-            vertex.position.y, scale * vertex.position.z), vertex.normal, vertex.uv });
-    }
-    return scaled_vertices;
-}
 
 std::vector<int> plane_indices = { 0, 1, 2, 2, 3, 0 };
 
 Plane::Plane(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list) :
-    Mesh(device, command_list, convert_to_packed_vertices(scale_vertices(plane_vertices, 30.0f)),
-        plane_indices)
+    Mesh(device, command_list, convert_to_packed_vertices(plane_vertices), plane_indices)
 {
 }

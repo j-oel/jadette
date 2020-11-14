@@ -63,30 +63,34 @@ struct Material_not_defined
     std::string object;
 };
 
+using DirectX::PackedVector::XMConvertFloatToHalf;
+
 void convert_vector_to_half4(DirectX::PackedVector::XMHALF4& half4, DirectX::XMVECTOR vec)
 {
-    half4.x = DirectX::PackedVector::XMConvertFloatToHalf(vec.m128_f32[0]);
-    half4.y = DirectX::PackedVector::XMConvertFloatToHalf(vec.m128_f32[1]);
-    half4.z = DirectX::PackedVector::XMConvertFloatToHalf(vec.m128_f32[2]);
-    half4.w = DirectX::PackedVector::XMConvertFloatToHalf(vec.m128_f32[3]);
+    half4.x = XMConvertFloatToHalf(vec.m128_f32[0]);
+    half4.y = XMConvertFloatToHalf(vec.m128_f32[1]);
+    half4.z = XMConvertFloatToHalf(vec.m128_f32[2]);
+    half4.w = XMConvertFloatToHalf(vec.m128_f32[3]);
 }
+
+using DirectX::PackedVector::XMConvertHalfToFloat;
 
 DirectX::XMVECTOR convert_half4_to_vector(DirectX::PackedVector::XMHALF4 half4)
 {
-    DirectX::XMVECTOR vec = XMVectorSet(DirectX::PackedVector::XMConvertHalfToFloat(half4.x),
-                                        DirectX::PackedVector::XMConvertHalfToFloat(half4.y),
-                                        DirectX::PackedVector::XMConvertHalfToFloat(half4.z),
-                                        DirectX::PackedVector::XMConvertHalfToFloat(half4.w));
+    DirectX::XMVECTOR vec = XMVectorSet(XMConvertHalfToFloat(half4.x),
+                                        XMConvertHalfToFloat(half4.y),
+                                        XMConvertHalfToFloat(half4.z),
+                                        XMConvertHalfToFloat(half4.w));
     return vec;
 }
 
-DirectX::PackedVector::XMHALF4 convert_float3_point_to_half4(const XMFLOAT3& pos)
+DirectX::PackedVector::XMHALF4 convert_float4_to_half4(const XMFLOAT4& vec)
 {
     DirectX::PackedVector::XMHALF4 half4;
-    half4.x = DirectX::PackedVector::XMConvertFloatToHalf(pos.x);
-    half4.y = DirectX::PackedVector::XMConvertFloatToHalf(pos.y);
-    half4.z = DirectX::PackedVector::XMConvertFloatToHalf(pos.z);
-    half4.w = DirectX::PackedVector::XMConvertFloatToHalf(1.0f);
+    half4.x = XMConvertFloatToHalf(vec.x);
+    half4.y = XMConvertFloatToHalf(vec.y);
+    half4.z = XMConvertFloatToHalf(vec.z);
+    half4.w = XMConvertFloatToHalf(vec.w);
     return half4;
 }
 
@@ -233,6 +237,7 @@ XMMATRIX fly_around_in_circle(std::shared_ptr<Graphical_object>& object,
     XMMATRIX new_model_matrix = orient_the_ship * go_in_a_circle *
         translate_to_the_point_on_which_to_rotate_around;
 
+    new_model_matrix.r[3].m128_f32[3] = translation.m128_f32[3]; // Set the scaling component
     return new_model_matrix;
 }
 
@@ -436,10 +441,10 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
     };
 
     auto create_object = [&](const string& name, shared_ptr<Mesh> mesh,
-        shared_ptr<Texture> diffuse_map, bool dynamic, XMFLOAT3 position, int instances = 1,
+        shared_ptr<Texture> diffuse_map, bool dynamic, XMFLOAT4 position, int instances = 1,
         shared_ptr<Texture> normal_map = nullptr)
     {
-        Per_instance_translation_data translation = { convert_float3_point_to_half4(position) };
+        Per_instance_translation_data translation = { convert_float4_to_half4(position) };
         m_translations.push_back(translation);
         auto object = std::make_shared<Graphical_object>(device, mesh,
             command_list, root_param_index_of_textures, diffuse_map, 
@@ -479,10 +484,11 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             file >> model;
             string diffuse_map;
             file >> diffuse_map;
-            XMFLOAT3 position;
+            XMFLOAT4 position;
             file >> position.x;
             file >> position.y;
             file >> position.z;
+            file >> position.w; // This is used as scale.
 
             bool dynamic = static_dynamic == "dynamic" ? true : false;
 
@@ -593,6 +599,8 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             file >> offset.x;
             file >> offset.y;
             file >> offset.z;
+            float scale;
+            file >> scale;
 
             int instances = count.x * count.y * count.z;
             bool dynamic = static_dynamic == "dynamic" ? true : false;
@@ -617,8 +625,8 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                 for (int y = 0; y < count.y; ++y)
                     for (int z = 0; z < count.z; ++z, --instances)
                     {
-                        XMFLOAT3 position = XMFLOAT3(pos.x + offset.x * x, pos.y + offset.y * y,
-                            pos.z + offset.z * z);
+                        XMFLOAT4 position = XMFLOAT4(pos.x + offset.x * x, pos.y + offset.y * y,
+                            pos.z + offset.z * z, scale);
                         create_object(dynamic? "arrayobject" + std::to_string(object_id) :"", 
                             mesh, diffuse_map_tex, dynamic, position, instances);
                     }
