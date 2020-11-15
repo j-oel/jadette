@@ -47,8 +47,6 @@ void Mesh::draw(ComPtr<ID3D12GraphicsCommandList> command_list,
     D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view, int instance_id, int draw_instances_count,
     const Input_element_model& input_element_model)
 {
-    command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
     switch (input_element_model)
     {
         case Input_element_model::translation:

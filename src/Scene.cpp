@@ -282,6 +282,8 @@ void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
     const std::vector<std::shared_ptr<Graphical_object> >& objects,
     Texture_mapping texture_mapping, const Input_element_model& input_element_model) const
 {
+    command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
     for (size_t i = 0; i < objects.size();)
     {
         auto& graphical_object = objects[i];
