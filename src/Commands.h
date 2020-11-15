@@ -19,6 +19,7 @@ class Depth_stencil;
 class Depth_pass;
 class Root_signature;
 enum class Texture_mapping;
+enum class Input_element_model;
 
 using Microsoft::WRL::ComPtr;
 
@@ -37,8 +38,10 @@ public:
     void clear_depth_stencil();
     void set_descriptor_heap(ComPtr<ID3D12DescriptorHeap> descriptor_heap);
     void set_shader_constants();
-    void draw_static_objects(ComPtr<ID3D12PipelineState> pipeline_state);
-    void draw_dynamic_objects(ComPtr<ID3D12PipelineState> pipeline_state);
+    void draw_static_objects(ComPtr<ID3D12PipelineState> pipeline_state,
+        const Input_element_model& input_element_model);
+    void draw_dynamic_objects(ComPtr<ID3D12PipelineState> pipeline_state,
+        const Input_element_model& input_element_model);
     void close();
 private:
     ComPtr<ID3D12GraphicsCommandList> m_command_list;

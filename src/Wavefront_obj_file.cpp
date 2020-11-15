@@ -22,7 +22,7 @@ using std::string;
 void read_mtl_file(const string file_name, map<string, Material>& materials);
 
 
-bool read_obj_file(std::ifstream& file, vector<Vertex>& vertices, vector<int>& indices, 
+bool read_obj_file(std::ifstream& file, Vertices& vertices, vector<int>& indices,
     vector<XMHALF4>& input_vertices, vector<XMHALF4>& input_normals,
     vector<XMHALF2>& input_texture_coords, string& material,
     map<string, Material>* materials)
@@ -107,8 +107,8 @@ bool read_obj_file(std::ifstream& file, vector<Vertex>& vertices, vector<int>& i
                     normal_plus_v.w = input_texture_coords[uv_index - 1].y;
                 }
 
-                const Vertex vertex{ position_plus_u, normal_plus_v };
-                vertices.push_back(vertex);
+                vertices.positions.push_back({ position_plus_u });
+                vertices.normals.push_back({ normal_plus_v });
             }
         }
         else if (input == "mtllib")
@@ -124,7 +124,7 @@ bool read_obj_file(std::ifstream& file, vector<Vertex>& vertices, vector<int>& i
         else if (input == "o")
         {
             file >> input; // Read the object name
-            if (!vertices.empty())
+            if (!vertices.positions.empty())
             {
                 more_objects = true;
                 break;
@@ -135,7 +135,7 @@ bool read_obj_file(std::ifstream& file, vector<Vertex>& vertices, vector<int>& i
     return more_objects;
 }
 
-void read_obj_file(const string& filename, vector<Vertex>& vertices, vector<int>& indices)
+void read_obj_file(const string& filename, Vertices& vertices, vector<int>& indices)
 {
     vector<XMHALF4> input_vertices;
     vector<XMHALF4> input_normals;
@@ -160,7 +160,7 @@ std::shared_ptr<Model_collection> read_obj_file(const string& filename,
     bool more_objects = true;
     while (more_objects)
     {
-        vector<Vertex> vertices;
+        Vertices vertices;
         vector<int> indices;
         string material;
         more_objects = read_obj_file(file, vertices, indices, input_vertices,

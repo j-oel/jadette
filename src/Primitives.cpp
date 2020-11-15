@@ -61,18 +61,20 @@ namespace {
 
 }
 
-std::vector<Vertex> convert_to_packed_vertices(const std::vector<Float_vertex>& input_vertices)
+Vertices convert_to_packed_vertices(const std::vector<Float_vertex>& input_vertices)
 {
     using DirectX::PackedVector::XMConvertFloatToHalf;
-    std::vector<Vertex> vertices;
+    Vertices vertices;
     for (const auto& i_v : input_vertices)
     {
-        Vertex v;
+        Vertex_position v;
+        Vertex_normal n;
         v.position = { XMConvertFloatToHalf(i_v.position.x), XMConvertFloatToHalf(i_v.position.y),
         XMConvertFloatToHalf(i_v.position.z), i_v.uv.x };
-        v.normal = { XMConvertFloatToHalf(i_v.normal.x), XMConvertFloatToHalf(i_v.normal.y),
+        vertices.positions.push_back(v);
+        n.normal = { XMConvertFloatToHalf(i_v.normal.x), XMConvertFloatToHalf(i_v.normal.y),
         XMConvertFloatToHalf(i_v.normal.z), i_v.uv.y };
-        vertices.push_back(v);
+        vertices.normals.push_back(n);
     }
     return vertices;
 }

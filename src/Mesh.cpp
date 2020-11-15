@@ -8,6 +8,7 @@
 #include "Mesh.h"
 #include "util.h"
 #include "Wavefront_obj_file.h"
+#include "Root_signature.h"
 
 #include <vector>
 
@@ -15,44 +16,70 @@
 Mesh::Mesh(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list, 
     const std::string& filename)
 {
-    std::vector<Vertex> vertices;
+    Vertices vertices;
     std::vector<int> indices;
 
     read_obj_file(filename, vertices, indices);
 
-    create_and_fill_vertex_buffer(vertices, device, command_list);
+    create_and_fill_vertex_positions_buffer(vertices.positions, device, command_list);
+    create_and_fill_vertex_normals_buffer(vertices.normals, device, command_list);
     create_and_fill_index_buffer(indices, device, command_list);
 }
 
 Mesh::Mesh(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
-    const std::vector<Vertex>& vertices, const std::vector<int>& indices)
+    const Vertices& vertices, const std::vector<int>& indices)
 {
-    create_and_fill_vertex_buffer(vertices, device, command_list);
+    create_and_fill_vertex_positions_buffer(vertices.positions, device, command_list);
+    create_and_fill_vertex_normals_buffer(vertices.normals, device, command_list);
     create_and_fill_index_buffer(indices, device, command_list);
 }
 
 
 void Mesh::release_temp_resources()
 {
-    m_temp_upload_resource_vb.Reset();
+    m_temp_upload_resource_vb_pos.Reset();
+    m_temp_upload_resource_vb_normals.Reset();
     m_temp_upload_resource_ib.Reset();
 }
 
 
 void Mesh::draw(ComPtr<ID3D12GraphicsCommandList> command_list,
-    D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view, int instance_id, int draw_instances_count)
+    D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view, int instance_id, int draw_instances_count,
+    const Input_element_model& input_element_model)
 {
     command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    if (instance_vertex_buffer_view.BufferLocation)
+
+    switch (input_element_model)
     {
-        D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_buffer_view, instance_vertex_buffer_view };
-        command_list->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
+        case Input_element_model::translation:
+        {
+            D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_positions_buffer_view,
+                m_vertex_normals_buffer_view, instance_vertex_buffer_view };
+            command_list->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
+            break;
+        }
+        case Input_element_model::trans_rot:
+        {
+            D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_positions_buffer_view,
+            m_vertex_normals_buffer_view };
+            command_list->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
+            break;
+        }
+        case Input_element_model::positions_translation:
+        {
+            D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_positions_buffer_view,
+                instance_vertex_buffer_view };
+            command_list->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
+            break;
+        }
+        case Input_element_model::positions_trans_rot:
+        {
+            D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_positions_buffer_view };
+            command_list->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
+            break;
+        }
     }
-    else
-    {
-        D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_buffer_view };
-        command_list->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
-    }
+
     command_list->IASetIndexBuffer(&m_index_buffer_view);
     command_list->DrawIndexedInstanced(m_index_count, draw_instances_count, 0, 0, instance_id);
 }
@@ -138,17 +165,30 @@ namespace
 }
 
 
-void Mesh::create_and_fill_vertex_buffer(const std::vector<Vertex>& vertices, 
+void Mesh::create_and_fill_vertex_positions_buffer(const std::vector<Vertex_position>& vertices, 
     ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
-    const UINT vertex_buffer_size = static_cast<UINT>(vertices.size() * sizeof(Vertex));
+    const UINT vertex_buffer_size = static_cast<UINT>(vertices.size() * sizeof(Vertex_position));
 
-    create_and_fill_buffer(device, command_list, m_vertex_buffer, 
-        m_temp_upload_resource_vb, vertices, vertex_buffer_size, m_vertex_buffer_view);
+    create_and_fill_buffer(device, command_list, m_vertex_positions_buffer, 
+        m_temp_upload_resource_vb_pos, vertices, vertex_buffer_size, m_vertex_positions_buffer_view);
 
-    SET_DEBUG_NAME(m_vertex_buffer, L"Vertex Buffer");
+    SET_DEBUG_NAME(m_vertex_positions_buffer, L"Vertex Positions Buffer");
 
-    m_vertex_buffer_view.StrideInBytes = sizeof(Vertex);
+    m_vertex_positions_buffer_view.StrideInBytes = sizeof(Vertex_position);
+}
+
+void Mesh::create_and_fill_vertex_normals_buffer(const std::vector<Vertex_normal>& vertices,
+    ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list)
+{
+    const UINT vertex_buffer_size = static_cast<UINT>(vertices.size() * sizeof(Vertex_normal));
+
+    create_and_fill_buffer(device, command_list, m_vertex_normals_buffer,
+        m_temp_upload_resource_vb_normals, vertices, vertex_buffer_size, m_vertex_normals_buffer_view);
+
+    SET_DEBUG_NAME(m_vertex_normals_buffer, L"Vertex Normals Buffer");
+
+    m_vertex_normals_buffer_view.StrideInBytes = sizeof(Vertex_normal);
 }
 
 void Mesh::create_and_fill_index_buffer(const std::vector<int>& indices,

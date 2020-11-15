@@ -18,6 +18,7 @@
 using Microsoft::WRL::ComPtr;
 
 enum class Primitive_type { Plane, Cube };
+enum class Input_element_model;
 
 class Graphical_object
 {
@@ -34,9 +35,11 @@ public:
         int instances = 1);
 
     void draw(ComPtr<ID3D12GraphicsCommandList> command_list,
-        D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view, int instance_id);
+        D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view, int instance_id,
+        const Input_element_model& input_element_model);
     void draw_textured(ComPtr<ID3D12GraphicsCommandList> command_list,
-        D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view, int instance_id);
+        D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view, int instance_id,
+        const Input_element_model& input_element_model);
     void release_temp_resources();
     int triangles_count();
     int instances() { return m_instances; }

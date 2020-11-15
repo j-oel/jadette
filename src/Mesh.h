@@ -17,11 +17,28 @@
 using Microsoft::WRL::ComPtr;
 
 
-struct Vertex
+struct Vertex_position
 {
     DirectX::PackedVector::XMHALF4 position;
+};
+
+struct Vertex_normal
+{
     DirectX::PackedVector::XMHALF4 normal;
 };
+
+
+// The depth passes (which includes the shadow map generation) becomes
+// about 10-20% faster when run with vertex buffers with only positions.
+// Although, only when having more complex objects - i.e. not my standard
+// test scene with a lot of instanced cubes.
+struct Vertices
+{
+    std::vector<Vertex_position> positions;
+    std::vector<Vertex_normal> normals;
+};
+
+enum class Input_element_model;
 
 class Mesh
 {
@@ -29,32 +46,38 @@ public:
     Mesh(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list, 
         const std::string& filename);
     Mesh(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
-        const std::vector<Vertex>& vertices, const std::vector<int>& indices);
+        const Vertices& vertices, const std::vector<int>& indices);
 
     void release_temp_resources();
 
     void draw(ComPtr<ID3D12GraphicsCommandList> command_list, 
         D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view, int instance_id,
-        int draw_instances_count);
+        int draw_instances_count, const Input_element_model& input_element_model);
 
     int triangles_count();
 
 private:
 
-    void create_and_fill_vertex_buffer(const std::vector<Vertex>& vertices, 
+    void create_and_fill_vertex_positions_buffer(const std::vector<Vertex_position>& vertices, 
+        ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list);
+    void create_and_fill_vertex_normals_buffer(const std::vector<Vertex_normal>& vertices,
         ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list);
     void create_and_fill_index_buffer(const std::vector<int>& indices, ComPtr<ID3D12Device> device, 
         ComPtr<ID3D12GraphicsCommandList>& command_list);
 
 
-    ComPtr<ID3D12Resource> m_vertex_buffer;
-    D3D12_VERTEX_BUFFER_VIEW m_vertex_buffer_view;
+    ComPtr<ID3D12Resource> m_vertex_positions_buffer;
+    D3D12_VERTEX_BUFFER_VIEW m_vertex_positions_buffer_view;
+
+    ComPtr<ID3D12Resource> m_vertex_normals_buffer;
+    D3D12_VERTEX_BUFFER_VIEW m_vertex_normals_buffer_view;
 
     ComPtr<ID3D12Resource> m_index_buffer;
     D3D12_INDEX_BUFFER_VIEW m_index_buffer_view;
     UINT m_index_count;
 
-    ComPtr<ID3D12Resource> m_temp_upload_resource_vb;
+    ComPtr<ID3D12Resource> m_temp_upload_resource_vb_pos;
+    ComPtr<ID3D12Resource> m_temp_upload_resource_vb_normals;
     ComPtr<ID3D12Resource> m_temp_upload_resource_ib;
 };
 

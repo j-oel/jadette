@@ -20,12 +20,12 @@ m_root_signature(device), m_dsv_format(dsv_format)
     const char* empty_pixel_shader = nullptr;
     create_pipeline_state(device, m_pipeline_state_model_vector, m_root_signature.get(),
         "depths_vertex_shader_model_vector", empty_pixel_shader,
-        dsv_format, render_targets_count, Input_element_model::translation);
+        dsv_format, render_targets_count, Input_element_model::positions_translation);
     SET_DEBUG_NAME(m_pipeline_state_model_vector, L"Depths Pipeline State Object Model Vector");
 
     create_pipeline_state(device, m_pipeline_state_srv_instance_data, m_root_signature.get(),
         "depths_vertex_shader_srv_instance_data", empty_pixel_shader,
-        dsv_format, render_targets_count, Input_element_model::trans_rot);
+        dsv_format, render_targets_count, Input_element_model::positions_trans_rot);
     SET_DEBUG_NAME(m_pipeline_state_srv_instance_data,
         L"Depths Pipeline State Object SRV instance data");
 }
@@ -54,8 +54,8 @@ void Depth_pass::record_commands(Scene& scene, const View& view, Depth_stencil& 
     c.set_shader_constants();
     set_render_target(command_list, depth_stencil);
     c.clear_depth_stencil();
-    c.draw_static_objects(m_pipeline_state_model_vector);
-    c.draw_dynamic_objects(m_pipeline_state_srv_instance_data);
+    c.draw_static_objects(m_pipeline_state_model_vector, Input_element_model::positions_translation);
+    c.draw_dynamic_objects(m_pipeline_state_srv_instance_data, Input_element_model::positions_trans_rot);
 }
 
 Depth_pass_root_signature::Depth_pass_root_signature(ComPtr<ID3D12Device> device)

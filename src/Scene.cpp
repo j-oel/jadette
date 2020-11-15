@@ -286,16 +286,19 @@ void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
     {
         auto& graphical_object = objects[i];
         bool vector_data = true;
-        if (input_element_model == Input_element_model::translation)
+        if (input_element_model == Input_element_model::translation ||
+            input_element_model == Input_element_model::positions_translation)
         {
             if (texture_mapping == Texture_mapping::enabled)
                 graphical_object->draw_textured(command_list,
-                    m_instance_vector_data->buffer_view(), graphical_object->id());
+                    m_instance_vector_data->buffer_view(), graphical_object->id(),
+                    input_element_model);
             else
                 graphical_object->draw(command_list, m_instance_vector_data->buffer_view(),
-                    graphical_object->id());
+                    graphical_object->id(), input_element_model);
         }
-        else if (input_element_model == Input_element_model::trans_rot)
+        else if (input_element_model == Input_element_model::trans_rot ||
+            input_element_model == Input_element_model::positions_trans_rot)
         {
             D3D12_VERTEX_BUFFER_VIEW v {};
             constexpr UINT offset = 0;
@@ -303,9 +306,10 @@ void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
             command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
                 size_in_words_of_value, &i, offset);
             if (texture_mapping == Texture_mapping::enabled)
-                graphical_object->draw_textured(command_list, v, static_cast<int>(i));
+                graphical_object->draw_textured(command_list, v, static_cast<int>(i),
+                    input_element_model);
             else
-                graphical_object->draw(command_list, v, static_cast<int>(i));
+                graphical_object->draw(command_list, v, static_cast<int>(i), input_element_model);
         }
 
         // If instances() returns more than 1, those additional instances were already drawn
@@ -315,15 +319,15 @@ void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
 }
 
 void Scene::draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    Texture_mapping texture_mapping) const
+    Texture_mapping texture_mapping, const Input_element_model& input_element_model) const
 {
-    draw_objects(command_list, m_static_objects, texture_mapping, Input_element_model::translation);
+    draw_objects(command_list, m_static_objects, texture_mapping, input_element_model);
 }
 
 void Scene::draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    Texture_mapping texture_mapping) const
+    Texture_mapping texture_mapping, const Input_element_model& input_element_model) const
 {
-    draw_objects(command_list, m_dynamic_objects, texture_mapping, Input_element_model::trans_rot);
+    draw_objects(command_list, m_dynamic_objects, texture_mapping, input_element_model);
 }
 
 void Scene::upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list)

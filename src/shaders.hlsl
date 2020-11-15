@@ -229,8 +229,7 @@ struct depths_vertex_shader_output
 };
 
 depths_vertex_shader_output depths_vertex_shader_model_trans_rot(float4 position : POSITION,
-    float3 normal : NORMAL, half4 translation : TRANSLATION, 
-    half4 rotation : ROTATION)
+    half4 translation : TRANSLATION, half4 rotation : ROTATION)
 {
     depths_vertex_shader_output result;
     half4x4 model = to_scaled_model_matrix(translation, rotation);
@@ -240,7 +239,7 @@ depths_vertex_shader_output depths_vertex_shader_model_trans_rot(float4 position
 }
 
 depths_vertex_shader_output depths_vertex_shader_srv_instance_data(uint instance_id : SV_InstanceID,
-    float3 position : POSITION, float3 normal : NORMAL)
+    float3 position : POSITION)
 {
     const uint index = values.object_id + instance_id;
     uint4 v = instance[index].value;
@@ -248,13 +247,13 @@ depths_vertex_shader_output depths_vertex_shader_srv_instance_data(uint instance
     float4 translation = float4(f16tof32(v.x), f16tof32(v.x >> 16), f16tof32(v.y), f16tof32(v.y >> 16));
     float4 rotation = float4(f16tof32(v.z), f16tof32(v.z >> 16), f16tof32(v.w), f16tof32(v.w >> 16));
 
-    return depths_vertex_shader_model_trans_rot(float4(position, 1), normal, translation, rotation);
+    return depths_vertex_shader_model_trans_rot(float4(position, 1), translation, rotation);
 }
 
 
 depths_vertex_shader_output depths_vertex_shader_model_vector(float3 position : POSITION,
-    float3 normal : NORMAL, half4 translation : TRANSLATION)
+    half4 translation : TRANSLATION)
 {
-    return depths_vertex_shader_model_trans_rot(float4(position, 1), normal, translation,
+    return depths_vertex_shader_model_trans_rot(float4(position, 1), translation,
         half4(0, 0, 0, 1));
 }

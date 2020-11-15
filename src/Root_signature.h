@@ -34,7 +34,7 @@ protected:
 };
 
 
-enum class Input_element_model { translation, trans_rot };
+enum class Input_element_model { translation, trans_rot, positions_translation, positions_trans_rot };
 enum class Depth_write { enabled, disabled };
 
 void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineState>& pipeline_state,

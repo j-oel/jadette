@@ -35,8 +35,7 @@ struct Model_collection
 // Read Wavefront .obj files.
 // See https://en.wikipedia.org/wiki/Wavefront_.obj_file
 
-void read_obj_file(const std::string& filename, std::vector<Vertex>& vertices,
-    std::vector<int>& indices);
+void read_obj_file(const std::string& filename, Vertices& vertices, std::vector<int>& indices);
 
 std::shared_ptr<Model_collection> read_obj_file(const std::string& filename,
     ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list);

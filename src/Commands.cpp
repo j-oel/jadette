@@ -75,16 +75,18 @@ void Commands::close()
     throw_if_failed(m_command_list->Close());
 }
 
-void Commands::draw_static_objects(ComPtr<ID3D12PipelineState> pipeline_state)
+void Commands::draw_static_objects(ComPtr<ID3D12PipelineState> pipeline_state,
+    const Input_element_model& input_element_model)
 {
     assert(m_scene);
     m_command_list->SetPipelineState(pipeline_state.Get());
-    m_scene->draw_static_objects(m_command_list, m_texture_mapping);
+    m_scene->draw_static_objects(m_command_list, m_texture_mapping, input_element_model);
 }
 
-void Commands::draw_dynamic_objects(ComPtr<ID3D12PipelineState> pipeline_state)
+void Commands::draw_dynamic_objects(ComPtr<ID3D12PipelineState> pipeline_state,
+    const Input_element_model& input_element_model)
 {
     assert(m_scene);
     m_command_list->SetPipelineState(pipeline_state.Get());
-    m_scene->draw_dynamic_objects(m_command_list, m_texture_mapping);
+    m_scene->draw_dynamic_objects(m_command_list, m_texture_mapping, input_element_model);
 }

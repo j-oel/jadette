@@ -58,13 +58,16 @@ Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<
 }
 
 void Graphical_object::draw(ComPtr<ID3D12GraphicsCommandList> command_list,
-    D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view, int instance_id)
+    D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view, int instance_id,
+    const Input_element_model& input_element_model)
 {
-    m_mesh->draw(command_list, instance_vertex_buffer_view, instance_id, m_instances);
+    m_mesh->draw(command_list, instance_vertex_buffer_view, instance_id, m_instances, 
+        input_element_model);
 }
 
 void Graphical_object::draw_textured(ComPtr<ID3D12GraphicsCommandList> command_list,
-    D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view, int instance_id)
+    D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view, int instance_id,
+    const Input_element_model& input_element_model)
 {
     constexpr UINT size_in_words_of_value = 1;
     command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
@@ -79,7 +82,7 @@ void Graphical_object::draw_textured(ComPtr<ID3D12GraphicsCommandList> command_l
         m_diffuse_map->set_texture_for_shader(command_list, m_root_param_index_of_normal_maps);
 
 
-    draw(command_list, instance_vertex_buffer_view, instance_id);
+    draw(command_list, instance_vertex_buffer_view, instance_id, input_element_model);
 }
 
 void Graphical_object::release_temp_resources()

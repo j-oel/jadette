@@ -35,9 +35,9 @@ public:
     void update();
 
     void draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list, 
-        Texture_mapping texture_mapping) const;
+        Texture_mapping texture_mapping, const Input_element_model& input_element_model) const;
     void draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list, 
-        Texture_mapping texture_mapping) const;
+        Texture_mapping texture_mapping, const Input_element_model& input_element_model) const;
     void upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
     int triangles_count() const { return m_triangles_count; }
     size_t objects_count() const { return m_graphical_objects.size(); }

@@ -232,8 +232,8 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     c.set_root_signature();
     set_and_clear_render_target();
     c.set_shader_constants();
-    c.draw_static_objects(m_pipeline_state_model_vector);
-    c.draw_dynamic_objects(m_pipeline_state_srv_instance_data);
+    c.draw_static_objects(m_pipeline_state_model_vector, Input_element_model::translation);
+    c.draw_dynamic_objects(m_pipeline_state_srv_instance_data, Input_element_model::trans_rot);
 
     // If text is enabled, the text object takes care of the render target state transition.
 #ifdef NO_TEXT
