@@ -13,8 +13,9 @@
 
 using namespace std;
 
-Input::Input() : m_mouse_position({ 0, 0 }), m_forward(false), m_backward(false),
-m_left(false), m_right(false), m_up(false), m_down(false)
+Input::Input() : m_mouse_position({ 0, 0 }), m_mouse_wheel_delta(0), m_left_mouse_button_down(false),
+m_control_left_mouse_button_down(false), m_shift_left_mouse_button_down(false), m_forward(false), 
+m_backward(false), m_left(false), m_right(false), m_up(false), m_down(false)
 {
 }
 
@@ -40,6 +41,10 @@ void Input::key_down(WPARAM key_code)
         case 'D':
         case VK_RIGHT:
             m_right = true;
+            break;
+
+        case 'E':
+            m_e = true;
             break;
 
         case VK_SPACE:
@@ -90,9 +95,21 @@ void Input::key_up(WPARAM key_code)
     }
 }
 
+void Input::mouse_left_button_up()
+{
+    m_left_mouse_button_down = false;
+    m_shift_left_mouse_button_down = false;
+    m_control_left_mouse_button_down = false;
+}
+
 void Input::mouse_move(LPARAM position)
 {
     m_mouse_position = { GET_X_LPARAM(position), GET_Y_LPARAM(position) };
+}
+
+void Input::mouse_wheel_roll(short delta)
+{
+    m_mouse_wheel_delta = delta;
 }
 
 bool Input::f1()
@@ -102,8 +119,29 @@ bool Input::f1()
     return f1;
 }
 
+bool Input::e()
+{
+    bool e = m_e;
+    m_e = false;
+    return e;
+}
+
+void Input::set_mouse_position(POINT position, HWND window)
+{
+    m_mouse_position = position;
+    ClientToScreen(window, &position);
+    SetCursorPos(position.x, position.y);
+}
+
 POINT Input::mouse_position()
 {
     return m_mouse_position;
+}
+
+int Input::mouse_wheel_delta()
+{
+    int delta = m_mouse_wheel_delta;
+    m_mouse_wheel_delta = 0;
+    return delta;
 }
 

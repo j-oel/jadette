@@ -25,6 +25,10 @@ public:
     void set_view(ComPtr<ID3D12GraphicsCommandList> command_list, 
         int root_param_index_of_matrices) const;
     const DirectX::XMMATRIX& view_projection_matrix() const { return m_view_projection_matrix; }
+    const DirectX::XMMATRIX& view_matrix() const { return m_view_matrix; }
+    const DirectX::XMMATRIX& projection_matrix() const { return m_projection_matrix; }
+    UINT width() const { return m_width; }
+    UINT height() const { return m_height; }
 private:
     DirectX::XMMATRIX m_view_matrix;
     DirectX::XMMATRIX m_projection_matrix;

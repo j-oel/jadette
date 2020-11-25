@@ -285,6 +285,32 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM w_param, LPA
             }
             break;
 
+        case WM_LBUTTONDOWN:
+            if (engine)
+            {
+                if (w_param & MK_SHIFT)
+                    engine->input.shift_mouse_left_button_down();
+                else if (w_param & MK_CONTROL)
+                    engine->input.control_mouse_left_button_down();
+                else
+                    engine->input.mouse_left_button_down();
+            }
+            break;
+
+        case WM_LBUTTONUP:
+            if (engine)
+            {
+                engine->input.mouse_left_button_up();
+            }
+            break;
+
+        case WM_MOUSEWHEEL:
+            if (engine)
+            {
+                engine->input.mouse_wheel_roll(GET_WHEEL_DELTA_WPARAM(w_param));
+            }
+            break;
+
         case WM_DPICHANGED:
         {
             uint16_t dpi = HIWORD(w_param);

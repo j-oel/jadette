@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <directxmath.h>
 #include "windefmin.h"
 
 class Input;
@@ -19,11 +18,16 @@ public:
     View_controller(Input& input, HWND window);
     void update(View& view);
 private:
-    void first_person_view_update(DirectX::XMVECTOR& eye_position, DirectX::XMVECTOR& focus_point);
-    void mouse_look(DirectX::XMVECTOR& eye_position,
-        DirectX::XMVECTOR& focus_point, double delta_time);
+    void first_person_view_update(View& view);
+    void orbit_update(View& view);
+    void mouse_look(View& view, double delta_time);
     void move_mouse_pointer_to_center();
+    void switch_to_edit_mode();
+    void switch_to_non_edit_mode();
+
     Input& m_input;
+
+    bool m_edit_mode;
 
     double m_acceleration_x;
     double m_acceleration_y;
