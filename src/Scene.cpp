@@ -343,7 +343,7 @@ void Scene::upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list
     if (!m_graphical_objects.empty())
         upload_instance_translation_data(command_list);
     if (!m_dynamic_objects.empty())
-        upload_instance_trans_rot_data(command_list, m_dynamic_objects);
+        upload_instance_trans_rot_data(command_list);
 }
 
 void Scene::upload_instance_translation_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
@@ -356,8 +356,7 @@ void Scene::upload_instance_translation_data(ComPtr<ID3D12GraphicsCommandList>& 
     }
 }
 
-void Scene::upload_instance_trans_rot_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    const std::vector<std::shared_ptr<Graphical_object> >& objects)
+void Scene::upload_instance_trans_rot_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
     m_instance_trans_rot_data->upload_new_trans_rot_data(command_list, m_model_transforms);
 }

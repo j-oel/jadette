@@ -52,8 +52,7 @@ private:
     void upload_resources_to_gpu(ComPtr<ID3D12Device> device,
         ComPtr<ID3D12GraphicsCommandList>& command_list);
     void upload_instance_translation_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
-    void upload_instance_trans_rot_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
-        const std::vector<std::shared_ptr<Graphical_object> >& objects);
+    void upload_instance_trans_rot_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
     void draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
         const std::vector<std::shared_ptr<Graphical_object> >& objects,
         Texture_mapping texture_mapping, const Input_element_model& input_element_model) const;
