@@ -19,6 +19,7 @@
 
 
 using namespace DirectX;
+using namespace DirectX::PackedVector;
 
 
 struct Read_error
@@ -63,9 +64,7 @@ struct Material_not_defined
     std::string object;
 };
 
-using DirectX::PackedVector::XMConvertFloatToHalf;
-
-void convert_vector_to_half4(DirectX::PackedVector::XMHALF4& half4, DirectX::XMVECTOR vec)
+void convert_vector_to_half4(XMHALF4& half4, XMVECTOR vec)
 {
     half4.x = XMConvertFloatToHalf(vec.m128_f32[0]);
     half4.y = XMConvertFloatToHalf(vec.m128_f32[1]);
@@ -73,20 +72,28 @@ void convert_vector_to_half4(DirectX::PackedVector::XMHALF4& half4, DirectX::XMV
     half4.w = XMConvertFloatToHalf(vec.m128_f32[3]);
 }
 
-using DirectX::PackedVector::XMConvertHalfToFloat;
-
-DirectX::XMVECTOR convert_half4_to_vector(DirectX::PackedVector::XMHALF4 half4)
+XMHALF4 convert_vector_to_half4(XMVECTOR vec)
 {
-    DirectX::XMVECTOR vec = XMVectorSet(XMConvertHalfToFloat(half4.x),
+    XMHALF4 half4;
+    half4.x = XMConvertFloatToHalf(vec.m128_f32[0]);
+    half4.y = XMConvertFloatToHalf(vec.m128_f32[1]);
+    half4.z = XMConvertFloatToHalf(vec.m128_f32[2]);
+    half4.w = XMConvertFloatToHalf(vec.m128_f32[3]);
+    return half4;
+}
+
+XMVECTOR convert_half4_to_vector(PackedVector::XMHALF4 half4)
+{
+    XMVECTOR vec = XMVectorSet(XMConvertHalfToFloat(half4.x),
                                         XMConvertHalfToFloat(half4.y),
                                         XMConvertHalfToFloat(half4.z),
                                         XMConvertHalfToFloat(half4.w));
     return vec;
 }
 
-DirectX::PackedVector::XMHALF4 convert_float4_to_half4(const XMFLOAT4& vec)
+XMHALF4 convert_float4_to_half4(const XMFLOAT4& vec)
 {
-    DirectX::PackedVector::XMHALF4 half4;
+    XMHALF4 half4;
     half4.x = XMConvertFloatToHalf(vec.x);
     half4.y = XMConvertFloatToHalf(vec.y);
     half4.z = XMConvertFloatToHalf(vec.z);
@@ -241,8 +248,8 @@ XMMATRIX fly_around_in_circle(std::shared_ptr<Graphical_object>& object,
     return new_model_matrix;
 }
 
-void set_instance_data(Per_instance_trans_rot& trans_rot, DirectX::PackedVector::XMHALF4 translation,
-    const DirectX::XMVECTOR& rotation)
+void set_instance_data(Per_instance_trans_rot& trans_rot, XMHALF4 translation,
+    const XMVECTOR& rotation)
 {
     trans_rot.translation = translation;
     convert_vector_to_half4(trans_rot.rotation, rotation);
@@ -250,13 +257,6 @@ void set_instance_data(Per_instance_trans_rot& trans_rot, DirectX::PackedVector:
 
 void Scene::update()
 {
-    int i = 0;
-    for (auto& object : m_dynamic_objects)
-    {
-        m_model_transforms[i].translation = m_translations[object->id()].model;
-        ++i;
-    }
-
     const float angle = XMConvertToRadians(static_cast<float>(elapsed_time_in_seconds() * 100.0));
     XMVECTOR rotation_axis = XMVectorSet(0.25f, 0.25f, 1.0f, 0.0f);
     XMMATRIX rotation_matrix = XMMatrixRotationAxis(rotation_axis, angle);
@@ -266,11 +266,11 @@ void Scene::update()
     rotation_matrix = rotation_matrix * XMMatrixRotationAxis(rotation_axis, angle);
 
     XMVECTOR quaternion = XMQuaternionRotationMatrix(rotation_matrix);
+    XMHALF4 quaternion_half = convert_vector_to_half4(quaternion);
 
     for (auto& object : m_rotating_objects)
     {
-        set_instance_data(m_model_transforms[object.transform_ref],
-            m_translations[object.object->id()].model, quaternion);
+        m_model_transforms[object.transform_ref].rotation = quaternion_half;
     }
 
     for (auto& ufo : m_flying_objects) // :-)
@@ -278,7 +278,7 @@ void Scene::update()
         XMMATRIX new_model_matrix = fly_around_in_circle(ufo.object, m_translations);
         XMVECTOR quaternion = XMQuaternionRotationMatrix(new_model_matrix);
         XMVECTOR translation = new_model_matrix.r[3];
-        DirectX::PackedVector::XMHALF4 translation_half4;
+        XMHALF4 translation_half4;
         convert_vector_to_half4(translation_half4, translation);
         set_instance_data(m_model_transforms[ufo.transform_ref], translation_half4, quaternion);
     }
@@ -378,6 +378,7 @@ void Scene::manipulate_object(DirectX::XMVECTOR delta_pos, DirectX::XMVECTOR del
         XMVECTOR translation = convert_half4_to_vector(selected_object_translation);
         translation += delta_pos;
         convert_vector_to_half4(selected_object_translation, translation);
+        m_model_transforms[m_selected_object_id].translation = selected_object_translation;
 
         auto& selected_object_rotation = m_model_transforms[m_selected_object_id].rotation;
         XMVECTOR rotation = convert_half4_to_vector(selected_object_rotation);
@@ -496,8 +497,8 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
         if (dynamic)
         {
             m_dynamic_objects.push_back(object);
-            Per_instance_trans_rot trans_rot {};
-            convert_vector_to_half4(trans_rot.rotation, DirectX::XMQuaternionIdentity());
+            const Per_instance_trans_rot trans_rot { translation.model,
+                convert_vector_to_half4(DirectX::XMQuaternionIdentity()) };
             m_model_transforms.push_back(trans_rot);
             Dynamic_object dynamic_object { object, transform_ref };
             if (rotating)
