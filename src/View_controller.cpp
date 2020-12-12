@@ -19,10 +19,12 @@
 using namespace DirectX;
 
 
-View_controller::View_controller(Input& input, HWND window, bool edit_mode, bool invert_mouse) :
+View_controller::View_controller(Input& input, HWND window, bool edit_mode, bool invert_mouse,
+    float mouse_sensitivity) :
 m_input(input),
 m_edit_mode(edit_mode),
 m_invert_mouse(invert_mouse),
+m_mouse_look_sensitivity(mouse_sensitivity),
 m_acceleration_x(0.0f),
 m_acceleration_y(0.0f),
 m_acceleration_z(0.0f),
@@ -107,10 +109,9 @@ void View_controller::mouse_look(View& view, double delta_time)
             delta.y = -delta.y;
 
         const XMVECTOR up_direction = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-        const float sensitivity = 0.3f;
 
         XMVECTOR rotation_sideways = XMQuaternionRotationNormal(up_direction, 
-            -static_cast<float>(delta.x * sensitivity * delta_time));
+            -static_cast<float>(delta.x * m_mouse_look_sensitivity * delta_time));
 
         XMVECTOR eye_to_focus_point = XMVector3Normalize(view.focus_point() - view.eye_position());
 
@@ -133,7 +134,7 @@ void View_controller::mouse_look(View& view, double delta_time)
             XMVECTOR x_axis = XMVector3Cross(eye_to_focus_point, up_direction);
 
             XMVECTOR rotation_up_down = XMQuaternionRotationNormal(x_axis, 
-                static_cast<float>(delta.y * sensitivity * delta_time));
+                static_cast<float>(delta.y * m_mouse_look_sensitivity * delta_time));
 
             total_rotation = XMQuaternionMultiply(rotation_sideways, rotation_up_down);
         }

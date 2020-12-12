@@ -85,7 +85,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
         &m_view, &m_scene, &m_depth_pass, &m_root_signature, &m_shadow_map),
     m_input(input),
     m_user_interface(m_dx12_display, m_texture_descriptor_heap, texture_index_for_depth_buffer(),
-        m_input, window, config.width, config.height, config.edit_mode, config.invert_mouse),
+        m_input, window, config),
     m_width(config.width),
     m_height(config.height)
 {

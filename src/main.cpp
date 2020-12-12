@@ -76,6 +76,10 @@ Config read_config(const std::string& config_file)
         {
             file >> config.invert_mouse;
         }
+        else if (input == "mouse_sensitivity")
+        {
+            file >> config.mouse_sensitivity;
+        }
         else if (input == "fov")
         {
             file >> config.fov;
