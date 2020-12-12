@@ -18,7 +18,8 @@ m_control_left_mouse_button_down(false), m_shift_left_mouse_button_down(false),
 m_right_mouse_button_down(false), m_control_right_mouse_button_down(false),
 m_shift_right_mouse_button_down(false), m_right_mouse_button_was_just_down(false),
 m_right_mouse_button_was_just_up(false),
-m_forward(false), m_backward(false), m_left(false), m_right(false), m_up(false), m_down(false)
+m_forward(false), m_backward(false), m_left(false), m_right(false), m_up(false), m_down(false),
+m_e(false), m_i(false), m_z(false)
 {
 }
 
@@ -52,6 +53,10 @@ void Input::key_down(WPARAM key_code)
 
         case 'I':
             m_i = true;
+            break;
+
+        case 'Z':
+            m_z = true;
             break;
 
         case VK_SPACE:
@@ -152,6 +157,13 @@ bool Input::i()
     bool i = m_i;
     m_i = false;
     return i;
+}
+
+bool Input::z()
+{
+    bool z = m_z;
+    m_z = false;
+    return z;
 }
 
 void Input::set_mouse_position(POINT position, HWND window)

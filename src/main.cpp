@@ -92,6 +92,10 @@ Config read_config(const std::string& config_file)
         {
             file >> config.vsync;
         }
+        else if (input == "early_z_pass")
+        {
+            file >> config.early_z_pass;
+        }
         else if (input == "monitor")
         {
             file >> config.monitor;

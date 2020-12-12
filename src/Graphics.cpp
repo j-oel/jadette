@@ -134,13 +134,24 @@ void Graphics_impl::create_pipeline_states()
 
     create_pipeline_state(m_device, m_pipeline_state_model_vector, m_root_signature.get(),
         "vertex_shader_model_vector", "pixel_shader", m_depth_stencil.dsv_format(),
-        render_targets_count, Input_element_model::translation, Depth_write::disabled);
+        render_targets_count, Input_element_model::translation, Depth_write::enabled);
     SET_DEBUG_NAME(m_pipeline_state_model_vector, L"Pipeline State Object Model Vector");
 
     create_pipeline_state(m_device, m_pipeline_state_srv_instance_data, m_root_signature.get(),
         "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
-        render_targets_count, Input_element_model::trans_rot, Depth_write::disabled);
+        render_targets_count, Input_element_model::trans_rot, Depth_write::enabled);
     SET_DEBUG_NAME(m_pipeline_state_srv_instance_data, L"Pipeline State Object SRV instance data");
+
+    create_pipeline_state(m_device, m_pipeline_state_model_vector_early_z, m_root_signature.get(),
+        "vertex_shader_model_vector", "pixel_shader", m_depth_stencil.dsv_format(),
+        render_targets_count, Input_element_model::translation, Depth_write::disabled);
+    SET_DEBUG_NAME(m_pipeline_state_model_vector, L"Pipeline State Object Model Vector early z");
+
+    create_pipeline_state(m_device, m_pipeline_state_srv_instance_data_early_z, m_root_signature.get(),
+        "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
+        render_targets_count, Input_element_model::trans_rot, Depth_write::disabled);
+    SET_DEBUG_NAME(m_pipeline_state_srv_instance_data,
+        L"Pipeline State Object SRV instance data early z");
 }
 
 ComPtr<ID3D12GraphicsCommandList> Graphics_impl::create_main_command_list()
@@ -161,12 +172,25 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     c.upload_instance_data();
     c.set_descriptor_heap(m_texture_descriptor_heap);
     c.record_shadow_map_generation_commands_in_command_list();
-    c.early_z_pass();
+    if (m_user_interface.early_z_pass())
+        c.early_z_pass();
+    else
+        c.clear_depth_stencil();
     c.set_root_signature();
     set_and_clear_render_target();
     c.set_shader_constants();
-    c.draw_static_objects(m_pipeline_state_model_vector, Input_element_model::translation);
-    c.draw_dynamic_objects(m_pipeline_state_srv_instance_data, Input_element_model::trans_rot);
+    if (m_user_interface.early_z_pass())
+    {
+        c.draw_static_objects(m_pipeline_state_model_vector_early_z,
+            Input_element_model::translation);
+        c.draw_dynamic_objects(m_pipeline_state_srv_instance_data_early_z,
+            Input_element_model::trans_rot);
+    }
+    else
+    {
+        c.draw_static_objects(m_pipeline_state_model_vector, Input_element_model::translation);
+        c.draw_dynamic_objects(m_pipeline_state_srv_instance_data, Input_element_model::trans_rot);
+    }
 
     // If text is enabled, the text object takes care of the render target state transition.
 #ifdef NO_TEXT

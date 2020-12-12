@@ -40,6 +40,7 @@ User_interface::User_interface(std::shared_ptr<Dx12_display> dx12_display,
     m_window(window),
     m_width(config.width),
     m_height(config.height),
+    m_early_z_pass(config.early_z_pass),
     m_show_help(false)
 {
     create_selection_command_list();
@@ -116,6 +117,9 @@ void User_interface::update(Scene& scene, View& view)
 
     if (m_input.f1())
         m_show_help = !m_show_help;
+
+    if (m_input.z())
+        m_early_z_pass = !m_early_z_pass;
 }
 
 void User_interface::create_selection_command_list()
@@ -309,14 +313,16 @@ void User_interface::render_2d_text(size_t objects_count, int triangles_count)
     ss.unsetf(ios::ios_base::floatfield); // To get default floating point format
     ss << "Frame time: " << setprecision(4) << frame_time << " ms" << endl
         << "Number of objects: " << objects_count << endl
-        << "Number of triangles: " << triangles_count << "\n\n";
+        << "Number of triangles: " << triangles_count << endl
+        << "Early Z pass " << (m_early_z_pass? "enabled": "disabled") << "\n\n";
 
     bool invert_mouse = m_view_controller.is_mouse_inverted();
 
     if (m_show_help)
     {
         ss << "Press F1 to hide help\n\n"
-            "Press Esc to exit.\n\n";
+              "Press Esc to exit.\n\n"
+              "Press z to toggle early Z pass\n\n";
         if (m_view_controller.is_edit_mode())
             ss << "Edit mode controls:\n"
             "Left mouse button drag to rotate view, orbit style.\n"
