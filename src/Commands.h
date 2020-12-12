@@ -43,6 +43,8 @@ public:
     void draw_dynamic_objects(ComPtr<ID3D12PipelineState> pipeline_state,
         const Input_element_model& input_element_model);
     void close();
+    void simple_render_pass(ComPtr<ID3D12PipelineState> static_objects_pipeline_state,
+        ComPtr<ID3D12PipelineState> dynamic_objects_pipeline_state);
 private:
     ComPtr<ID3D12GraphicsCommandList> m_command_list;
     Texture_mapping m_texture_mapping;

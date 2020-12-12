@@ -16,13 +16,14 @@ class Input;
 struct Config
 {
     Config() : width(800), height(600), monitor(1), borderless_windowed_fullscreen(false),
-        vsync(false) {}
+        vsync(false), edit_mode(false) {}
     int width;
     int height;
     std::string scene_file;
     int monitor;
     bool borderless_windowed_fullscreen;
     bool vsync;
+    bool edit_mode;
 };
 
 class Graphics

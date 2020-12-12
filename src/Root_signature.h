@@ -34,6 +34,19 @@ protected:
 };
 
 
+class Simple_root_signature : public Root_signature
+{
+public:
+    Simple_root_signature(ComPtr<ID3D12Device> device);
+    virtual void set_constants(ComPtr<ID3D12GraphicsCommandList> command_list,
+        Scene* scene, const View* view, Shadow_map* shadow_map);
+
+    const int m_root_param_index_of_values = 0;
+    const int m_root_param_index_of_matrices = 1;
+    const int m_root_param_index_of_instance_data = 2;
+};
+
+
 enum class Input_element_model { translation, trans_rot, positions_translation, positions_trans_rot };
 enum class Depth_write { enabled, disabled };
 
@@ -41,4 +54,6 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
     ComPtr<ID3D12RootSignature> root_signature,
     const char* vertex_shader_entry_function, const char* pixel_shader_entry_function,
     DXGI_FORMAT dsv_format, UINT render_targets_count, Input_element_model input_element_model,
-    Depth_write depth_write = Depth_write::enabled);
+    Depth_write depth_write = Depth_write::enabled,
+    DXGI_FORMAT rtv_format0 = DXGI_FORMAT_R8G8B8A8_UNORM,
+    DXGI_FORMAT rtv_format1 = DXGI_FORMAT_R8G8B8A8_UNORM);

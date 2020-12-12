@@ -45,6 +45,9 @@ public:
     DirectX::XMVECTOR light_focus_point() const { return m_light_focus_point; }
     void set_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
         int root_param_index_of_instance_data);
+    void manipulate_object(DirectX::XMVECTOR delta_pos, DirectX::XMVECTOR delta_rotation);
+    void select_object(int object_id);
+    bool object_selected() { return m_object_selected; }
 private:
     void upload_resources_to_gpu(ComPtr<ID3D12Device> device,
         ComPtr<ID3D12GraphicsCommandList>& command_list);
@@ -64,6 +67,7 @@ private:
     std::vector<std::shared_ptr<Graphical_object> > m_static_objects;
     std::vector<std::shared_ptr<Graphical_object> > m_dynamic_objects;
     std::vector<Dynamic_object> m_flying_objects;
+    std::vector<Dynamic_object> m_rotating_objects;
 
     std::vector<std::shared_ptr<Texture>> m_textures;
 
@@ -78,5 +82,8 @@ private:
     int m_root_param_index_of_values;
 
     int m_triangles_count;
+
+    int m_selected_object_id;
+    bool m_object_selected;
 };
 

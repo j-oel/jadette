@@ -11,6 +11,7 @@
 #include <exception>
 #include <string>
 
+
 #if defined(_DEBUG)
 #define SET_DEBUG_NAME(object, name) object->SetName(name)
 #else
@@ -74,6 +75,19 @@ inline void throw_if_failed(HRESULT hr)
         else
             throw com_exception(hr);
     }
+}
+
+void log(const std::string& text);
+
+enum class Mouse_cursor { arrow, move_cross, move_vertical };
+void set_mouse_cursor(HWND window, Mouse_cursor mouse_cursor);
+
+inline POINT operator-(POINT p1, POINT p2)
+{
+    POINT result;
+    result.x = p1.x - p2.x;
+    result.y = p1.y - p2.y;
+    return result;
 }
 
 

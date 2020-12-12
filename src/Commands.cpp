@@ -90,3 +90,13 @@ void Commands::draw_dynamic_objects(ComPtr<ID3D12PipelineState> pipeline_state,
     m_command_list->SetPipelineState(pipeline_state.Get());
     m_scene->draw_dynamic_objects(m_command_list, m_texture_mapping, input_element_model);
 }
+
+void Commands::simple_render_pass(ComPtr<ID3D12PipelineState> static_objects_pipeline_state,
+    ComPtr<ID3D12PipelineState> dynamic_objects_pipeline_state)
+{
+    set_root_signature();
+    set_shader_constants();
+    clear_depth_stencil();
+    draw_static_objects(static_objects_pipeline_state, Input_element_model::positions_translation);
+    draw_dynamic_objects(dynamic_objects_pipeline_state, Input_element_model::positions_trans_rot);
+}

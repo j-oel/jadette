@@ -16,10 +16,7 @@
 #include "Root_signature.h"
 #include "Dx12_display.h"
 #include "Commands.h"
-
-#ifndef NO_TEXT
-#include "Text.h"
-#endif
+#include "User_interface.h"
 
 #include <memory>
 #include <vector>
@@ -60,7 +57,6 @@ private:
     int create_texture_descriptor_heap();
     void create_pipeline_states();
     ComPtr<ID3D12GraphicsCommandList> create_main_command_list();
-    void render_2d_text();
 
     std::shared_ptr<Dx12_display> m_dx12_display;
     ComPtr<ID3D12Device> m_device;
@@ -75,17 +71,12 @@ private:
     Shadow_map m_shadow_map;
     Main_root_signature m_root_signature;
     Scene m_scene;
-    View_controller m_view_controller;
     View m_view;
     Commands m_commands;
     Input& m_input;
-
-#ifndef NO_TEXT
-    Text m_text;
-#endif
+    User_interface m_user_interface;
 
     UINT m_width;
     UINT m_height;
-    bool m_show_help;
 };
 

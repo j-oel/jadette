@@ -14,8 +14,11 @@
 using namespace std;
 
 Input::Input() : m_mouse_position({ 0, 0 }), m_mouse_wheel_delta(0), m_left_mouse_button_down(false),
-m_control_left_mouse_button_down(false), m_shift_left_mouse_button_down(false), m_forward(false), 
-m_backward(false), m_left(false), m_right(false), m_up(false), m_down(false)
+m_control_left_mouse_button_down(false), m_shift_left_mouse_button_down(false),
+m_right_mouse_button_down(false), m_control_right_mouse_button_down(false),
+m_shift_right_mouse_button_down(false), m_right_mouse_button_was_just_down(false),
+m_right_mouse_button_was_just_up(false),
+m_forward(false), m_backward(false), m_left(false), m_right(false), m_up(false), m_down(false)
 {
 }
 
@@ -102,6 +105,20 @@ void Input::mouse_left_button_up()
     m_control_left_mouse_button_down = false;
 }
 
+void Input::mouse_right_button_just_down(LPARAM position)
+{
+    m_mouse_down_position = { GET_X_LPARAM(position), GET_Y_LPARAM(position) };
+    m_right_mouse_button_was_just_down = true;
+}
+
+void Input::mouse_right_button_up()
+{
+    m_right_mouse_button_down = false;
+    m_shift_right_mouse_button_down = false;
+    m_control_right_mouse_button_down = false;
+    m_right_mouse_button_was_just_up = true;
+}
+
 void Input::mouse_move(LPARAM position)
 {
     m_mouse_position = { GET_X_LPARAM(position), GET_Y_LPARAM(position) };
@@ -133,15 +150,24 @@ void Input::set_mouse_position(POINT position, HWND window)
     SetCursorPos(position.x, position.y);
 }
 
-POINT Input::mouse_position()
-{
-    return m_mouse_position;
-}
-
 int Input::mouse_wheel_delta()
 {
     int delta = m_mouse_wheel_delta;
     m_mouse_wheel_delta = 0;
     return delta;
+}
+
+bool Input::was_right_mouse_button_just_down()
+{
+    bool was_it = m_right_mouse_button_was_just_down;
+    m_right_mouse_button_was_just_down = false;
+    return was_it;
+}
+
+bool Input::was_right_mouse_button_just_up()
+{
+    bool was_it = m_right_mouse_button_was_just_up;
+    m_right_mouse_button_was_just_up = false;
+    return was_it;
 }
 

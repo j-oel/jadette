@@ -30,7 +30,7 @@ public:
     void begin_render(ComPtr<ID3D12GraphicsCommandList> command_list);
     void set_and_clear_render_target(D3D12_CPU_DESCRIPTOR_HANDLE dsv_handle);
     void barrier_transition(D3D12_RESOURCE_STATES from_state, D3D12_RESOURCE_STATES to_state);
-    void execute_command_list();
+    void execute_command_list(ComPtr<ID3D12GraphicsCommandList> command_list);
     void end_render();
 
     ComPtr<ID3D12Device> device() { return m_device; }

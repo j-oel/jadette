@@ -46,53 +46,9 @@ void Depth_pass::record_commands(Scene& scene, const View& view, Depth_stencil& 
     ComPtr<ID3D12GraphicsCommandList> command_list)
 {
     assert(m_dsv_format == depth_stencil.dsv_format());
-    Commands commands(command_list, &depth_stencil, Texture_mapping::disabled,
-        &view, &scene, this, &m_root_signature);
-    Commands& c = commands;
 
-    c.set_root_signature();
-    c.set_shader_constants();
     set_render_target(command_list, depth_stencil);
-    c.clear_depth_stencil();
-    c.draw_static_objects(m_pipeline_state_model_vector, Input_element_model::positions_translation);
-    c.draw_dynamic_objects(m_pipeline_state_srv_instance_data, Input_element_model::positions_trans_rot);
-}
-
-Depth_pass_root_signature::Depth_pass_root_signature(ComPtr<ID3D12Device> device)
-{
-    constexpr int root_parameters_count = 3;
-    CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count] {};
-
-    constexpr int values_count = 4; // Needs to be a multiple of 4, because constant buffers are
-                                    // viewed as sets of 4x32-bit values, see:
-// https://docs.microsoft.com/en-us/windows/win32/direct3d12/using-constants-directly-in-the-root-signature
-
-    UINT shader_register = 0;
-    constexpr int register_space = 0;
-    root_parameters[m_root_param_index_of_values].InitAsConstants(
-        values_count, shader_register, register_space, D3D12_SHADER_VISIBILITY_VERTEX);
-
-    ++shader_register;
-    constexpr int matrices_count = 1;
-    init_matrices(root_parameters[m_root_param_index_of_matrices], matrices_count, shader_register);
-
-    UINT base_register = 3;
-    CD3DX12_DESCRIPTOR_RANGE1 descriptor_range;
-    init_descriptor_table(root_parameters[m_root_param_index_of_instance_data],
-        descriptor_range, base_register);
-    root_parameters[m_root_param_index_of_instance_data].ShaderVisibility =
-        D3D12_SHADER_VISIBILITY_VERTEX;
-
-    constexpr int samplers_count = 0;
-    create(device, root_parameters, _countof(root_parameters), nullptr, samplers_count);
-
-    SET_DEBUG_NAME(m_root_signature, L"Depth Pass Root Signature");
-}
-
-void Depth_pass_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> command_list,
-    Scene* scene, const View* view, Shadow_map* shadow_map)
-{
-    view->set_view(command_list, m_root_param_index_of_matrices);
-    scene->set_instance_data_shader_constant(command_list,
-        m_root_param_index_of_instance_data);
+    Commands c(command_list, &depth_stencil, Texture_mapping::disabled,
+        &view, &scene, this, &m_root_signature);
+    c.simple_render_pass(m_pipeline_state_model_vector, m_pipeline_state_srv_instance_data);
 }

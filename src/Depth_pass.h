@@ -18,18 +18,6 @@ class Scene;
 class View;
 class Depth_stencil;
 
-class Depth_pass_root_signature : public Root_signature
-{
-public:
-    Depth_pass_root_signature(ComPtr<ID3D12Device> device);
-    virtual void set_constants(ComPtr<ID3D12GraphicsCommandList> command_list,
-        Scene* scene, const View* view, Shadow_map* shadow_map);
-
-    const int m_root_param_index_of_values = 0;
-    const int m_root_param_index_of_matrices = 1;
-    const int m_root_param_index_of_instance_data = 2;
-};
-
 
 class Depth_pass
 {
@@ -40,7 +28,7 @@ public:
 private:
     ComPtr<ID3D12PipelineState> m_pipeline_state_srv_instance_data;
     ComPtr<ID3D12PipelineState> m_pipeline_state_model_vector;
-    Depth_pass_root_signature m_root_signature;
+    Simple_root_signature m_root_signature;
     DXGI_FORMAT m_dsv_format;
 };
 

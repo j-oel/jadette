@@ -19,8 +19,8 @@
 using namespace DirectX;
 
 
-View_controller::View_controller(Input& input, HWND window) : m_input(input),
-m_edit_mode(false),
+View_controller::View_controller(Input& input, HWND window, bool edit_mode) : m_input(input),
+m_edit_mode(edit_mode),
 m_acceleration_x(0.0f),
 m_acceleration_y(0.0f),
 m_acceleration_z(0.0f),
@@ -33,8 +33,13 @@ m_window_center(POINT())
     m_window_center.x = (rect.right - rect.left) / 2;
     m_window_center.y = (rect.bottom - rect.top) / 2;
 
-    move_mouse_pointer_to_center();
-    ShowCursor(FALSE);
+    if (!edit_mode)
+        switch_to_non_edit_mode();
+    // If we are in edit_mode at construction time we don't need to call the switch
+    // function, because everything is already as it should be. It would actually be
+    // an error to call it, because then the number of calls to ShowCursor() would
+    // not add upp (there is a Windows internal counter that would be out of sync).
+    // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showcursor
 }
 
 
@@ -73,14 +78,6 @@ void View_controller::switch_to_non_edit_mode()
     ShowCursor(FALSE);
 }
 
-
-POINT operator-(POINT& p1, POINT& p2)
-{
-    POINT result;
-    result.x = p1.x - p2.x;
-    result.y = p1.y - p2.y;
-    return result;
-}
 
 XMVECTOR rotate_around_point(XMVECTOR point_to_rotate, XMVECTOR point_to_rotate_around,
     XMVECTOR rotation_quaternion)
@@ -266,13 +263,13 @@ XMVECTOR find_point_on_sphere(POINT mouse, POINT center, const View& view, float
 // By Ken Shoemake
 // Proceedings of the conference on Graphics interface '92 September 1992 Pages 151–156
 //
-void arcball(POINT mouse_initial, POINT mouse_current, XMVECTOR eye,
-    const View& view, float radius, XMVECTOR& resulting_rotation_quaternion)
+void arcball(POINT mouse_initial, POINT mouse_current, POINT center, const View& view,
+    float radius, XMVECTOR& resulting_rotation_quaternion)
 {
     if (mouse_initial.x != mouse_current.x || mouse_initial.y != mouse_current.y)
     {
-        XMVECTOR p1 = find_point_on_sphere(mouse_initial, mouse_initial, view, radius);
-        XMVECTOR p2 = find_point_on_sphere(mouse_current, mouse_initial, view, radius);
+        XMVECTOR p1 = find_point_on_sphere(mouse_initial, center, view, radius);
+        XMVECTOR p2 = find_point_on_sphere(mouse_current, center, view, radius);
         resulting_rotation_quaternion = XMVector3Cross(p1, p2);
         resulting_rotation_quaternion.m128_f32[3] = XMVectorGetX(XMVector3Dot(p1, p2));
     }
@@ -294,8 +291,7 @@ void orbit_rotate_view(View& view, POINT mouse_initial, POINT mouse_current)
 {
     const float radius = view.width() * 0.5f;
     XMVECTOR rotation_quaternion = XMQuaternionIdentity();
-    arcball(mouse_initial, mouse_current, view.eye_position(), view, radius,
-        rotation_quaternion);
+    arcball(mouse_initial, mouse_current, mouse_initial, view, radius, rotation_quaternion);
 
     const XMVECTOR old_view_direction = view.eye_position() - view.focus_point();
     const XMVECTOR new_eye_position = rotate_around_point(view.eye_position(), view.focus_point(),

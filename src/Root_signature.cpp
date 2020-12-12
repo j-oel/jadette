@@ -7,6 +7,8 @@
 
 #include "Root_signature.h"
 #include "util.h"
+#include "Scene.h"
+#include "View.h"
 
 #include <D3DCompiler.h>
 
@@ -64,11 +66,52 @@ void Root_signature::init_matrices(CD3DX12_ROOT_PARAMETER1& root_parameter,
         D3D12_SHADER_VISIBILITY_VERTEX);
 }
 
+Simple_root_signature::Simple_root_signature(ComPtr<ID3D12Device> device)
+{
+    constexpr int root_parameters_count = 3;
+    CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count]{};
+
+    constexpr int values_count = 4; // Needs to be a multiple of 4, because constant buffers are
+                                    // viewed as sets of 4x32-bit values, see:
+// https://docs.microsoft.com/en-us/windows/win32/direct3d12/using-constants-directly-in-the-root-signature
+
+    UINT shader_register = 0;
+    constexpr int register_space = 0;
+    root_parameters[m_root_param_index_of_values].InitAsConstants(
+        values_count, shader_register, register_space, D3D12_SHADER_VISIBILITY_VERTEX);
+
+    ++shader_register;
+    constexpr int matrices_count = 1;
+    init_matrices(root_parameters[m_root_param_index_of_matrices], matrices_count, shader_register);
+
+    UINT base_register = 3;
+    CD3DX12_DESCRIPTOR_RANGE1 descriptor_range;
+    init_descriptor_table(root_parameters[m_root_param_index_of_instance_data],
+        descriptor_range, base_register);
+    root_parameters[m_root_param_index_of_instance_data].ShaderVisibility =
+        D3D12_SHADER_VISIBILITY_VERTEX;
+
+    constexpr int samplers_count = 0;
+    create(device, root_parameters, _countof(root_parameters), nullptr, samplers_count);
+
+    SET_DEBUG_NAME(m_root_signature, L"Depth Pass Root Signature");
+}
+
+void Simple_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> command_list,
+    Scene* scene, const View* view, Shadow_map* shadow_map)
+{
+    view->set_view(command_list, m_root_param_index_of_matrices);
+    scene->set_instance_data_shader_constant(command_list,
+        m_root_param_index_of_instance_data);
+}
+
 void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineState>& pipeline_state,
     ComPtr<ID3D12RootSignature> root_signature,
     const char* vertex_shader_entry_function, const char* pixel_shader_entry_function,
     DXGI_FORMAT dsv_format, UINT render_targets_count, Input_element_model input_element_model,
-    Depth_write depth_write/* = Depth_write::enabled*/)
+    Depth_write depth_write/* = Depth_write::enabled*/,
+    DXGI_FORMAT rtv_format0/*= DXGI_FORMAT_R8G8B8A8_UNORM*/,
+    DXGI_FORMAT rtv_format1/*= DXGI_FORMAT_R8G8B8A8_UNORM*/)
 {
 
 #if defined(_DEBUG)
@@ -151,7 +194,9 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
     s.SampleDesc.Count = 1; // No multisampling
 
     if (render_targets_count > 0)
-        s.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+        s.RTVFormats[0] = rtv_format0;
+    if (render_targets_count > 1)
+        s.RTVFormats[1] = rtv_format1;
 
     auto& ps_desc = s;
     throw_if_failed(device->CreateGraphicsPipelineState(&ps_desc, IID_PPV_ARGS(&pipeline_state)));

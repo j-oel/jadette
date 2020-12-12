@@ -101,7 +101,7 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
     int normal_map_flag_offset, int descriptor_index_of_instance_data) :
     m_light_position(XMVectorSet(0.0f, 20.0f, 5.0f, 1.0f)),
     m_root_param_index_of_values(root_param_index_of_values),
-    m_triangles_count(0)
+    m_triangles_count(0), m_selected_object_id(-1), m_object_selected(false)
 {
 
     // Initialize COM, needed by Windows Imaging Component (WIC)
@@ -250,6 +250,13 @@ void set_instance_data(Per_instance_trans_rot& trans_rot, DirectX::PackedVector:
 
 void Scene::update()
 {
+    int i = 0;
+    for (auto& object : m_dynamic_objects)
+    {
+        m_model_transforms[i].translation = m_translations[object->id()].model;
+        ++i;
+    }
+
     const float angle = XMConvertToRadians(static_cast<float>(elapsed_time_in_seconds() * 100.0));
     XMVECTOR rotation_axis = XMVectorSet(0.25f, 0.25f, 1.0f, 0.0f);
     XMMATRIX rotation_matrix = XMMatrixRotationAxis(rotation_axis, angle);
@@ -260,11 +267,10 @@ void Scene::update()
 
     XMVECTOR quaternion = XMQuaternionRotationMatrix(rotation_matrix);
 
-    int i = 0;
-    for (auto& object : m_dynamic_objects)
+    for (auto& object : m_rotating_objects)
     {
-        set_instance_data(m_model_transforms[i], m_translations[object->id()].model, quaternion);
-        ++i;
+        set_instance_data(m_model_transforms[object.transform_ref],
+            m_translations[object.object->id()].model, quaternion);
     }
 
     for (auto& ufo : m_flying_objects) // :-)
@@ -363,10 +369,38 @@ void Scene::set_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>&
         m_instance_trans_rot_data->srv_gpu_handle());
 }
 
+void Scene::manipulate_object(DirectX::XMVECTOR delta_pos, DirectX::XMVECTOR delta_rotation)
+{
+    if (m_object_selected)
+    {
+        auto& selected_object_translation =
+            m_translations[m_dynamic_objects[m_selected_object_id]->id()].model;
+        XMVECTOR translation = convert_half4_to_vector(selected_object_translation);
+        translation += delta_pos;
+        convert_vector_to_half4(selected_object_translation, translation);
+
+        auto& selected_object_rotation = m_model_transforms[m_selected_object_id].rotation;
+        XMVECTOR rotation = convert_half4_to_vector(selected_object_rotation);
+        convert_vector_to_half4(selected_object_rotation,
+            XMQuaternionMultiply(rotation, delta_rotation));
+    }
+}
+
+void Scene::select_object(int object_id)
+{
+    if (object_id < 0)
+        m_object_selected = false;
+    else
+    {
+        m_object_selected = true;
+        m_selected_object_id = object_id;
+    }
+}
+
 void Scene::upload_resources_to_gpu(ComPtr<ID3D12Device> device,
     ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
-    D3D12_COMMAND_QUEUE_DESC desc{};
+    D3D12_COMMAND_QUEUE_DESC desc {};
     desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
     ComPtr<ID3D12CommandQueue> command_queue;
     throw_if_failed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&command_queue)));
@@ -448,7 +482,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
 
     auto create_object = [&](const string& name, shared_ptr<Mesh> mesh,
         shared_ptr<Texture> diffuse_map, bool dynamic, XMFLOAT4 position, int instances = 1,
-        shared_ptr<Texture> normal_map = nullptr)
+        shared_ptr<Texture> normal_map = nullptr, bool rotating = false)
     {
         Per_instance_translation_data translation = { convert_float4_to_half4(position) };
         m_translations.push_back(translation);
@@ -462,9 +496,14 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
         if (dynamic)
         {
             m_dynamic_objects.push_back(object);
-            m_model_transforms.push_back(Per_instance_trans_rot());
+            Per_instance_trans_rot trans_rot {};
+            convert_vector_to_half4(trans_rot.rotation, DirectX::XMQuaternionIdentity());
+            m_model_transforms.push_back(trans_rot);
+            Dynamic_object dynamic_object { object, transform_ref };
+            if (rotating)
+                m_rotating_objects.push_back(dynamic_object);
             if (!name.empty())
-                objects[name] = { object, transform_ref };
+                objects[name] = dynamic_object;
             ++transform_ref;
         }
         else
@@ -583,7 +622,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                 }
             }
         }
-        else if (input == "array")
+        else if (input == "array" || input == "rotating_array")
         {
             string static_dynamic;
             file >> static_dynamic;
@@ -626,6 +665,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                 throw Model_not_defined(model);
 
             auto diffuse_map_tex = get_texture(diffuse_map);
+            shared_ptr<Texture> no_normal_map = nullptr;
 
             for (int x = 0; x < count.x; ++x)
                 for (int y = 0; y < count.y; ++y)
@@ -634,7 +674,8 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                         XMFLOAT4 position = XMFLOAT4(pos.x + offset.x * x, pos.y + offset.y * y,
                             pos.z + offset.z * z, scale);
                         create_object(dynamic? "arrayobject" + std::to_string(object_id) :"", 
-                            mesh, diffuse_map_tex, dynamic, position, instances);
+                            mesh, diffuse_map_tex, dynamic, position, instances,
+                            no_normal_map, (input == "rotating_array")? true: false);
                     }
         }
         else if (input == "fly")
@@ -644,6 +685,14 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             if (!objects.count(object))
                 throw Object_not_defined(object);
             m_flying_objects.push_back(objects[object]);
+        }
+        else if (input == "rotate")
+        {
+            string object;
+            file >> object;
+            if (!objects.count(object))
+                throw Object_not_defined(object);
+            m_rotating_objects.push_back(objects[object]);
         }
         else if (input == "light")
         {

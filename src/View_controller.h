@@ -8,6 +8,7 @@
 #pragma once
 
 #include "windefmin.h"
+#include <DirectXMath.h>
 
 class Input;
 class View;
@@ -15,8 +16,9 @@ class View;
 class View_controller
 {
 public:
-    View_controller(Input& input, HWND window);
+    View_controller(Input& input, HWND window, bool edit_mode);
     void update(View& view);
+    bool is_edit_mode() const { return m_edit_mode; }
 private:
     void first_person_view_update(View& view);
     void orbit_update(View& view);
@@ -39,3 +41,5 @@ private:
     POINT m_window_center;
 };
 
+void arcball(POINT mouse_initial, POINT mouse_current, POINT center, const View& view,
+    float radius, DirectX::XMVECTOR& resulting_rotation_quaternion);

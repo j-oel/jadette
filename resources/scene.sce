@@ -46,10 +46,10 @@ model cube_from_file cube.obj
 
 array dynamic cube_from_file pattern 1 0 0 3 3 3 3.0 3.0 3.0 1
 model cube_model cube
-array dynamic cube_model pattern 0 0 0 40 40 40 -3.0 3.0 3.0 0.4
+rotating_array dynamic cube_model pattern 0 0 0 40 40 40 -3.0 3.0 3.0 0.4
+
 
 model platform_model platform.obj
-
 
 # If a model file (.obj file) references materials defined in an .mtl file, 
 # the <texture_name> argument is ignored:
@@ -69,3 +69,5 @@ light 0 20 5 0 0 0
 fly spaceship
 fly arrayobject11
 fly arrayobject20
+
+rotate arrayobject9

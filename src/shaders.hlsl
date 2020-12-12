@@ -257,3 +257,49 @@ depths_vertex_shader_output depths_vertex_shader_model_vector(float3 position : 
     return depths_vertex_shader_model_trans_rot(float4(position, 1), translation,
         half4(0, 0, 0, 1));
 }
+
+
+struct object_ids_vertex_shader_output
+{
+    float4 sv_position : SV_POSITION;
+    int object_id : OBJECT_ID;
+};
+
+
+int pixel_shader_object_ids(object_ids_vertex_shader_output input) : SV_TARGET
+{
+    return input.object_id;
+}
+
+
+object_ids_vertex_shader_output object_ids_vertex_shader_model_trans_rot(float4 position : POSITION,
+    half4 translation : TRANSLATION, half4 rotation : ROTATION, int object_id)
+{
+    object_ids_vertex_shader_output result;
+    half4x4 model = to_scaled_model_matrix(translation, rotation);
+    float4x4 model_view_projection = mul(matrices.view_projection, model);
+    result.sv_position = mul(model_view_projection, position);
+    result.object_id = object_id;
+    return result;
+}
+
+
+object_ids_vertex_shader_output object_ids_vertex_shader_srv_instance_data(
+    uint instance_id : SV_InstanceID, float3 position : POSITION)
+{
+    const uint index = values.object_id + instance_id;
+    uint4 v = instance[index].value;
+
+    float4 translation = float4(f16tof32(v.x), f16tof32(v.x >> 16), f16tof32(v.y), f16tof32(v.y >> 16));
+    float4 rotation = float4(f16tof32(v.z), f16tof32(v.z >> 16), f16tof32(v.w), f16tof32(v.w >> 16));
+
+    return object_ids_vertex_shader_model_trans_rot(float4(position, 1), translation, rotation, index);
+}
+
+
+object_ids_vertex_shader_output object_ids_vertex_shader_model_vector(float3 position : POSITION,
+    half4 translation : TRANSLATION)
+{
+    return object_ids_vertex_shader_model_trans_rot(float4(position, 1), translation,
+        half4(0, 0, 0, 1), 0);
+}

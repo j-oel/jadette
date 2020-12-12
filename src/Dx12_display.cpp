@@ -7,6 +7,7 @@
 
 #include "Dx12_display.h"
 #include "util.h"
+#include "Dx12_util.h"
 
 Dx12_display::Dx12_display(HWND window, UINT width, UINT height, bool vsync) :
     m_device(nullptr),
@@ -61,14 +62,14 @@ void Dx12_display::barrier_transition(D3D12_RESOURCE_STATES from_state,
     D3D12_RESOURCE_STATES to_state)
 {
     UINT barriers_count = 1;
-    m_command_list->ResourceBarrier(barriers_count,
-        &CD3DX12_RESOURCE_BARRIER::Transition(m_render_targets[m_back_buf_index].Get(), 
-            from_state, to_state));
+    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_render_targets[m_back_buf_index].Get(),
+        from_state, to_state);
+    m_command_list->ResourceBarrier(barriers_count, &barrier);
 }
 
-void Dx12_display::execute_command_list()
+void Dx12_display::execute_command_list(ComPtr<ID3D12GraphicsCommandList> command_list)
 {
-    ID3D12CommandList* const list = m_command_list.Get();
+    ID3D12CommandList* const list = command_list.Get();
     UINT command_list_count = 1;
     m_command_queue->ExecuteCommandLists(command_list_count, &list);
 }
@@ -176,16 +177,6 @@ void Dx12_display::create_swap_chain(HWND window, ComPtr<IDXGIFactory5> dxgi_fac
 
 namespace
 {
-    void create_descriptor_heap(ComPtr<ID3D12Device> device,
-        ComPtr<ID3D12DescriptorHeap>& render_target_view_heap, UINT descriptor_count)
-    {
-        D3D12_DESCRIPTOR_HEAP_DESC d {};
-        d.NumDescriptors = descriptor_count;
-        d.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-        throw_if_failed(device->CreateDescriptorHeap(&d, IID_PPV_ARGS(&render_target_view_heap)));
-        SET_DEBUG_NAME(render_target_view_heap, L"Render Target View Heap");
-    }
-
     void create_fence(ComPtr<ID3D12Device> device, ComPtr<ID3D12Fence>& fence)
     {
         UINT64 initial_value = 0U;
@@ -230,6 +221,7 @@ namespace
 void Dx12_display::create_per_swap_chain_buffer_objects()
 {
     create_descriptor_heap(m_device, m_render_target_view_heap, m_swap_chain_buffer_count);
+    SET_DEBUG_NAME(m_render_target_view_heap, L"Render Target View Heap");
 
     UINT render_target_view_descriptor_size = m_device->GetDescriptorHandleIncrementSize(
         D3D12_DESCRIPTOR_HEAP_TYPE_RTV);

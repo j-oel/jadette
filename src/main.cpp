@@ -68,6 +68,10 @@ Config read_config(const std::string& config_file)
         {
             file >> config.scene_file;
         }
+        else if (input == "edit_mode")
+        {
+            file >> config.edit_mode;
+        }
         else if (input == "borderless_windowed_fullscreen")
         {
             file >> config.borderless_windowed_fullscreen;
@@ -301,6 +305,26 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM w_param, LPA
             if (engine)
             {
                 engine->input.mouse_left_button_up();
+            }
+            break;
+
+        case WM_RBUTTONDOWN:
+            if (engine)
+            {
+                engine->input.mouse_right_button_just_down(l_param);
+                if (w_param & MK_SHIFT)
+                    engine->input.shift_mouse_right_button_down();
+                else if (w_param & MK_CONTROL)
+                    engine->input.control_mouse_right_button_down();
+                else
+                    engine->input.mouse_right_button_down();
+            }
+            break;
+
+        case WM_RBUTTONUP:
+            if (engine)
+            {
+                engine->input.mouse_right_button_up();
             }
             break;
 

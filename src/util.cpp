@@ -5,13 +5,14 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
-#include "util.h"
 #include "windefmin.h"
+#include "util.h"
 
 #include <stringapiset.h>
 #include <profileapi.h>
 #include <winuser.h>
 #include <sstream>
+#include <fstream>
 
 
 LARGE_INTEGER get_frequency()
@@ -61,6 +62,39 @@ void print(int number, const char* title/* = ""*/)
     std::stringstream ss;
     ss << number;
     print(ss.str().c_str(), title);
+}
+
+void log(const std::string& text)
+{
+    static bool first = true;
+    static std::ofstream file;
+    if (first)
+    {
+        file.open("logfile.txt");
+        first = false;
+    }
+
+    file << text << std::endl;
+}
+
+void set_mouse_cursor(HWND window, Mouse_cursor mouse_cursor)
+{
+    LPCWSTR cursor_name = nullptr;
+    switch (mouse_cursor)
+    {
+        case Mouse_cursor::arrow:
+            cursor_name = IDC_ARROW;
+            break;
+        case Mouse_cursor::move_cross:
+            cursor_name = IDC_SIZEALL;
+            break;
+        case Mouse_cursor::move_vertical:
+            cursor_name = IDC_SIZENS;
+            break;
+    }
+    HCURSOR cursor = LoadCursor(NULL, cursor_name);
+    SetClassLongPtr(window, GCLP_HCURSOR, bit_cast<LONG_PTR>(cursor));
+    SetCursor(cursor);
 }
 
 std::wstring widen(const std::string& input)

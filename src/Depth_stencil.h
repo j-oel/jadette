@@ -9,6 +9,7 @@
 
 
 #include "dx12min.h"
+#include <vector>
 
 using Microsoft::WRL::ComPtr;
 
@@ -32,11 +33,25 @@ private:
     void create_shader_resource_view(ComPtr<ID3D12Device> device, DXGI_FORMAT format,
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
         UINT texture_position_in_descriptor_heap);
-
     ComPtr<ID3D12DescriptorHeap> m_depth_stencil_view_heap;
-    ComPtr<ID3D12Resource> m_depth_buffer;
     D3D12_GPU_DESCRIPTOR_HANDLE m_depth_buffer_gpu_descriptor_handle;
     DXGI_FORMAT m_dsv_format;
     D3D12_RESOURCE_STATES m_current_state;
+protected:
+    ComPtr<ID3D12Resource> m_depth_buffer;
+    UINT m_width;
+    UINT m_height;
+    DXGI_FORMAT m_srv_format;
 };
 
+class Read_back_depth_stencil : public Depth_stencil
+{
+public:
+    Read_back_depth_stencil(ComPtr<ID3D12Device> device, UINT width, UINT height,
+        Bit_depth bit_depth, D3D12_RESOURCE_STATES initial_state,
+        ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index);
+    void copy_data_to_readback_memory(ComPtr<ID3D12GraphicsCommandList> command_list);
+    void read_data_from_gpu(std::vector<float>& depths);
+private:
+    ComPtr<ID3D12Resource> m_render_target_read_back_buffer;
+};

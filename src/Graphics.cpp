@@ -9,9 +9,8 @@
 #include "Graphics_impl.h"
 #include "util.h"
 #include "Input.h"
+#include "Dx12_util.h"
 
-#include <sstream>
-#include <iomanip>
 #include <directxmath.h>
 
 
@@ -80,30 +79,23 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
         m_root_signature.m_root_param_index_of_values,
         m_root_signature.m_root_param_index_of_normal_maps,
         value_offset_for_shadow_mapping_flag(), descriptor_index_for_instance_data()),
-    m_view_controller(input, window),
     m_view(config.width, config.height, XMVectorSet(0.0f, 0.0f, -10.0f, 1.0f), 
         XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 0.1f, 4000.0f),
     m_commands(create_main_command_list(), &m_depth_stencil, Texture_mapping::enabled,
         &m_view, &m_scene, &m_depth_pass, &m_root_signature, &m_shadow_map),
     m_input(input),
+    m_user_interface(m_dx12_display, m_texture_descriptor_heap, texture_index_for_depth_buffer(),
+        m_input, window, config.width, config.height, config.edit_mode),
     m_width(config.width),
-    m_height(config.height),
-    m_show_help(false)
+    m_height(config.height)
 {
     m_depth_stencil.set_debug_names(L"DSV Heap", L"Depth Buffer");
     create_pipeline_states();
-
-#ifndef NO_TEXT
-    m_text.init(window, m_dx12_display);
-#endif
-
 }
 
 void Graphics_impl::update()
 {
-    if (m_input.f1())
-        m_show_help = !m_show_help;
-    m_view_controller.update(m_view);
+    m_user_interface.update(m_scene, m_view);
     m_scene.update();
 }
 
@@ -113,69 +105,16 @@ void Graphics_impl::render()
 
     record_frame_rendering_commands_in_command_list();
 
-    m_dx12_display->execute_command_list();
+    m_dx12_display->execute_command_list(m_command_list);
 
-    render_2d_text();
+    m_user_interface.render_2d_text(m_scene.objects_count(), m_scene.triangles_count());
 
     m_dx12_display->end_render();
 }
 
 void Graphics_impl::scaling_changed(float dpi)
 {
-#ifndef NO_TEXT
-    m_text.scaling_changed(dpi);
-#endif
-}
-
-
-void record_frame_time(double& frame_time, double& fps)
-{
-    static Time time;
-    const double milliseconds_per_second = 1000.0;
-    double delta_time_ms = time.seconds_since_last_call() * milliseconds_per_second;
-    static int frames_count = 0;
-    ++frames_count;
-    static double accumulated_time = 0.0;
-    accumulated_time += delta_time_ms;
-    if (accumulated_time > 1000.0)
-    {
-        frame_time = accumulated_time / frames_count;
-        fps = 1000.0 * frames_count / accumulated_time;
-        accumulated_time = 0.0;
-        frames_count = 0;
-    }
-}
-
-void Graphics_impl::render_2d_text()
-{
-#ifndef NO_TEXT
-
-    static double frame_time = 0.0;
-    static double fps = 0.0;
-    record_frame_time(frame_time, fps);
-
-    using namespace std;
-    wstringstream ss;
-    ss << "Frames per second: " << fixed << setprecision(0) << fps << endl;
-    ss.unsetf(ios::ios_base::floatfield); // To get default floating point format
-    ss << "Frame time: " << setprecision(4) << frame_time << " ms" << endl
-       << "Number of objects: " << m_scene.objects_count() << endl
-       << "Number of triangles: " << m_scene.triangles_count() << "\n\n";
-
-    if (m_show_help)
-        ss << "Press F1 to hide help\n\n"
-              "Press Esc to exit.\n"
-              "Controls: Arrow keys or WASD keys to move.\n"
-              "Shift moves down, space moves up.\n"
-              "Mouse look.";
-    else
-        ss << "Press F1 for help";
-
-    float x_position = 5.0f;
-    float y_position = 5.0f;
-    m_text.draw(ss.str().c_str(), x_position, y_position, m_dx12_display->back_buf_index());
-
-#endif
+    m_user_interface.scaling_changed(dpi);
 }
 
 int Graphics_impl::create_texture_descriptor_heap()
@@ -194,26 +133,20 @@ void Graphics_impl::create_pipeline_states()
     UINT render_targets_count = 1;
 
     create_pipeline_state(m_device, m_pipeline_state_model_vector, m_root_signature.get(),
-        "vertex_shader_model_vector", "pixel_shader", DXGI_FORMAT_D16_UNORM,
+        "vertex_shader_model_vector", "pixel_shader", m_depth_stencil.dsv_format(),
         render_targets_count, Input_element_model::translation, Depth_write::disabled);
     SET_DEBUG_NAME(m_pipeline_state_model_vector, L"Pipeline State Object Model Vector");
 
     create_pipeline_state(m_device, m_pipeline_state_srv_instance_data, m_root_signature.get(),
-        "vertex_shader_srv_instance_data", "pixel_shader", DXGI_FORMAT_D16_UNORM,
+        "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
         render_targets_count, Input_element_model::trans_rot, Depth_write::disabled);
-
     SET_DEBUG_NAME(m_pipeline_state_srv_instance_data, L"Pipeline State Object SRV instance data");
 }
 
 ComPtr<ID3D12GraphicsCommandList> Graphics_impl::create_main_command_list()
 {
-    constexpr UINT node_mask = 0; // Single GPU
-    constexpr ID3D12PipelineState* initial_pipeline_state = nullptr;
-    throw_if_failed(m_device->CreateCommandList(node_mask, D3D12_COMMAND_LIST_TYPE_DIRECT,
-        m_dx12_display->command_allocator().Get(), initial_pipeline_state,
-        IID_PPV_ARGS(&m_command_list)));
+    m_command_list = create_command_list(m_device, m_dx12_display->command_allocator());
     SET_DEBUG_NAME(m_command_list, L"Main Command List");
-    throw_if_failed(m_command_list->Close());
     return m_command_list;
 }
 
@@ -308,8 +241,9 @@ void Main_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> comman
         size_in_words_of_XMVECTOR, &view->eye_position(), offset);
 
     offset = size_in_words_of_XMVECTOR;
+    auto light_position = scene->light_position();
     command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_vectors,
-        size_in_words_of_XMVECTOR, &scene->light_position(), offset);
+        size_in_words_of_XMVECTOR, &light_position, offset);
 
     constexpr int shadow_transform_offset = size_in_words_of_XMMATRIX;
     assert(shadow_map);

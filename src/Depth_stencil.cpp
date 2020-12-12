@@ -7,6 +7,7 @@
 
 #include "Depth_stencil.h"
 #include "util.h"
+#include "Dx12_util.h"
 
 
 namespace
@@ -34,12 +35,12 @@ namespace
 Depth_stencil::Depth_stencil(ComPtr<ID3D12Device> device, UINT width, UINT height, 
     Bit_depth bit_depth, D3D12_RESOURCE_STATES initial_state, 
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index) :
-    m_current_state(initial_state)
+    m_current_state(initial_state), m_width(width), m_height(height)
 {
     m_dsv_format = DXGI_FORMAT_UNKNOWN;
-    DXGI_FORMAT srv_format = DXGI_FORMAT_UNKNOWN;
+    m_srv_format = DXGI_FORMAT_UNKNOWN;
     DXGI_FORMAT resource_format = DXGI_FORMAT_UNKNOWN;
-    set_formats(bit_depth, m_dsv_format, srv_format, resource_format);
+    set_formats(bit_depth, m_dsv_format, m_srv_format, resource_format);
 
     D3D12_CLEAR_VALUE v {};
     v.Format = m_dsv_format;
@@ -49,13 +50,14 @@ Depth_stencil::Depth_stencil(ComPtr<ID3D12Device> device, UINT width, UINT heigh
     auto resource_desc = CD3DX12_RESOURCE_DESC::Tex2D(resource_format, width, height);
     resource_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
+    auto heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
     throw_if_failed(device->CreateCommittedResource(
-        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE,
+        &heap_properties, D3D12_HEAP_FLAG_NONE,
         &resource_desc, initial_state, &clear_value, IID_PPV_ARGS(&m_depth_buffer)));
 
     create_descriptor_heap(device);
     create_depth_stencil_view(device);
-    create_shader_resource_view(device, srv_format, texture_descriptor_heap, 
+    create_shader_resource_view(device, m_srv_format, texture_descriptor_heap, 
         texture_index);
 }
 
@@ -104,8 +106,8 @@ void Depth_stencil::barrier_transition(ComPtr<ID3D12GraphicsCommandList> command
     D3D12_RESOURCE_STATES to_state)
 {
     UINT barriers_count = 1;
-    command_list->ResourceBarrier(barriers_count, 
-        &CD3DX12_RESOURCE_BARRIER::Transition(m_depth_buffer.Get(), m_current_state, to_state));
+    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_depth_buffer.Get(), m_current_state, to_state);
+    command_list->ResourceBarrier(barriers_count, &barrier);
     m_current_state = to_state;
 }
 
@@ -118,4 +120,40 @@ void Depth_stencil::set_debug_names(const wchar_t* dsv_heap_name, const wchar_t*
 D3D12_CPU_DESCRIPTOR_HANDLE Depth_stencil::cpu_handle() const
 {
     return m_depth_stencil_view_heap->GetCPUDescriptorHandleForHeapStart();
+}
+
+Read_back_depth_stencil::Read_back_depth_stencil(ComPtr<ID3D12Device> device, UINT width,
+    UINT height, Bit_depth bit_depth, D3D12_RESOURCE_STATES initial_state,
+    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index) :
+    Depth_stencil(device, width, height, bit_depth, initial_state, texture_descriptor_heap,
+        texture_index)
+{
+    const UINT row_pitch = calculate_row_pitch_in_bytes<float>(m_width);
+    const int size = row_pitch * height;
+    auto resource_buf_desc = CD3DX12_RESOURCE_DESC::Buffer(size);
+
+    constexpr D3D12_CLEAR_VALUE* no_clear_value = nullptr;
+    auto heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
+    throw_if_failed(device->CreateCommittedResource( &heap_properties, D3D12_HEAP_FLAG_NONE,
+        &resource_buf_desc, D3D12_RESOURCE_STATE_COPY_DEST, no_clear_value,
+        IID_PPV_ARGS(&m_render_target_read_back_buffer)));
+}
+
+void Read_back_depth_stencil::copy_data_to_readback_memory(
+    ComPtr<ID3D12GraphicsCommandList> command_list)
+{
+    barrier_transition(command_list, D3D12_RESOURCE_STATE_DEPTH_READ |
+        D3D12_RESOURCE_STATE_COPY_SOURCE);
+
+    copy_to_read_back_memory<float>(command_list, m_depth_buffer, m_render_target_read_back_buffer,
+        m_width, m_height, m_srv_format);
+
+    barrier_transition(command_list, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+}
+
+// Ensure that other synchronization is in place because this function does not
+// contain any synchronization to guarantee that the gpu data actually is available.
+void Read_back_depth_stencil::read_data_from_gpu(std::vector<float>& depths)
+{
+    read_back_data_from_gpu<float>(depths, m_width, m_height, m_render_target_read_back_buffer);
 }

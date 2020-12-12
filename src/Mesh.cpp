@@ -124,23 +124,24 @@ namespace
     {
         D3D12_CLEAR_VALUE* clear_value = nullptr;
 
-        throw_if_failed(device->CreateCommittedResource(
-            properties, D3D12_HEAP_FLAG_NONE, &CD3DX12_RESOURCE_DESC::Buffer(size),
+        auto desc = CD3DX12_RESOURCE_DESC::Buffer(size);
+        throw_if_failed(device->CreateCommittedResource(properties, D3D12_HEAP_FLAG_NONE, &desc,
             initial_state, clear_value, IID_PPV_ARGS(resource.GetAddressOf())));
     }
 
     void create_upload_heap(ComPtr<ID3D12Device> device, UINT size, 
         ComPtr<ID3D12Resource>& upload_resource)
     {
-        create_resource(device, size, upload_resource, 
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_RESOURCE_STATE_GENERIC_READ);
+        auto heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+        create_resource(device, size, upload_resource, &heap_properties,
+            D3D12_RESOURCE_STATE_GENERIC_READ);
     }
 
     void create_gpu_buffer(ComPtr<ID3D12Device> device, UINT size,
         ComPtr<ID3D12Resource>& resource)
     {
-        create_resource(device, size, resource, &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-            D3D12_RESOURCE_STATE_COPY_DEST);
+        auto heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+        create_resource(device, size, resource, &heap_properties, D3D12_RESOURCE_STATE_COPY_DEST);
     }
 
     template <typename T, typename View_type>
