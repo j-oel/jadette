@@ -34,7 +34,8 @@ void Shadow_map::record_shadow_map_generation_commands_in_command_list(Scene& sc
     const XMVECTOR light_position = scene.light_position();
     constexpr float near_z = 1.0f;
     constexpr float far_z = 100.0f;
-    View view(m_size, m_size, light_position, focus_position, near_z, far_z);
+    constexpr float fov = 90.0f;
+    View view(m_size, m_size, light_position, focus_position, near_z, far_z, fov);
 
     m_depth_stencil.barrier_transition(command_list, D3D12_RESOURCE_STATE_DEPTH_WRITE);
     depth_pass.record_commands(scene, view, m_depth_stencil, command_list);

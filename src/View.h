@@ -17,7 +17,7 @@ class View
 {
 public:
     View(UINT width, UINT height, DirectX::XMVECTOR eye_position, DirectX::XMVECTOR focus_point,
-        float near_z, float far_z);
+        float near_z, float far_z, float fov);
     void update();
     const DirectX::XMVECTOR& eye_position() const { return m_eye_position; }
     DirectX::XMVECTOR& eye_position() { return m_eye_position; }
@@ -42,6 +42,7 @@ private:
 
     UINT m_width;
     UINT m_height;
+    float m_fov;
     float m_near_z;
     float m_far_z;
 };

@@ -76,6 +76,10 @@ Config read_config(const std::string& config_file)
         {
             file >> config.invert_mouse;
         }
+        else if (input == "fov")
+        {
+            file >> config.fov;
+        }
         else if (input == "borderless_windowed_fullscreen")
         {
             file >> config.borderless_windowed_fullscreen;

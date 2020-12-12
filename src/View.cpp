@@ -13,7 +13,7 @@ using namespace DirectX;
 
 
 View::View(UINT width, UINT height, DirectX::XMVECTOR eye_position, DirectX::XMVECTOR focus_point,
-    float near_z, float far_z) :
+    float near_z, float far_z, float fov) :
     m_view_matrix(XMMatrixIdentity()),
     m_projection_matrix(XMMatrixIdentity()),
     m_eye_position(eye_position),
@@ -22,6 +22,7 @@ View::View(UINT width, UINT height, DirectX::XMVECTOR eye_position, DirectX::XMV
     m_scissor_rect({ 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) }),
     m_width(width),
     m_height(height),
+    m_fov(fov),
     m_near_z(near_z),
     m_far_z(far_z)
 {
@@ -34,8 +35,7 @@ void View::update()
     m_view_matrix = XMMatrixLookAtLH(m_eye_position, m_focus_point, up_direction);
 
     const float aspect_ratio = static_cast<float>(m_width) / m_height;
-    constexpr float fov = 90.0f;
-    m_projection_matrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(fov),
+    m_projection_matrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_fov),
         aspect_ratio, m_near_z, m_far_z);
     m_view_projection_matrix = XMMatrixMultiply(m_view_matrix, m_projection_matrix);
 }

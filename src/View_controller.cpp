@@ -107,7 +107,7 @@ void View_controller::mouse_look(View& view, double delta_time)
             delta.y = -delta.y;
 
         const XMVECTOR up_direction = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-        const float sensitivity = 0.2f;
+        const float sensitivity = 0.3f;
 
         XMVECTOR rotation_sideways = XMQuaternionRotationNormal(up_direction, 
             -static_cast<float>(delta.x * sensitivity * delta_time));
