@@ -24,6 +24,7 @@ struct Config
     bool borderless_windowed_fullscreen;
     bool vsync;
     bool edit_mode;
+    bool invert_mouse;
 };
 
 class Graphics

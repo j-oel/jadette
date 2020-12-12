@@ -16,9 +16,10 @@ class View;
 class View_controller
 {
 public:
-    View_controller(Input& input, HWND window, bool edit_mode);
+    View_controller(Input& input, HWND window, bool edit_mode, bool invert_mouse);
     void update(View& view);
     bool is_edit_mode() const { return m_edit_mode; }
+    bool is_mouse_inverted() const { return m_invert_mouse; }
 private:
     void first_person_view_update(View& view);
     void orbit_update(View& view);
@@ -30,6 +31,7 @@ private:
     Input& m_input;
 
     bool m_edit_mode;
+    bool m_invert_mouse;
 
     double m_acceleration_x;
     double m_acceleration_y;

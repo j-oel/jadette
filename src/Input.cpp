@@ -50,6 +50,10 @@ void Input::key_down(WPARAM key_code)
             m_e = true;
             break;
 
+        case 'I':
+            m_i = true;
+            break;
+
         case VK_SPACE:
             m_up = true;
             break;
@@ -141,6 +145,13 @@ bool Input::e()
     bool e = m_e;
     m_e = false;
     return e;
+}
+
+bool Input::i()
+{
+    bool i = m_i;
+    m_i = false;
+    return i;
 }
 
 void Input::set_mouse_position(POINT position, HWND window)

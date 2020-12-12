@@ -28,7 +28,7 @@ class User_interface
 public:
     User_interface(std::shared_ptr<Dx12_display> dx12_display,
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index,
-        Input& input, HWND window, UINT width, UINT height, bool edit_mode);
+        Input& input, HWND window, UINT width, UINT height, bool edit_mode, bool invert_mouse);
     void update(Scene& scene, View& view);
     void render_2d_text(size_t objects_count, int triangles_count);
     void scaling_changed(float dpi);

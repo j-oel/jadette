@@ -25,9 +25,9 @@
 
 User_interface::User_interface(std::shared_ptr<Dx12_display> dx12_display,
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index, Input& input,
-    HWND window, UINT width, UINT height, bool edit_mode) :
+    HWND window, UINT width, UINT height, bool edit_mode, bool invert_mouse) :
     m_dx12_display(dx12_display), m_texture_descriptor_heap(texture_descriptor_heap),
-    m_view_controller(input, window, edit_mode),
+    m_view_controller(input, window, edit_mode, invert_mouse),
     m_depth_stencil_for_object_id(dx12_display->device(), width, height,
         Bit_depth::bpp32, D3D12_RESOURCE_STATE_DEPTH_WRITE,
         texture_descriptor_heap, texture_index),
@@ -311,6 +311,8 @@ void User_interface::render_2d_text(size_t objects_count, int triangles_count)
         << "Number of objects: " << objects_count << endl
         << "Number of triangles: " << triangles_count << "\n\n";
 
+    bool invert_mouse = m_view_controller.is_mouse_inverted();
+
     if (m_show_help)
     {
         ss << "Press F1 to hide help\n\n"
@@ -333,7 +335,8 @@ void User_interface::render_2d_text(size_t objects_count, int triangles_count)
         else
             ss << "Free fly mode controls: Arrow keys or WASD keys to move.\n"
             "Shift moves down, space moves up.\n"
-            "Mouse look.\n\n"
+            "Mouse look" << (invert_mouse? " (inverted mouse)" : "") << ".\n"
+            "Press i to " << (invert_mouse? "un" : "") << "invert mouse.\n\n"
 
             "Press e to enter edit mode, which has orbit style controls\n"
             "and where it is possible to move objects.";

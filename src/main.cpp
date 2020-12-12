@@ -72,6 +72,10 @@ Config read_config(const std::string& config_file)
         {
             file >> config.edit_mode;
         }
+        else if (input == "invert_mouse")
+        {
+            file >> config.invert_mouse;
+        }
         else if (input == "borderless_windowed_fullscreen")
         {
             file >> config.borderless_windowed_fullscreen;

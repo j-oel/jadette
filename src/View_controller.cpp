@@ -19,8 +19,10 @@
 using namespace DirectX;
 
 
-View_controller::View_controller(Input& input, HWND window, bool edit_mode) : m_input(input),
+View_controller::View_controller(Input& input, HWND window, bool edit_mode, bool invert_mouse) :
+m_input(input),
 m_edit_mode(edit_mode),
+m_invert_mouse(invert_mouse),
 m_acceleration_x(0.0f),
 m_acceleration_y(0.0f),
 m_acceleration_z(0.0f),
@@ -52,6 +54,9 @@ void View_controller::update(View& view)
         else
             switch_to_edit_mode();
     }
+
+    if (m_input.i() && !m_edit_mode)
+        m_invert_mouse = !m_invert_mouse;
 
     if (m_edit_mode)
         orbit_update(view);
@@ -98,6 +103,9 @@ void View_controller::mouse_look(View& view, double delta_time)
 
     if (delta.x != 0 || delta.y != 0)
     {
+        if (m_invert_mouse)
+            delta.y = -delta.y;
+
         const XMVECTOR up_direction = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
         const float sensitivity = 0.2f;
 
