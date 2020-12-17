@@ -26,8 +26,7 @@ public:
     void record_commands(Scene& scene, const View& view, Depth_stencil& depth_stencil,
         ComPtr<ID3D12GraphicsCommandList> command_list);
 private:
-    ComPtr<ID3D12PipelineState> m_pipeline_state_srv_instance_data;
-    ComPtr<ID3D12PipelineState> m_pipeline_state_model_vector;
+    ComPtr<ID3D12PipelineState> m_pipeline_state;
     Simple_root_signature m_root_signature;
     DXGI_FORMAT m_dsv_format;
 };

@@ -38,7 +38,7 @@ struct Vertices
     std::vector<Vertex_normal> normals;
 };
 
-enum class Input_element_model;
+enum class Input_layout;
 
 class Mesh
 {
@@ -50,9 +50,8 @@ public:
 
     void release_temp_resources();
 
-    void draw(ComPtr<ID3D12GraphicsCommandList> command_list, 
-        D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view, int instance_id,
-        int draw_instances_count, const Input_element_model& input_element_model);
+    void draw(ComPtr<ID3D12GraphicsCommandList> command_list, int draw_instances_count,
+        const Input_layout& input_element_model);
 
     int triangles_count();
 
@@ -82,33 +81,21 @@ private:
 };
 
 
-struct Per_instance_translation_data
-{
-    DirectX::PackedVector::XMHALF4 model;
-};
-
-
-struct Per_instance_trans_rot
+struct Per_instance_transform
 {
     DirectX::PackedVector::XMHALF4 translation;
     DirectX::PackedVector::XMHALF4 rotation;
 };
 
-
 class Instance_data
 {
 public:
     Instance_data(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
-        UINT instance_count, Per_instance_translation_data data);
-    Instance_data(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
-        UINT instance_count, Per_instance_trans_rot data,
+        UINT instance_count, Per_instance_transform data,
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index);
-    void upload_new_translation_data(ComPtr<ID3D12GraphicsCommandList>& command_list, 
-        const std::vector<Per_instance_translation_data>& instance_data);
-    void upload_new_trans_rot_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
-        const std::vector<Per_instance_trans_rot>& instance_data);
+    void upload_new_data_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list,
+        const std::vector<Per_instance_transform>& instance_data);
     D3D12_GPU_DESCRIPTOR_HANDLE srv_gpu_handle() { return m_structured_buffer_gpu_descriptor_handle; }
-    D3D12_VERTEX_BUFFER_VIEW buffer_view() { return m_instance_vertex_buffer_view; }
 private:
     ComPtr<ID3D12Resource> m_instance_vertex_buffer;
     ComPtr<ID3D12Resource> m_upload_resource;

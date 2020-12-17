@@ -76,7 +76,7 @@ void Commands::close()
 }
 
 void Commands::draw_static_objects(ComPtr<ID3D12PipelineState> pipeline_state,
-    const Input_element_model& input_element_model)
+    const Input_layout& input_element_model)
 {
     assert(m_scene);
     m_command_list->SetPipelineState(pipeline_state.Get());
@@ -84,19 +84,22 @@ void Commands::draw_static_objects(ComPtr<ID3D12PipelineState> pipeline_state,
 }
 
 void Commands::draw_dynamic_objects(ComPtr<ID3D12PipelineState> pipeline_state,
-    const Input_element_model& input_element_model)
+    const Input_layout& input_element_model)
 {
     assert(m_scene);
     m_command_list->SetPipelineState(pipeline_state.Get());
     m_scene->draw_dynamic_objects(m_command_list, m_texture_mapping, input_element_model);
 }
 
-void Commands::simple_render_pass(ComPtr<ID3D12PipelineState> static_objects_pipeline_state,
-    ComPtr<ID3D12PipelineState> dynamic_objects_pipeline_state)
+void Commands::simple_render_pass(ComPtr<ID3D12PipelineState> dynamic_objects_pipeline_state,
+    ComPtr<ID3D12PipelineState> static_objects_pipeline_state,
+    int root_param_index_of_instance_data)
 {
     set_root_signature();
     set_shader_constants();
     clear_depth_stencil();
-    draw_static_objects(static_objects_pipeline_state, Input_element_model::positions_translation);
-    draw_dynamic_objects(dynamic_objects_pipeline_state, Input_element_model::positions_trans_rot);
+    draw_dynamic_objects(dynamic_objects_pipeline_state, Input_layout::position);
+    m_scene->set_dynamic_instance_data_shader_constant(m_command_list,
+        root_param_index_of_instance_data);
+    draw_static_objects(static_objects_pipeline_state, Input_layout::position);
 }

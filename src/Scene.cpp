@@ -105,7 +105,8 @@ XMHALF4 convert_float4_to_half4(const XMFLOAT4& vec)
 Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int texture_start_index,
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures,
     int root_param_index_of_values, int root_param_index_of_normal_maps, 
-    int normal_map_flag_offset, int descriptor_index_of_instance_data) :
+    int normal_map_flag_offset, int descriptor_index_of_dynamic_instance_data,
+    int descriptor_index_of_static_instance_data) :
     m_light_position(XMVectorSet(0.0f, 20.0f, 5.0f, 1.0f)),
     m_root_param_index_of_values(root_param_index_of_values),
     m_triangles_count(0), m_selected_object_id(-1), m_object_selected(false)
@@ -123,6 +124,7 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
     constexpr ID3D12PipelineState* initial_pipeline_state = nullptr;
     throw_if_failed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
         command_allocator.Get(), initial_pipeline_state, IID_PPV_ARGS(&command_list)));
+    SET_DEBUG_NAME(command_list, L"Scene Upload Data Command List");
 
     std::exception_ptr exc = nullptr;
 
@@ -205,11 +207,12 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
         return;
     }
 
-    m_instance_vector_data = std::make_unique<Instance_data>(device, command_list,
-        static_cast<UINT>(m_graphical_objects.size()), Per_instance_translation_data());
-    m_instance_trans_rot_data = std::make_unique<Instance_data>(device, command_list,
-        static_cast<UINT>(m_dynamic_objects.size()), Per_instance_trans_rot(), texture_descriptor_heap,
-        descriptor_index_of_instance_data);
+    m_dynamic_instance_data = std::make_unique<Instance_data>(device, command_list,
+        static_cast<UINT>(m_dynamic_objects.size()), Per_instance_transform(), texture_descriptor_heap,
+        descriptor_index_of_dynamic_instance_data);
+    m_static_instance_data = std::make_unique<Instance_data>(device, command_list,
+        static_cast<UINT>(m_graphical_objects.size()), Per_instance_transform(), texture_descriptor_heap,
+        descriptor_index_of_static_instance_data);
 
     upload_resources_to_gpu(device, command_list);
     for (auto& g : m_graphical_objects)
@@ -225,7 +228,7 @@ Scene::~Scene()
 }
 
 XMMATRIX fly_around_in_circle(std::shared_ptr<Graphical_object>& object,
-    const std::vector<Per_instance_translation_data>& translations)
+    const std::vector<Per_instance_transform>& transforms)
 {
     XMVECTOR rotation_axis = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
     const float angle = XMConvertToRadians(static_cast<float>(elapsed_time_in_seconds() * 100.0));
@@ -238,7 +241,7 @@ XMMATRIX fly_around_in_circle(std::shared_ptr<Graphical_object>& object,
     XMMATRIX orient_the_ship = XMMatrixRotationAxis(rotation_axis,
         angle + XMConvertToRadians(-90.0f));
 
-    auto translation = convert_half4_to_vector(translations[object->id()].model);
+    auto translation = convert_half4_to_vector(transforms[object->id()].translation);
     XMMATRIX translate_to_the_point_on_which_to_rotate_around =
         XMMatrixTranslationFromVector(translation);
     XMMATRIX new_model_matrix = orient_the_ship * go_in_a_circle *
@@ -248,11 +251,11 @@ XMMATRIX fly_around_in_circle(std::shared_ptr<Graphical_object>& object,
     return new_model_matrix;
 }
 
-void set_instance_data(Per_instance_trans_rot& trans_rot, XMHALF4 translation,
+void set_instance_data(Per_instance_transform& transform, XMHALF4 translation,
     const XMVECTOR& rotation)
 {
-    trans_rot.translation = translation;
-    convert_vector_to_half4(trans_rot.rotation, rotation);
+    transform.translation = translation;
+    convert_vector_to_half4(transform.rotation, rotation);
 }
 
 void Scene::update()
@@ -270,55 +273,39 @@ void Scene::update()
 
     for (auto& object : m_rotating_objects)
     {
-        m_model_transforms[object.transform_ref].rotation = quaternion_half;
+        m_dynamic_model_transforms[object.transform_ref].rotation = quaternion_half;
     }
 
     for (auto& ufo : m_flying_objects) // :-)
     {
-        XMMATRIX new_model_matrix = fly_around_in_circle(ufo.object, m_translations);
+        XMMATRIX new_model_matrix = fly_around_in_circle(ufo.object, m_static_model_transforms);
         XMVECTOR quaternion = XMQuaternionRotationMatrix(new_model_matrix);
         XMVECTOR translation = new_model_matrix.r[3];
         XMHALF4 translation_half4;
         convert_vector_to_half4(translation_half4, translation);
-        set_instance_data(m_model_transforms[ufo.transform_ref], translation_half4, quaternion);
+        set_instance_data(m_dynamic_model_transforms[ufo.transform_ref], translation_half4, quaternion);
     }
 }
 
 void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list, 
     const std::vector<std::shared_ptr<Graphical_object> >& objects,
-    Texture_mapping texture_mapping, const Input_element_model& input_element_model) const
+    Texture_mapping texture_mapping, const Input_layout& input_element_model, bool dynamic) const
 {
     command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     for (size_t i = 0; i < objects.size();)
     {
         auto& graphical_object = objects[i];
-        bool vector_data = true;
-        if (input_element_model == Input_element_model::translation ||
-            input_element_model == Input_element_model::positions_translation)
-        {
-            if (texture_mapping == Texture_mapping::enabled)
-                graphical_object->draw_textured(command_list,
-                    m_instance_vector_data->buffer_view(), graphical_object->id(),
-                    input_element_model);
-            else
-                graphical_object->draw(command_list, m_instance_vector_data->buffer_view(),
-                    graphical_object->id(), input_element_model);
-        }
-        else if (input_element_model == Input_element_model::trans_rot ||
-            input_element_model == Input_element_model::positions_trans_rot)
-        {
-            D3D12_VERTEX_BUFFER_VIEW v {};
-            constexpr UINT offset = 0;
-            constexpr UINT size_in_words_of_value = 1;
-            command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
-                size_in_words_of_value, &i, offset);
-            if (texture_mapping == Texture_mapping::enabled)
-                graphical_object->draw_textured(command_list, v, static_cast<int>(i),
-                    input_element_model);
-            else
-                graphical_object->draw(command_list, v, static_cast<int>(i), input_element_model);
-        }
+
+        constexpr UINT offset = 0;
+        constexpr UINT size_in_words_of_value = 1;
+        int object_id = static_cast<int>(dynamic ? i : graphical_object->id());
+        command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
+            size_in_words_of_value, &object_id, offset);
+        if (texture_mapping == Texture_mapping::enabled)
+            graphical_object->draw_textured(command_list, input_element_model);
+        else
+            graphical_object->draw(command_list, input_element_model);
 
         // If instances() returns more than 1, those additional instances were already drawn
         // by the last draw call and the corresponding graphical objects should hence be skipped.
@@ -327,45 +314,47 @@ void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
 }
 
 void Scene::draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    Texture_mapping texture_mapping, const Input_element_model& input_element_model) const
+    Texture_mapping texture_mapping, const Input_layout& input_element_model) const
 {
-    draw_objects(command_list, m_static_objects, texture_mapping, input_element_model);
+    draw_objects(command_list, m_static_objects, texture_mapping, input_element_model, false);
 }
 
 void Scene::draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    Texture_mapping texture_mapping, const Input_element_model& input_element_model) const
+    Texture_mapping texture_mapping, const Input_layout& input_element_model) const
 {
-    draw_objects(command_list, m_dynamic_objects, texture_mapping, input_element_model);
+    draw_objects(command_list, m_dynamic_objects, texture_mapping, input_element_model, true);
 }
 
 void Scene::upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
     if (!m_graphical_objects.empty())
-        upload_instance_translation_data(command_list);
+        upload_static_instance_data(command_list);
     if (!m_dynamic_objects.empty())
-        upload_instance_trans_rot_data(command_list);
+        m_dynamic_instance_data->upload_new_data_to_gpu(command_list, m_dynamic_model_transforms);
 }
 
-void Scene::upload_instance_translation_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
+void Scene::upload_static_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
     static bool first = true;
     if (first)
     {
-        m_instance_vector_data->upload_new_translation_data(command_list, m_translations);
+        m_static_instance_data->upload_new_data_to_gpu(command_list, m_static_model_transforms);
         first = false;
     }
 }
 
-void Scene::upload_instance_trans_rot_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
-{
-    m_instance_trans_rot_data->upload_new_trans_rot_data(command_list, m_model_transforms);
-}
-
-void Scene::set_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+void Scene::set_static_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
     int root_param_index_of_instance_data)
 {
     command_list->SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
-        m_instance_trans_rot_data->srv_gpu_handle());
+        m_dynamic_instance_data->srv_gpu_handle());
+}
+
+void Scene::set_dynamic_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    int root_param_index_of_instance_data)
+{
+    command_list->SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
+        m_static_instance_data->srv_gpu_handle());
 }
 
 void Scene::manipulate_object(DirectX::XMVECTOR delta_pos, DirectX::XMVECTOR delta_rotation)
@@ -373,13 +362,13 @@ void Scene::manipulate_object(DirectX::XMVECTOR delta_pos, DirectX::XMVECTOR del
     if (m_object_selected)
     {
         auto& selected_object_translation =
-            m_translations[m_dynamic_objects[m_selected_object_id]->id()].model;
+                m_static_model_transforms[m_dynamic_objects[m_selected_object_id]->id()].translation;
         XMVECTOR translation = convert_half4_to_vector(selected_object_translation);
         translation += delta_pos;
         convert_vector_to_half4(selected_object_translation, translation);
-        m_model_transforms[m_selected_object_id].translation = selected_object_translation;
+        m_dynamic_model_transforms[m_selected_object_id].translation = selected_object_translation;
 
-        auto& selected_object_rotation = m_model_transforms[m_selected_object_id].rotation;
+        auto& selected_object_rotation = m_dynamic_model_transforms[m_selected_object_id].rotation;
         XMVECTOR rotation = convert_half4_to_vector(selected_object_rotation);
         convert_vector_to_half4(selected_object_rotation,
             XMQuaternionMultiply(rotation, delta_rotation));
@@ -484,10 +473,11 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
         shared_ptr<Texture> diffuse_map, bool dynamic, XMFLOAT4 position, int instances = 1,
         shared_ptr<Texture> normal_map = nullptr, bool rotating = false)
     {
-        Per_instance_translation_data translation = { convert_float4_to_half4(position) };
-        m_translations.push_back(translation);
+        Per_instance_transform transform = { convert_float4_to_half4(position),
+        convert_vector_to_half4(DirectX::XMQuaternionIdentity()) };
+        m_static_model_transforms.push_back(transform);
         auto object = std::make_shared<Graphical_object>(device, mesh,
-            command_list, root_param_index_of_textures, diffuse_map, 
+            command_list, root_param_index_of_textures, diffuse_map,
             root_param_index_of_values, root_param_index_of_normal_maps, normal_map_flag_offset,
             normal_map, object_id++, instances);
 
@@ -496,9 +486,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
         if (dynamic)
         {
             m_dynamic_objects.push_back(object);
-            const Per_instance_trans_rot trans_rot { translation.model,
-                convert_vector_to_half4(DirectX::XMQuaternionIdentity()) };
-            m_model_transforms.push_back(trans_rot);
+            m_dynamic_model_transforms.push_back(transform);
             Dynamic_object dynamic_object { object, transform_ref };
             if (rotating)
                 m_rotating_objects.push_back(dynamic_object);

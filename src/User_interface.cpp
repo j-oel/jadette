@@ -246,7 +246,6 @@ void User_interface::object_update(const User_action& user_action, Input& input,
     }
     else if (user_action.rotate_object)
     {
-
         rotation_quaternion = rotate_object(view, mouse_initial_position, mouse_current,
             m_input.mouse_down_position(), m_selected_object_radius);
     }

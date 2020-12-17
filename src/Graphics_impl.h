@@ -64,10 +64,8 @@ private:
     ComPtr<ID3D12DescriptorHeap> m_texture_descriptor_heap;
     int m_textures_count;
     Depth_stencil m_depth_stencil;
-    ComPtr<ID3D12PipelineState> m_pipeline_state_srv_instance_data;
-    ComPtr<ID3D12PipelineState> m_pipeline_state_model_vector;
-    ComPtr<ID3D12PipelineState> m_pipeline_state_srv_instance_data_early_z;
-    ComPtr<ID3D12PipelineState> m_pipeline_state_model_vector_early_z;
+    ComPtr<ID3D12PipelineState> m_pipeline_state;
+    ComPtr<ID3D12PipelineState> m_pipeline_state_early_z;
 
     Depth_pass m_depth_pass;
     Shadow_map m_shadow_map;

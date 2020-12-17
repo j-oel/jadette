@@ -101,14 +101,14 @@ void Simple_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> comm
     Scene* scene, const View* view, Shadow_map* shadow_map)
 {
     view->set_view(command_list, m_root_param_index_of_matrices);
-    scene->set_instance_data_shader_constant(command_list,
+    scene->set_static_instance_data_shader_constant(command_list,
         m_root_param_index_of_instance_data);
 }
 
 void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineState>& pipeline_state,
     ComPtr<ID3D12RootSignature> root_signature,
     const char* vertex_shader_entry_function, const char* pixel_shader_entry_function,
-    DXGI_FORMAT dsv_format, UINT render_targets_count, Input_element_model input_element_model,
+    DXGI_FORMAT dsv_format, UINT render_targets_count, Input_layout input_layout,
     Depth_write depth_write/* = Depth_write::enabled*/,
     DXGI_FORMAT rtv_format0/*= DXGI_FORMAT_R8G8B8A8_UNORM*/,
     DXGI_FORMAT rtv_format1/*= DXGI_FORMAT_R8G8B8A8_UNORM*/)
@@ -139,39 +139,23 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
         handle_errors(hr, error_messages);
     }
 
-    D3D12_INPUT_ELEMENT_DESC input_element_desc_translation[] =
+    D3D12_INPUT_ELEMENT_DESC input_element_desc_position[] =
     {
         { "POSITION", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         { "NORMAL", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "TRANSLATION", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 2, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 }
+        // Texture coordinates are stored in the w components of position and normal.
     };
 
-    D3D12_INPUT_ELEMENT_DESC input_element_desc_model_trans_rot[] =
-    {
-        { "POSITION", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "NORMAL", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-    };
-
-    D3D12_INPUT_ELEMENT_DESC input_element_desc_positions_translation[] =
-    {
-        { "POSITION", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "TRANSLATION", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 }
-    };
-
-    D3D12_INPUT_ELEMENT_DESC input_element_desc_positions_trans_rot[] =
+    D3D12_INPUT_ELEMENT_DESC input_element_desc_position_normal[] =
     {
         { "POSITION", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
     };
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC s {};
-    if (input_element_model == Input_element_model::translation)
-        s.InputLayout = { input_element_desc_translation, _countof(input_element_desc_translation) };
-    else if (input_element_model == Input_element_model::trans_rot)
-        s.InputLayout = { input_element_desc_model_trans_rot, _countof(input_element_desc_model_trans_rot) };
-    else if (input_element_model == Input_element_model::positions_translation)
-        s.InputLayout = { input_element_desc_positions_translation, _countof(input_element_desc_positions_translation) };
-    else if (input_element_model == Input_element_model::positions_trans_rot)
-        s.InputLayout = { input_element_desc_positions_trans_rot, _countof(input_element_desc_positions_trans_rot) };
+    if (input_layout == Input_layout::position_normal)
+        s.InputLayout = { input_element_desc_position, _countof(input_element_desc_position) };
+    else if (input_layout == Input_layout::position)
+        s.InputLayout = { input_element_desc_position_normal, _countof(input_element_desc_position_normal) };
     s.pRootSignature = root_signature.Get();
     s.VS = CD3DX12_SHADER_BYTECODE(vertex_shader.Get());
     if (pixel_shader_entry_function)

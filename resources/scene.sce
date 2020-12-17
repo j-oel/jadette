@@ -35,6 +35,7 @@ model plane_model plane
 normal_mapped_object plane1 static plane_model pattern2 -20 -10 0 30 normal_map
 normal_mapped_object plane2 static plane_model pattern2 10 -8 0 30 normal_map
 
+
 model cube_from_file cube.obj
 
 
@@ -46,7 +47,7 @@ model cube_from_file cube.obj
 
 array dynamic cube_from_file pattern 1 0 0 3 3 3 3.0 3.0 3.0 1
 model cube_model cube
-rotating_array dynamic cube_model pattern 0 0 0 40 40 40 -3.0 3.0 3.0 0.4
+array static cube_model pattern 0 0 0 40 40 40 -3.0 3.0 3.0 0.4
 
 
 model platform_model platform.obj

@@ -47,13 +47,13 @@ public:
 };
 
 
-enum class Input_element_model { translation, trans_rot, positions_translation, positions_trans_rot };
+enum class Input_layout { position_normal, position };
 enum class Depth_write { enabled, disabled };
 
 void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineState>& pipeline_state,
     ComPtr<ID3D12RootSignature> root_signature,
     const char* vertex_shader_entry_function, const char* pixel_shader_entry_function,
-    DXGI_FORMAT dsv_format, UINT render_targets_count, Input_element_model input_element_model,
+    DXGI_FORMAT dsv_format, UINT render_targets_count, Input_layout input_layout,
     Depth_write depth_write = Depth_write::enabled,
     DXGI_FORMAT rtv_format0 = DXGI_FORMAT_R8G8B8A8_UNORM,
     DXGI_FORMAT rtv_format1 = DXGI_FORMAT_R8G8B8A8_UNORM);

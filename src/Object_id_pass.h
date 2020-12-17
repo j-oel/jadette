@@ -39,8 +39,8 @@ private:
     ComPtr<ID3D12Resource> m_render_target_read_back_buffer;
     ComPtr<ID3D12DescriptorHeap> m_render_target_view_heap;
     D3D12_CPU_DESCRIPTOR_HANDLE m_render_target_view;
-    ComPtr<ID3D12PipelineState> m_pipeline_state_srv_instance_data;
-    ComPtr<ID3D12PipelineState> m_pipeline_state_model_vector;
+    ComPtr<ID3D12PipelineState> m_pipeline_state_dynamic_objects;
+    ComPtr<ID3D12PipelineState> m_pipeline_state_static_objects;
     Simple_root_signature m_root_signature;
     DXGI_FORMAT m_dsv_format;
     DXGI_FORMAT m_rtv_format;

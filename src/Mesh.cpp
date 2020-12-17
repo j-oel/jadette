@@ -43,34 +43,19 @@ void Mesh::release_temp_resources()
 }
 
 
-void Mesh::draw(ComPtr<ID3D12GraphicsCommandList> command_list,
-    D3D12_VERTEX_BUFFER_VIEW instance_vertex_buffer_view, int instance_id, int draw_instances_count,
-    const Input_element_model& input_element_model)
+void Mesh::draw(ComPtr<ID3D12GraphicsCommandList> command_list, int draw_instances_count,
+    const Input_layout& input_element_model)
 {
     switch (input_element_model)
     {
-        case Input_element_model::translation:
-        {
-            D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_positions_buffer_view,
-                m_vertex_normals_buffer_view, instance_vertex_buffer_view };
-            command_list->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
-            break;
-        }
-        case Input_element_model::trans_rot:
+        case Input_layout::position_normal:
         {
             D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_positions_buffer_view,
             m_vertex_normals_buffer_view };
             command_list->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
             break;
         }
-        case Input_element_model::positions_translation:
-        {
-            D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_positions_buffer_view,
-                instance_vertex_buffer_view };
-            command_list->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
-            break;
-        }
-        case Input_element_model::positions_trans_rot:
+        case Input_layout::position:
         {
             D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_positions_buffer_view };
             command_list->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
@@ -79,7 +64,7 @@ void Mesh::draw(ComPtr<ID3D12GraphicsCommandList> command_list,
     }
 
     command_list->IASetIndexBuffer(&m_index_buffer_view);
-    command_list->DrawIndexedInstanced(m_index_count, draw_instances_count, 0, 0, instance_id);
+    command_list->DrawIndexedInstanced(m_index_count, draw_instances_count, 0, 0, 0);
 }
 
 int Mesh::triangles_count()
@@ -215,7 +200,7 @@ void construct_instance_data(ComPtr<ID3D12Device> device,
 {
     vertex_buffer_size = static_cast<UINT>(instance_count * sizeof(T));
     std::vector<T> instance_data;
-    instance_data.resize(vertex_buffer_size);
+    instance_data.resize(instance_count);
 
     create_and_fill_buffer(device, command_list, instance_vertex_buffer,
         upload_resource, instance_data, vertex_buffer_size, instance_vertex_buffer_view,
@@ -226,26 +211,14 @@ void construct_instance_data(ComPtr<ID3D12Device> device,
 
 Instance_data::Instance_data(ComPtr<ID3D12Device> device,
     ComPtr<ID3D12GraphicsCommandList>& command_list,
-    UINT instance_count, Per_instance_translation_data data)
-{
-    if (instance_count == 0)
-        return;
-    construct_instance_data<Per_instance_translation_data>(device, command_list, instance_count,
-        m_instance_vertex_buffer, m_upload_resource, m_instance_vertex_buffer_view,
-        m_vertex_buffer_size);
-    SET_DEBUG_NAME(m_instance_vertex_buffer, L"Vector Instance Buffer");
-}
-
-Instance_data::Instance_data(ComPtr<ID3D12Device> device,
-    ComPtr<ID3D12GraphicsCommandList>& command_list,
-    UINT instance_count, Per_instance_trans_rot data,
+    UINT instance_count, Per_instance_transform data,
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index)
 {
     // Handle the case of zero dynamic objects. With this way, no special cases
     // are needed at other places.
     UINT adjusted_instance_count = instance_count == 0 ? 1 : instance_count;
     
-    construct_instance_data<Per_instance_trans_rot>(device, command_list, 
+    construct_instance_data<Per_instance_transform>(device, command_list, 
         adjusted_instance_count,
         m_instance_vertex_buffer, m_upload_resource, m_instance_vertex_buffer_view,
         m_vertex_buffer_size, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
@@ -262,7 +235,7 @@ Instance_data::Instance_data(ComPtr<ID3D12Device> device,
         texture_descriptor_heap->GetCPUDescriptorHandleForHeapStart(),
         texture_position_in_descriptor_heap);
 
-    D3D12_BUFFER_SRV srv = { 0, adjusted_instance_count, sizeof(Per_instance_trans_rot),
+    D3D12_BUFFER_SRV srv = { 0, adjusted_instance_count, sizeof(Per_instance_transform),
         D3D12_BUFFER_SRV_FLAG_NONE };
     D3D12_SHADER_RESOURCE_VIEW_DESC s = { DXGI_FORMAT_UNKNOWN, D3D12_SRV_DIMENSION_BUFFER,
                                           D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, srv };
@@ -287,15 +260,8 @@ void upload_new_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
         upload_resource, command_list, before_state);
 }
 
-void Instance_data::upload_new_translation_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    const std::vector<Per_instance_translation_data>& instance_data)
-{
-    upload_new_data(command_list, instance_data, m_instance_vertex_buffer, m_upload_resource,
-        m_vertex_buffer_size);
-}
-
-void Instance_data::upload_new_trans_rot_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    const std::vector<Per_instance_trans_rot>& instance_data)
+void Instance_data::upload_new_data_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    const std::vector<Per_instance_transform>& instance_data)
 {
     upload_new_data(command_list, instance_data, m_instance_vertex_buffer, m_upload_resource,
         m_vertex_buffer_size, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);

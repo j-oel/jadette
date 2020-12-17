@@ -18,16 +18,11 @@ m_root_signature(device), m_dsv_format(dsv_format)
 {
     UINT render_targets_count = 0;
     const char* empty_pixel_shader = nullptr;
-    create_pipeline_state(device, m_pipeline_state_model_vector, m_root_signature.get(),
-        "depths_vertex_shader_model_vector", empty_pixel_shader,
-        dsv_format, render_targets_count, Input_element_model::positions_translation);
-    SET_DEBUG_NAME(m_pipeline_state_model_vector, L"Depths Pipeline State Object Model Vector");
 
-    create_pipeline_state(device, m_pipeline_state_srv_instance_data, m_root_signature.get(),
+    create_pipeline_state(device, m_pipeline_state, m_root_signature.get(),
         "depths_vertex_shader_srv_instance_data", empty_pixel_shader,
-        dsv_format, render_targets_count, Input_element_model::positions_trans_rot);
-    SET_DEBUG_NAME(m_pipeline_state_srv_instance_data,
-        L"Depths Pipeline State Object SRV instance data");
+        dsv_format, render_targets_count, Input_layout::position);
+    SET_DEBUG_NAME(m_pipeline_state, L"Depths Pipeline State Object");
 }
 
 void set_render_target(ComPtr<ID3D12GraphicsCommandList> command_list,
@@ -50,5 +45,6 @@ void Depth_pass::record_commands(Scene& scene, const View& view, Depth_stencil& 
     set_render_target(command_list, depth_stencil);
     Commands c(command_list, &depth_stencil, Texture_mapping::disabled,
         &view, &scene, this, &m_root_signature);
-    c.simple_render_pass(m_pipeline_state_model_vector, m_pipeline_state_srv_instance_data);
+    c.simple_render_pass(m_pipeline_state, m_pipeline_state,
+        m_root_signature.m_root_param_index_of_instance_data);
 }

@@ -49,14 +49,19 @@ UINT texture_index_for_shadow_map()
     return 1;
 }
 
-UINT descriptor_index_for_instance_data()
+UINT descriptor_index_for_dynamic_instance_data()
 {
     return 2;
 }
 
-UINT texture_index_for_diffuse_textures()
+UINT descriptor_index_for_static_instance_data()
 {
     return 3;
+}
+
+UINT texture_index_for_diffuse_textures()
+{
+    return 4;
 }
 
 UINT value_offset_for_shadow_mapping_flag()
@@ -78,7 +83,8 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
         m_texture_descriptor_heap, m_root_signature.m_root_param_index_of_textures,
         m_root_signature.m_root_param_index_of_values,
         m_root_signature.m_root_param_index_of_normal_maps,
-        value_offset_for_shadow_mapping_flag(), descriptor_index_for_instance_data()),
+        value_offset_for_shadow_mapping_flag(), descriptor_index_for_dynamic_instance_data(),
+        descriptor_index_for_static_instance_data()),
     m_view(config.width, config.height, XMVectorSet(0.0f, 0.0f, -20.0f, 1.0f),
         XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 0.1f, 4000.0f, config.fov),
     m_commands(create_main_command_list(), &m_depth_stencil, Texture_mapping::enabled,
@@ -132,26 +138,15 @@ void Graphics_impl::create_pipeline_states()
 {
     UINT render_targets_count = 1;
 
-    create_pipeline_state(m_device, m_pipeline_state_model_vector, m_root_signature.get(),
-        "vertex_shader_model_vector", "pixel_shader", m_depth_stencil.dsv_format(),
-        render_targets_count, Input_element_model::translation, Depth_write::enabled);
-    SET_DEBUG_NAME(m_pipeline_state_model_vector, L"Pipeline State Object Model Vector");
-
-    create_pipeline_state(m_device, m_pipeline_state_srv_instance_data, m_root_signature.get(),
+    create_pipeline_state(m_device, m_pipeline_state, m_root_signature.get(),
         "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
-        render_targets_count, Input_element_model::trans_rot, Depth_write::enabled);
-    SET_DEBUG_NAME(m_pipeline_state_srv_instance_data, L"Pipeline State Object SRV instance data");
+        render_targets_count, Input_layout::position_normal, Depth_write::enabled);
+    SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering");
 
-    create_pipeline_state(m_device, m_pipeline_state_model_vector_early_z, m_root_signature.get(),
-        "vertex_shader_model_vector", "pixel_shader", m_depth_stencil.dsv_format(),
-        render_targets_count, Input_element_model::translation, Depth_write::disabled);
-    SET_DEBUG_NAME(m_pipeline_state_model_vector, L"Pipeline State Object Model Vector early z");
-
-    create_pipeline_state(m_device, m_pipeline_state_srv_instance_data_early_z, m_root_signature.get(),
+    create_pipeline_state(m_device, m_pipeline_state_early_z, m_root_signature.get(),
         "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
-        render_targets_count, Input_element_model::trans_rot, Depth_write::disabled);
-    SET_DEBUG_NAME(m_pipeline_state_srv_instance_data,
-        L"Pipeline State Object SRV instance data early z");
+        render_targets_count, Input_layout::position_normal, Depth_write::disabled);
+    SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering Early Z");
 }
 
 ComPtr<ID3D12GraphicsCommandList> Graphics_impl::create_main_command_list()
@@ -181,15 +176,17 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     c.set_shader_constants();
     if (m_user_interface.early_z_pass())
     {
-        c.draw_static_objects(m_pipeline_state_model_vector_early_z,
-            Input_element_model::translation);
-        c.draw_dynamic_objects(m_pipeline_state_srv_instance_data_early_z,
-            Input_element_model::trans_rot);
+        c.draw_dynamic_objects(m_pipeline_state_early_z, Input_layout::position_normal);
+        m_scene.set_dynamic_instance_data_shader_constant(m_command_list,
+            m_root_signature.m_root_param_index_of_instance_data);
+        c.draw_static_objects(m_pipeline_state_early_z, Input_layout::position_normal);
     }
     else
     {
-        c.draw_static_objects(m_pipeline_state_model_vector, Input_element_model::translation);
-        c.draw_dynamic_objects(m_pipeline_state_srv_instance_data, Input_element_model::trans_rot);
+        c.draw_dynamic_objects(m_pipeline_state, Input_layout::position_normal);
+        m_scene.set_dynamic_instance_data_shader_constant(m_command_list,
+            m_root_signature.m_root_param_index_of_instance_data);
+        c.draw_static_objects(m_pipeline_state, Input_layout::position_normal);
     }
 
     // If text is enabled, the text object takes care of the render target state transition.
@@ -276,5 +273,5 @@ void Main_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> comman
 
     view->set_view(command_list, m_root_param_index_of_matrices);
 
-    scene->set_instance_data_shader_constant(command_list, m_root_param_index_of_instance_data);
+    scene->set_static_instance_data_shader_constant(command_list, m_root_param_index_of_instance_data);
 }

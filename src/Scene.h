@@ -15,7 +15,7 @@
 
 
 enum class Texture_mapping { enabled, disabled };
-enum class Input_element_model;
+enum class Input_layout;
 
 struct Dynamic_object
 {
@@ -30,20 +30,23 @@ public:
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
         int root_param_index_of_textures, int root_param_index_of_values,
         int root_param_index_of_normal_maps, int normal_map_flag_offset,
-        int descriptor_index_of_instance_data);
+        int descriptor_index_of_dynamic_instance_data,
+        int descriptor_index_of_static_instance_data);
     ~Scene();
     void update();
 
     void draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list, 
-        Texture_mapping texture_mapping, const Input_element_model& input_element_model) const;
+        Texture_mapping texture_mapping, const Input_layout& input_element_model) const;
     void draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list, 
-        Texture_mapping texture_mapping, const Input_element_model& input_element_model) const;
+        Texture_mapping texture_mapping, const Input_layout& input_element_model) const;
     void upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
     int triangles_count() const { return m_triangles_count; }
     size_t objects_count() const { return m_graphical_objects.size(); }
     DirectX::XMVECTOR light_position() const { return m_light_position; }
     DirectX::XMVECTOR light_focus_point() const { return m_light_focus_point; }
-    void set_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    void set_static_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+        int root_param_index_of_instance_data);
+    void set_dynamic_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
         int root_param_index_of_instance_data);
     void manipulate_object(DirectX::XMVECTOR delta_pos, DirectX::XMVECTOR delta_rotation);
     void select_object(int object_id);
@@ -51,11 +54,11 @@ public:
 private:
     void upload_resources_to_gpu(ComPtr<ID3D12Device> device,
         ComPtr<ID3D12GraphicsCommandList>& command_list);
-    void upload_instance_translation_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
-    void upload_instance_trans_rot_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
+    void upload_static_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
     void draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
         const std::vector<std::shared_ptr<Graphical_object> >& objects,
-        Texture_mapping texture_mapping, const Input_element_model& input_element_model) const;
+        Texture_mapping texture_mapping, const Input_layout& input_element_model,
+        bool dynamic) const;
     void read_file(const std::string& file_name, ComPtr<ID3D12Device> device, 
         ComPtr<ID3D12GraphicsCommandList>& command_list, int texture_start_index,
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures,
@@ -73,10 +76,10 @@ private:
     DirectX::XMVECTOR m_light_position;
     DirectX::XMVECTOR m_light_focus_point;
 
-    std::vector<Per_instance_translation_data> m_translations;
-    std::vector<Per_instance_trans_rot> m_model_transforms;
-    std::unique_ptr<Instance_data> m_instance_vector_data;
-    std::unique_ptr<Instance_data> m_instance_trans_rot_data;
+    std::vector<Per_instance_transform> m_dynamic_model_transforms;
+    std::vector<Per_instance_transform> m_static_model_transforms;
+    std::unique_ptr<Instance_data> m_dynamic_instance_data;
+    std::unique_ptr<Instance_data> m_static_instance_data;
 
     int m_root_param_index_of_values;
 

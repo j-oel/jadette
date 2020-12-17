@@ -22,18 +22,18 @@ Object_id_pass::Object_id_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_form
     m_current_state(D3D12_RESOURCE_STATE_COPY_SOURCE)
 {
     UINT render_targets_count = 1;
-    create_pipeline_state(device, m_pipeline_state_model_vector, m_root_signature.get(),
-        "object_ids_vertex_shader_model_vector", "pixel_shader_object_ids",
-        dsv_format, render_targets_count, Input_element_model::positions_translation,
-        Depth_write::enabled, m_rtv_format);
-    SET_DEBUG_NAME(m_pipeline_state_model_vector, L"Object Id Pipeline State Object Model Vector");
 
-    create_pipeline_state(device, m_pipeline_state_srv_instance_data, m_root_signature.get(),
+    create_pipeline_state(device, m_pipeline_state_dynamic_objects, m_root_signature.get(),
         "object_ids_vertex_shader_srv_instance_data", "pixel_shader_object_ids",
-        dsv_format, render_targets_count, Input_element_model::positions_trans_rot,
-        Depth_write::enabled, m_rtv_format);
-    SET_DEBUG_NAME(m_pipeline_state_srv_instance_data,
-        L"Object Id Pipeline State Object SRV instance data");
+        dsv_format, render_targets_count, Input_layout::position, Depth_write::enabled, m_rtv_format);
+    SET_DEBUG_NAME(m_pipeline_state_dynamic_objects,
+        L"Object Id Pipeline State Object Dynamic Objects");
+
+    create_pipeline_state(device, m_pipeline_state_static_objects, m_root_signature.get(),
+        "object_ids_vertex_shader_srv_instance_data_static_objects", "pixel_shader_object_ids",
+        dsv_format, render_targets_count, Input_layout::position, Depth_write::enabled, m_rtv_format);
+    SET_DEBUG_NAME(m_pipeline_state_static_objects,
+        L"Object Id Pipeline State Object Static Objects");
 
     create_render_target(device);
 
@@ -73,7 +73,8 @@ void Object_id_pass::record_commands(Scene& scene, const View& view,
 
     Commands c(command_list, &depth_stencil, Texture_mapping::disabled,
         &view, &scene, nullptr, &m_root_signature);
-    c.simple_render_pass(m_pipeline_state_model_vector, m_pipeline_state_srv_instance_data);
+    c.simple_render_pass(m_pipeline_state_dynamic_objects, m_pipeline_state_static_objects,
+        m_root_signature.m_root_param_index_of_instance_data);
 
     barrier_transition(command_list, D3D12_RESOURCE_STATE_COPY_SOURCE);
 
