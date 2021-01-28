@@ -64,7 +64,7 @@ UINT texture_index_for_diffuse_textures()
     return 4;
 }
 
-UINT value_offset_for_shadow_mapping_flag()
+UINT value_offset_for_normal_map_settings()
 {
     return 2;
 }
@@ -83,7 +83,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
         m_texture_descriptor_heap, m_root_signature.m_root_param_index_of_textures,
         m_root_signature.m_root_param_index_of_values,
         m_root_signature.m_root_param_index_of_normal_maps,
-        value_offset_for_shadow_mapping_flag(), descriptor_index_for_dynamic_instance_data(),
+        value_offset_for_normal_map_settings(), descriptor_index_for_dynamic_instance_data(),
         descriptor_index_for_static_instance_data()),
     m_view(config.width, config.height, XMVectorSet(0.0f, 0.0f, -20.0f, 1.0f),
         XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 0.1f, 4000.0f, config.fov),

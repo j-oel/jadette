@@ -18,6 +18,7 @@ struct Material
 {
     std::string diffuse_map;
     std::string normal_map;
+    UINT normal_map_settings;
 };
 
 struct Model

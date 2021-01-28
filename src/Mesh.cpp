@@ -21,16 +21,14 @@ Mesh::Mesh(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& comma
 
     read_obj_file(filename, vertices, indices);
 
-    create_and_fill_vertex_positions_buffer(vertices.positions, device, command_list);
-    create_and_fill_vertex_normals_buffer(vertices.normals, device, command_list);
+    create_and_fill_vertex_buffers(vertices, device, command_list);
     create_and_fill_index_buffer(indices, device, command_list);
 }
 
 Mesh::Mesh(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
     const Vertices& vertices, const std::vector<int>& indices)
 {
-    create_and_fill_vertex_positions_buffer(vertices.positions, device, command_list);
-    create_and_fill_vertex_normals_buffer(vertices.normals, device, command_list);
+    create_and_fill_vertex_buffers(vertices, device, command_list);
     create_and_fill_index_buffer(indices, device, command_list);
 }
 
@@ -39,6 +37,8 @@ void Mesh::release_temp_resources()
 {
     m_temp_upload_resource_vb_pos.Reset();
     m_temp_upload_resource_vb_normals.Reset();
+    m_temp_upload_resource_vb_tangents.Reset();
+    m_temp_upload_resource_vb_bitangents.Reset();
     m_temp_upload_resource_ib.Reset();
 }
 
@@ -51,7 +51,8 @@ void Mesh::draw(ComPtr<ID3D12GraphicsCommandList> command_list, int draw_instanc
         case Input_layout::position_normal:
         {
             D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_positions_buffer_view,
-            m_vertex_normals_buffer_view };
+            m_vertex_normals_buffer_view, m_vertex_tangents_buffer_view,
+                m_vertex_bitangents_buffer_view };
             command_list->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
             break;
         }
@@ -146,33 +147,39 @@ namespace
         view.BufferLocation = destination_buffer->GetGPUVirtualAddress();
         view.SizeInBytes = size;
     }
+
+    template <typename T>
+    void create_and_fill_vertex_buffer(ComPtr<ID3D12Device> device,
+        ComPtr<ID3D12GraphicsCommandList>& command_list,
+        ComPtr<ID3D12Resource>& destination_buffer,
+        ComPtr<ID3D12Resource>& temp_upload_resource,
+        const std::vector<T>& source_data, D3D12_VERTEX_BUFFER_VIEW& view)
+    {
+        const UINT vertex_buffer_size = static_cast<UINT>(source_data.size() * sizeof(T));
+        create_and_fill_buffer(device, command_list, destination_buffer,
+            temp_upload_resource, source_data, vertex_buffer_size, view);
+        view.StrideInBytes = sizeof(T);
+    }
 }
 
-
-void Mesh::create_and_fill_vertex_positions_buffer(const std::vector<Vertex_position>& vertices, 
+void Mesh::create_and_fill_vertex_buffers(const Vertices& vertices,
     ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
-    const UINT vertex_buffer_size = static_cast<UINT>(vertices.size() * sizeof(Vertex_position));
-
-    create_and_fill_buffer(device, command_list, m_vertex_positions_buffer, 
-        m_temp_upload_resource_vb_pos, vertices, vertex_buffer_size, m_vertex_positions_buffer_view);
-
+    create_and_fill_vertex_buffer(device, command_list, m_vertex_positions_buffer,
+        m_temp_upload_resource_vb_pos, vertices.positions, m_vertex_positions_buffer_view);
     SET_DEBUG_NAME(m_vertex_positions_buffer, L"Vertex Positions Buffer");
 
-    m_vertex_positions_buffer_view.StrideInBytes = sizeof(Vertex_position);
-}
-
-void Mesh::create_and_fill_vertex_normals_buffer(const std::vector<Vertex_normal>& vertices,
-    ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list)
-{
-    const UINT vertex_buffer_size = static_cast<UINT>(vertices.size() * sizeof(Vertex_normal));
-
-    create_and_fill_buffer(device, command_list, m_vertex_normals_buffer,
-        m_temp_upload_resource_vb_normals, vertices, vertex_buffer_size, m_vertex_normals_buffer_view);
-
+    create_and_fill_vertex_buffer(device, command_list, m_vertex_normals_buffer,
+        m_temp_upload_resource_vb_normals, vertices.normals, m_vertex_normals_buffer_view);
     SET_DEBUG_NAME(m_vertex_normals_buffer, L"Vertex Normals Buffer");
 
-    m_vertex_normals_buffer_view.StrideInBytes = sizeof(Vertex_normal);
+    create_and_fill_vertex_buffer(device, command_list, m_vertex_tangents_buffer,
+        m_temp_upload_resource_vb_tangents, vertices.tangents, m_vertex_tangents_buffer_view);
+    SET_DEBUG_NAME(m_vertex_tangents_buffer, L"Vertex Tangents Buffer");
+
+    create_and_fill_vertex_buffer(device, command_list, m_vertex_bitangents_buffer,
+        m_temp_upload_resource_vb_bitangents, vertices.bitangents, m_vertex_bitangents_buffer_view);
+    SET_DEBUG_NAME(m_vertex_bitangents_buffer, L"Vertex Bitangents Buffer");
 }
 
 void Mesh::create_and_fill_index_buffer(const std::vector<int>& indices,
@@ -190,6 +197,72 @@ void Mesh::create_and_fill_index_buffer(const std::vector<int>& indices,
     m_index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
 }
 
+void calculate_tangent_space_basis(DirectX::XMVECTOR v[vertex_count_per_face],
+    DirectX::XMVECTOR uv[vertex_count_per_face],
+    DirectX::XMVECTOR& tangent, DirectX::XMVECTOR& bitangent)
+{
+    // This function calculates the tangent and bitangent part of a tangent space basis
+    // for a face, used for tangent space normal mapping.
+    // The tangent space basis is defined by the normal, tangent and bitangent vectors.
+    // The normals should be present in the mesh and are used as is.
+    // The tangent and bitangent vectors should ideally also be present in the mesh file,
+    // especially if the normal map has been generated by sampling a high poly model,
+    // because in that case the same tangent space has to be used at the generation
+    // and the rendering. This function can be used as a fallback when there are no tangents
+    // and bitangents defined in the mesh file. It gives decent result for my purposes,
+    // especially when using general tangent space maps for surface detail.
+    // The main problem that can arise when using incorrect tangent space bases is
+    // discontinuities in the shading, shading seams. Nowadays, the tangent space
+    // known as MikkTSpace has become more or less standard. It is described in
+    // http://image.diku.dk/projects/media/morten.mikkelsen.08.pdf
+    // and source code is available at https://github.com/mmikk/MikkTSpace
+    // It could be a good idea to integrate or reimplement that here in the future.
+    // That would mean that tangents and bitangents would not need to be present in the input
+    // file and still be able to render sampled normal maps perfectly.
+
+    // The following algorithm is inspired by:
+    // http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-13-normal-mapping/
+    //
+
+    // The main idea is that the tangent and bitangent vectors should have the same
+    // directions as the texture mapping. That way, the tangent space bases will be consistent
+    // between faces, as long as the UV-mapping is.
+
+    using namespace DirectX;
+
+    XMVECTOR edge_1 = v[1] - v[0];
+    XMVECTOR edge_2 = v[2] - v[0];
+    XMVECTOR delta_uv_1 = uv[1] - uv[0];
+    XMVECTOR delta_uv_2 = uv[2] - uv[0];
+
+    float r = 1.0f / (delta_uv_1.m128_f32[0] * delta_uv_2.m128_f32[1] -
+        delta_uv_1.m128_f32[1] * delta_uv_2.m128_f32[0]);
+
+    tangent = (edge_1 * delta_uv_2.m128_f32[1] -
+        edge_2 * delta_uv_1.m128_f32[1]) * r;
+    tangent.m128_f32[3] = 0.0f;
+
+    tangent = XMVector3Normalize(tangent);
+
+    bitangent = (edge_2 * delta_uv_1.m128_f32[0] -
+        edge_1 * delta_uv_2.m128_f32[0]) * r;
+    bitangent.m128_f32[3] = 0.0f;
+
+    bitangent = XMVector3Normalize(bitangent);
+}
+
+void calculate_and_add_tangent_and_bitangent(DirectX::XMVECTOR v[vertex_count_per_face],
+    DirectX::XMVECTOR uv[vertex_count_per_face], Vertices& vertices)
+{
+    DirectX::XMVECTOR tangent;
+    DirectX::XMVECTOR bitangent;
+    calculate_tangent_space_basis(v, uv, tangent, bitangent);
+    for (int i = 0; i < vertex_count_per_face; ++i)
+    {
+        vertices.tangents.push_back({ convert_vector_to_half4(tangent) });
+        vertices.bitangents.push_back({ convert_vector_to_half4(bitangent) });
+    }
+}
 
 template <typename T>
 void construct_instance_data(ComPtr<ID3D12Device> device,

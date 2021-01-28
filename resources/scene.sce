@@ -44,8 +44,13 @@ model cube_from_file cube.obj
 #
 # Then <c_x> * <c_y> * <c_z> instanced objects will be created.
 # <i_x>, <i_y> and <i_z> are the offset increment distances in each axis.
+#
+# rotating_array works like array but rotates the objects continuously.
+# normal_mapped_array works like array but the objects are normal mapped, the last parameter is
+# the previously defined normal map texture.
+# normal_mapped_rotating_array is the combination of the two above.
 
-array dynamic cube_from_file pattern 1 0 0 3 3 3 3.0 3.0 3.0 1
+normal_mapped_rotating_array dynamic cube_from_file pattern 1 0 0 3 3 3 3.0 3.0 3.0 1 normal_map
 model cube_model cube
 array static cube_model pattern 0 0 0 40 40 40 -3.0 3.0 3.0 0.4
 

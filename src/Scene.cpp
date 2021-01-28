@@ -72,25 +72,6 @@ void convert_vector_to_half4(XMHALF4& half4, XMVECTOR vec)
     half4.w = XMConvertFloatToHalf(vec.m128_f32[3]);
 }
 
-XMHALF4 convert_vector_to_half4(XMVECTOR vec)
-{
-    XMHALF4 half4;
-    half4.x = XMConvertFloatToHalf(vec.m128_f32[0]);
-    half4.y = XMConvertFloatToHalf(vec.m128_f32[1]);
-    half4.z = XMConvertFloatToHalf(vec.m128_f32[2]);
-    half4.w = XMConvertFloatToHalf(vec.m128_f32[3]);
-    return half4;
-}
-
-XMVECTOR convert_half4_to_vector(PackedVector::XMHALF4 half4)
-{
-    XMVECTOR vec = XMVectorSet(XMConvertHalfToFloat(half4.x),
-                                        XMConvertHalfToFloat(half4.y),
-                                        XMConvertHalfToFloat(half4.z),
-                                        XMConvertHalfToFloat(half4.w));
-    return vec;
-}
-
 XMHALF4 convert_float4_to_half4(const XMFLOAT4& vec)
 {
     XMHALF4 half4;
@@ -105,7 +86,7 @@ XMHALF4 convert_float4_to_half4(const XMFLOAT4& vec)
 Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int texture_start_index,
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures,
     int root_param_index_of_values, int root_param_index_of_normal_maps, 
-    int normal_map_flag_offset, int descriptor_index_of_dynamic_instance_data,
+    int normal_map_settings_offset, int descriptor_index_of_dynamic_instance_data,
     int descriptor_index_of_static_instance_data) :
     m_light_position(XMVectorSet(0.0f, 20.0f, 5.0f, 1.0f)),
     m_root_param_index_of_values(root_param_index_of_values),
@@ -148,7 +129,7 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
             read_file(scene_file, device, command_list, texture_start_index,
                 texture_descriptor_heap, root_param_index_of_textures,
                 root_param_index_of_values, root_param_index_of_normal_maps,
-                normal_map_flag_offset);
+                normal_map_settings_offset);
         }
         catch (...)
         {
@@ -429,7 +410,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
     ComPtr<ID3D12GraphicsCommandList>& command_list, int texture_start_index,
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures,
     int root_param_index_of_values, int root_param_index_of_normal_maps,
-    int normal_map_flag_offset)
+    int normal_map_settings_offset)
 {
     using std::map;
     using std::shared_ptr;
@@ -471,15 +452,15 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
 
     auto create_object = [&](const string& name, shared_ptr<Mesh> mesh,
         shared_ptr<Texture> diffuse_map, bool dynamic, XMFLOAT4 position, int instances = 1,
-        shared_ptr<Texture> normal_map = nullptr, bool rotating = false)
+        shared_ptr<Texture> normal_map = nullptr, UINT normal_map_settings = 0, bool rotating = false)
     {
         Per_instance_transform transform = { convert_float4_to_half4(position),
         convert_vector_to_half4(DirectX::XMQuaternionIdentity()) };
         m_static_model_transforms.push_back(transform);
         auto object = std::make_shared<Graphical_object>(device, mesh,
             command_list, root_param_index_of_textures, diffuse_map,
-            root_param_index_of_values, root_param_index_of_normal_maps, normal_map_flag_offset,
-            normal_map, object_id++, instances);
+            root_param_index_of_values, root_param_index_of_normal_maps, normal_map_settings_offset,
+            normal_map, object_id++, normal_map_settings, instances);
 
         m_graphical_objects.push_back(object);
 
@@ -534,10 +515,15 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                 auto mesh = meshes[model];
 
                 shared_ptr<Texture> normal_map_tex = nullptr;
+                UINT normal_map_settings = 0;
                 if (!normal_map.empty())
+                {
                     normal_map_tex = get_texture(normal_map);
+                    normal_map_settings = normal_mapping_enabled;
+                }
                 auto diffuse_map_tex = get_texture(diffuse_map);
-                create_object(name, mesh, diffuse_map_tex, dynamic, position, 1, normal_map_tex);
+                create_object(name, mesh, diffuse_map_tex, dynamic, position, 1,
+                    normal_map_tex, normal_map_settings);
             }
             else
             {
@@ -547,6 +533,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
 
                 for (auto& m : model_collection->models)
                 {
+                    UINT normal_map_settings = 0;
                     if (m.material != "")
                     {
                         auto material_iter = model_collection->materials.find(m.material);
@@ -555,12 +542,19 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                         auto& material = material_iter->second;
                         diffuse_map = material.diffuse_map;
                         normal_map = material.normal_map;
+                        normal_map_settings = material.normal_map_settings;
                     }
                     shared_ptr<Texture> normal_map_tex = nullptr;
                     if (!normal_map.empty())
+                    {
                         normal_map_tex = get_texture(normal_map);
+                        // This is for the case when a normal map is not defined in the mtl-file but
+                        // is defined directly in the scene file.
+                        normal_map_settings |= normal_mapping_enabled;
+                    }
                     auto diffuse_map_tex = get_texture(diffuse_map);
-                    create_object(name, m.mesh, diffuse_map_tex, dynamic, position, 1, normal_map_tex);
+                    create_object(name, m.mesh, diffuse_map_tex, dynamic, position, 1,
+                        normal_map_tex, normal_map_settings);
                 }
             }
         }
@@ -610,7 +604,8 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                 }
             }
         }
-        else if (input == "array" || input == "rotating_array")
+        else if (input == "array" || input == "rotating_array" || 
+        input == "normal_mapped_array" || input == "normal_mapped_rotating_array")
         {
             string static_dynamic;
             file >> static_dynamic;
@@ -635,6 +630,10 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             float scale;
             file >> scale;
 
+            string normal_map = "";
+            if (input == "normal_mapped_array" || input == "normal_mapped_rotating_array")
+                file >> normal_map;
+
             int instances = count.x * count.y * count.z;
             bool dynamic = static_dynamic == "dynamic" ? true : false;
             auto new_object_count = m_graphical_objects.size() + instances;
@@ -653,7 +652,15 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                 throw Model_not_defined(model);
 
             auto diffuse_map_tex = get_texture(diffuse_map);
-            shared_ptr<Texture> no_normal_map = nullptr;
+
+            shared_ptr<Texture> normal_map_tex = nullptr;
+
+            UINT normal_map_settings = 0;
+            if (!normal_map.empty())
+            {
+                normal_map_tex = get_texture(normal_map);
+                normal_map_settings = normal_mapping_enabled;
+            }
 
             for (int x = 0; x < count.x; ++x)
                 for (int y = 0; y < count.y; ++y)
@@ -663,7 +670,8 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                             pos.z + offset.z * z, scale);
                         create_object(dynamic? "arrayobject" + std::to_string(object_id) :"", 
                             mesh, diffuse_map_tex, dynamic, position, instances,
-                            no_normal_map, (input == "rotating_array")? true: false);
+                            normal_map_tex, normal_map_settings, (input == "rotating_array" ||
+                                input == "normal_mapped_rotating_array")? true: false);
                     }
         }
         else if (input == "fly")

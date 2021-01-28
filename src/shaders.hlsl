@@ -9,9 +9,14 @@ struct values_struct
 {
     uint object_id;
     int shadow_map_size;
-    int normal_mapped;
+    uint normal_map_settings;
 };
 ConstantBuffer<values_struct> values : register(b0);
+
+static const uint normal_mapping_enabled = 1;
+static const uint invert_y_in_normal_map = 1 << 2;
+static const uint two_channel_normal_map = 1 << 3;
+
 
 struct matrices_struct
 {
@@ -49,6 +54,8 @@ struct pixel_shader_input
     float4 position : POSITION;
     float4 position_in_shadow_map_space : POSITION1;
     float3 normal : NORMAL;
+    float3 tangent : TANGENT;
+    float3 bitangent : BITANGENT;
     half2 texcoord : TEXCOORD;
 };
 
@@ -126,7 +133,8 @@ half4x4 to_scaled_model_matrix(half4 translation, half4 rotation)
 
 
 pixel_shader_input vertex_shader_model_matrix(float4 position : POSITION, float3 normal : NORMAL,
-    float2 texcoord : TEXCOORD, half4x4 model : MODEL, half4x4 scaled_model : SCALED_MODEL)
+    float4 tangent : TANGENT, float4 bitangent : BITANGENT, float2 texcoord : TEXCOORD,
+    half4x4 model : MODEL, half4x4 scaled_model : SCALED_MODEL)
 {
     pixel_shader_input result;
 
@@ -136,7 +144,9 @@ pixel_shader_input vertex_shader_model_matrix(float4 position : POSITION, float3
     float4x4 transform_to_shadow_map_space = mul(matrices.transform_to_shadow_map_space, scaled_model);
     result.position_in_shadow_map_space = mul(transform_to_shadow_map_space, position);
     result.position_in_shadow_map_space /= result.position_in_shadow_map_space.w;
-    result.normal = mul(model, float4(normal, 0.0f)).xyz;
+    result.normal = mul(model, float4(normal, 0)).xyz;
+    result.tangent = mul(model, tangent).xyz;
+    result.bitangent = mul(model, bitangent).xyz;
     result.texcoord = texcoord;
 
     return result;
@@ -144,19 +154,22 @@ pixel_shader_input vertex_shader_model_matrix(float4 position : POSITION, float3
 
 
 pixel_shader_input vertex_shader_model_trans_rot(float4 position : POSITION, float3 normal : NORMAL,
-    float2 texcoord : TEXCOORD, half4 translation : TRANSLATION, half4 rotation : ROTATION)
+    float4 tangent : TANGENT, float4 bitangent : BITANGENT, float2 texcoord : TEXCOORD,
+    half4 translation : TRANSLATION, half4 rotation : ROTATION)
 {
     half4x4 rotation_matrix = quaternion_to_matrix(rotation);
     half4x4 model = rotation_matrix;
     model = translate(model, translation);
     half4x4 scaled_model = mul(scaling(translation.w), rotation_matrix);
     scaled_model = translate(scaled_model, translation);
-    return vertex_shader_model_matrix(position, normal, texcoord, model, scaled_model);
+    return vertex_shader_model_matrix(position, normal, tangent, bitangent, texcoord, model,
+        scaled_model);
 }
 
 
 pixel_shader_input vertex_shader_srv_instance_data(uint instance_id : SV_InstanceID, 
-    float4 position : POSITION, float4 normal : NORMAL)
+    float4 position : POSITION, float4 normal : NORMAL, float4 tangent : TANGENT,
+    float4 bitangent : BITANGENT)
 {
     const uint index = values.object_id + instance_id; 
     uint4 v = instance[index].value;
@@ -165,8 +178,8 @@ pixel_shader_input vertex_shader_srv_instance_data(uint instance_id : SV_Instanc
     float4 rotation = float4(f16tof32(v.z), f16tof32(v.z >> 16), f16tof32(v.w), f16tof32(v.w >> 16));
 
     float2 texcoord = float2(position.w, normal.w);
-    return vertex_shader_model_trans_rot(float4(position.xyz, 1), normal.xyz, texcoord, 
-        translation, rotation);
+    return vertex_shader_model_trans_rot(float4(position.xyz, 1), normal.xyz, tangent, bitangent,
+        texcoord, translation, rotation);
 }
 
 
@@ -188,23 +201,50 @@ float shadow_value(pixel_shader_input input)
     return shadow / 16.0f;
 }
 
+float3 tangent_space_normal_mapping(pixel_shader_input input)
+{
+    float3 normal = normal_map.Sample(texture_sampler, input.texcoord).xyz;
+
+    // Each channel is encoded as a value [0,1] in the normal map, where 0 signifies -1,
+    // 0.5 means 0 and 1 means 1. This gets it back to [-1, 1].
+    normal = 2 * normal - 1.0f;
+
+    if (values.normal_map_settings & invert_y_in_normal_map)
+        normal.y = -normal.y;
+
+    if (values.normal_map_settings & two_channel_normal_map)
+        normal.z = sqrt(1.0f - normal.x * normal.x - normal.y * normal.y);
+
+
+    float3 tangent = input.tangent;
+    float3 bitangent = input.bitangent;
+    float3 vertex_normal = input.normal;
+
+    float4x4 tangent_space_basis = { tangent.x, bitangent.x, vertex_normal.x, 0,
+                                     tangent.y, bitangent.y, vertex_normal.y, 0,
+                                     tangent.z, bitangent.z, vertex_normal.z, 0,
+                                     0,         0,           0,               1 };
+
+    normal = normalize(mul(tangent_space_basis, float4(normal, 0)).xyz);
+    return normal;
+}
+
 float4 pixel_shader(pixel_shader_input input) : SV_TARGET
 {
     float shadow = shadow_value(input);
 
     float3 normal;
-    if (!values.normal_mapped)
-        normal = input.normal;
+    if (values.normal_map_settings & normal_mapping_enabled)
+        normal = tangent_space_normal_mapping(input);
     else
-    {
-        normal = normal_map.Sample(texture_sampler, input.texcoord).xyz;
-        normal = normalize(normal);
-    }
+        normal = normalize(input.normal);
+
     const float3 eye = vectors.eye_position.xyz;
     const float3 light_unorm = vectors.light_position.xyz - input.position.xyz;
     const float3 light = normalize(light_unorm);
-    const float specular = pow(saturate(dot(2 * dot(normal, -light) * normal + light, 
-        normalize(input.position.xyz - eye))), 15);
+    const float shininess = 0.4f;
+    const float specular = shininess * saturate(pow(saturate(dot(2 * dot(normal, -light) * normal + light,
+        normalize(input.position.xyz - eye))), 30));
     const float4 color = tex.Sample(texture_sampler, input.texcoord);
     const float4 ambient_light = float4(0.2f, 0.2f, 0.2f, 1.0f);
     const float4 ambient = color * ambient_light;

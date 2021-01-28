@@ -10,13 +10,14 @@
 #include <fstream>
 
 
-using namespace std;
-
 using DirectX::PackedVector::XMHALF4;
 using DirectX::PackedVector::XMHALF2;
+using DirectX::XMVECTOR;
+using DirectX::PackedVector::XMConvertHalfToFloat;
 using std::vector;
 using std::map;
 using std::string;
+using std::ifstream;
 
 
 void read_mtl_file(const string file_name, map<string, Material>& materials);
@@ -24,9 +25,20 @@ void read_mtl_file(const string file_name, map<string, Material>& materials);
 
 bool read_obj_file(std::ifstream& file, Vertices& vertices, vector<int>& indices,
     vector<XMHALF4>& input_vertices, vector<XMHALF4>& input_normals,
-    vector<XMHALF2>& input_texture_coords, string& material,
-    map<string, Material>* materials)
+    vector<XMHALF2>& input_texture_coords, vector<XMHALF4>& input_tangents, 
+    vector<XMHALF4>& input_bitangents, string& material, map<string, Material>* materials)
 {
+    // Tangents and bitangents are not present in standard Wavefront obj files. It is an
+    // extension that I have devised myself. I have modified the open source tool assimp
+    // to generate obj files with tangents and bitangents in them. It can be found at
+    // https://github.com/j-oel/assimp/tree/obj-tangents
+    // Build assimp_cmd and run it with a file that contains tangents and bitangents.
+    // I have used FBX files. They can for example be exported from Blender, check Tangent space
+    // under Geometry in the export dialog.
+    // Then run assimp on the exported file like this:
+    // assimp export file.fbx file.obj
+
+
     using DirectX::PackedVector::XMConvertFloatToHalf;
 
     string input;
@@ -75,9 +87,38 @@ bool read_obj_file(std::ifstream& file, Vertices& vertices, vector<int>& indices
             vt.y = XMConvertFloatToHalf(f);
             input_texture_coords.push_back(vt);
         }
+        else if (input == "vtan") // Vertex tangent, my own extension.
+        {
+            XMHALF4 vtan;
+            float f;
+            file >> f;
+            vtan.x = XMConvertFloatToHalf(f);
+            file >> f;
+            vtan.y = XMConvertFloatToHalf(f);
+            file >> f;
+            vtan.z = XMConvertFloatToHalf(f);
+            vtan.w = XMConvertFloatToHalf(0);
+            input_tangents.push_back(vtan);
+        }
+        else if (input == "vbt") // Vertex bitangent, my own extension.
+        {
+            XMHALF4 vbt;
+            float f;
+            file >> f;
+            vbt.x = XMConvertFloatToHalf(f);
+            file >> f;
+            vbt.y = XMConvertFloatToHalf(f);
+            file >> f;
+            vbt.z = XMConvertFloatToHalf(f);
+            vbt.w = XMConvertFloatToHalf(0);
+            input_bitangents.push_back(vbt);
+        }
         else if (input == "f")
         {
-            for (int i = 0; i < 3; ++i)
+            XMVECTOR v[vertex_count_per_face];
+            XMVECTOR uv[vertex_count_per_face];
+            bool tangents_in_file = false;
+            for (int i = 0; i < vertex_count_per_face; ++i)
             {
                 string s;
                 file >> s;
@@ -85,6 +126,8 @@ bool read_obj_file(std::ifstream& file, Vertices& vertices, vector<int>& indices
                     break;
                 const size_t first_slash = s.find('/');
                 const size_t second_slash = s.find('/', first_slash + 1);
+                const size_t third_slash = s.find('/', second_slash + 1);
+                const size_t fourth_slash = s.find('/', third_slash + 1);
 
                 const string index_string = s.substr(0, first_slash);
                 const size_t vertex_index = atoi(index_string.c_str());
@@ -94,22 +137,58 @@ bool read_obj_file(std::ifstream& file, Vertices& vertices, vector<int>& indices
                 bool uvs = !uv_string.empty();
                 const size_t uv_index = atoi(uv_string.c_str());
 
-                const string normal_string = s.substr(second_slash + 1);
+                const size_t normal_index_start = second_slash + 1;
+                const string normal_string = s.substr(normal_index_start,
+                    third_slash - normal_index_start);
                 const size_t normal_index = atoi(normal_string.c_str());
+
+                if (third_slash != string::npos)
+                {
+                    // These are references to tangents and bitangents - my own extension,
+                    // used for tangent space normal mapping.
+
+                    const string tangent_string = s.substr(third_slash + 1);
+                    const size_t tangent_index = atoi(tangent_string.c_str());
+                    if (!tangent_string.empty())
+                    {
+                        tangents_in_file = true;
+                        XMHALF4 tangent = input_tangents[tangent_index - 1];
+                        vertices.tangents.push_back({ tangent });
+                    }
+
+                    if (fourth_slash != string::npos)
+                    {
+                        const string bitangent_string = s.substr(fourth_slash + 1);
+                        const size_t bitangent_index = atoi(bitangent_string.c_str());
+                        if (!bitangent_string.empty())
+                        {
+                            XMHALF4 bitangent = input_bitangents[bitangent_index - 1];
+                            vertices.bitangents.push_back({ bitangent });
+                        }
+                    }
+                }
 
                 indices.push_back(static_cast<int>(indices.size()));
 
                 XMHALF4 position_plus_u = input_vertices[vertex_index - 1];
                 XMHALF4 normal_plus_v = input_normals[normal_index - 1];
+
+                v[i] = convert_half4_to_vector(position_plus_u);
+
                 if (uvs)
                 {
                     position_plus_u.w = input_texture_coords[uv_index - 1].x;
                     normal_plus_v.w = input_texture_coords[uv_index - 1].y;
+                    uv[i].m128_f32[0] = XMConvertHalfToFloat(position_plus_u.w);
+                    uv[i].m128_f32[1] = XMConvertHalfToFloat(normal_plus_v.w);
                 }
 
                 vertices.positions.push_back({ position_plus_u });
                 vertices.normals.push_back({ normal_plus_v });
             }
+
+            if (!tangents_in_file)
+                calculate_and_add_tangent_and_bitangent(v, uv, vertices);
         }
         else if (input == "mtllib")
         {
@@ -140,11 +219,13 @@ void read_obj_file(const string& filename, Vertices& vertices, vector<int>& indi
     vector<XMHALF4> input_vertices;
     vector<XMHALF4> input_normals;
     vector<XMHALF2> input_texture_coords;
+    vector<XMHALF4> input_tangents;
+    vector<XMHALF4> input_bitangents;
 
     string not_used;
     ifstream file(filename);
     read_obj_file(file, vertices, indices, input_vertices, input_normals, input_texture_coords,
-        not_used, nullptr);
+        input_tangents, input_bitangents, not_used, nullptr);
 }
 
 std::shared_ptr<Model_collection> read_obj_file(const string& filename, 
@@ -155,6 +236,8 @@ std::shared_ptr<Model_collection> read_obj_file(const string& filename,
     vector<XMHALF4> input_vertices;
     vector<XMHALF4> input_normals;
     vector<XMHALF2> input_texture_coords;
+    vector<XMHALF4> input_tangents;
+    vector<XMHALF4> input_bitangents;
 
     auto collection = std::make_shared<Model_collection>();
     bool more_objects = true;
@@ -163,8 +246,8 @@ std::shared_ptr<Model_collection> read_obj_file(const string& filename,
         Vertices vertices;
         vector<int> indices;
         string material;
-        more_objects = read_obj_file(file, vertices, indices, input_vertices,
-            input_normals, input_texture_coords, material, &collection->materials);
+        more_objects = read_obj_file(file, vertices, indices, input_vertices, input_normals,
+            input_texture_coords, input_tangents, input_bitangents, material, &collection->materials);
         collection->models.push_back({ std::make_shared<Mesh>(device,
                 command_list, vertices, indices), material });
     }
@@ -178,8 +261,8 @@ void read_mtl_file(const string file_name, map<string, Material>& materials)
     ifstream file(file_name);
     string input;
     string name;
-    Material material; // There is no "end tag" for newmtl, so we have to be able to save the
-                       // last material, when the whole file has been read.
+    Material material {}; // There is no "end tag" for newmtl, so we have to be able to save the
+                          // last material, when the whole file has been read.
     while (file.is_open() && !file.eof())
     {
         file >> input;
@@ -189,9 +272,10 @@ void read_mtl_file(const string file_name, map<string, Material>& materials)
             if (!name.empty())
             {
                 materials[name] = material;
-                material.normal_map = "";   // Since the lifetime of the variable material is
-                material.diffuse_map = "";  // longer than the loop, we have to reset the
-            }                               // the components for the new material.
+                material.normal_map = "";         // Since the lifetime of the variable material is
+                material.diffuse_map = "";        // longer than the loop, we have to reset the
+                material.normal_map_settings = 0; // the components for the new material.
+            }
             file >> name;
         }
         else if (input == "map_Kd")
@@ -201,6 +285,21 @@ void read_mtl_file(const string file_name, map<string, Material>& materials)
         else if (input == "map_Bump")
         {
             file >> material.normal_map;
+            material.normal_map_settings |= normal_mapping_enabled;
+        }
+        else if (input == "normal_map_invert_y") // My extension
+        {
+            bool invert_y;
+            file >> invert_y;
+            if (invert_y)
+                material.normal_map_settings |= invert_y_in_normal_map;
+        }
+        else if (input == "two_channel_normal_map") // My extension
+        {
+            bool two_channel;
+            file >> two_channel;
+            if (two_channel)
+                material.normal_map_settings |= two_channel_normal_map;
         }
     }
     
