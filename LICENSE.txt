@@ -1,6 +1,6 @@
                             Jadette
 
-               Copyright (C) 2020 Joel Jansson
+              Copyright (C) 2020-2021 Joel Jansson
 
 Distributed under GNU GPL version 3 (see the file gpl-3.0.txt) plus the 
 additional terms that is dictated by the text below (namely that those 
