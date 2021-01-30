@@ -78,7 +78,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
         m_texture_descriptor_heap, texture_index_for_depth_buffer()),
     m_depth_pass(m_device, m_depth_stencil.dsv_format()),
     m_shadow_map(m_device, m_texture_descriptor_heap, texture_index_for_shadow_map()),
-    m_root_signature(m_device, m_shadow_map),
+    m_root_signature(m_device, m_shadow_map, config.mirror_texture_addressing),
     m_scene(m_device, data_path + config.scene_file, texture_index_for_diffuse_textures(),
         m_texture_descriptor_heap, m_root_signature.m_root_param_index_of_textures,
         m_root_signature.m_root_param_index_of_values,
@@ -199,7 +199,7 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
 
 
 Main_root_signature::Main_root_signature(ComPtr<ID3D12Device> device,
-    const Shadow_map& shadow_map)
+    const Shadow_map& shadow_map, bool mirror_texture_addressing)
 {
     constexpr int root_parameters_count = 7;
     CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count] {};
@@ -240,8 +240,11 @@ Main_root_signature::Main_root_signature(ComPtr<ID3D12Device> device,
     UINT sampler_shader_register = 0;
     CD3DX12_STATIC_SAMPLER_DESC texture_sampler_description;
     texture_sampler_description.Init(sampler_shader_register);
-    texture_sampler_description.AddressU = D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
-    texture_sampler_description.AddressV = D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+    if (mirror_texture_addressing)
+    {
+        texture_sampler_description.AddressU = D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+        texture_sampler_description.AddressV = D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+    }
 
     D3D12_STATIC_SAMPLER_DESC shadow_sampler_description = 
         shadow_map.shadow_map_sampler(++sampler_shader_register);
