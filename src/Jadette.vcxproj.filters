@@ -27,7 +27,7 @@
     <ClCompile Include="util.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\MS\WICTextureLoader12.cpp">
+    <ClCompile Include="3rdparty\MS\WICTextureLoader12.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Graphics.cpp">
@@ -72,7 +72,7 @@
     <ClCompile Include="Wavefront_obj_file.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\MS\DDSTextureLoader12.cpp">
+    <ClCompile Include="3rdparty\MS\DDSTextureLoader12.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Depth_pass.cpp">
@@ -98,10 +98,10 @@
     <ClInclude Include="util.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\MS\WICTextureLoader12.h">
+    <ClInclude Include="3rdparty\MS\WICTextureLoader12.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\MS\d3dx12.h">
+    <ClInclude Include="3rdparty\MS\d3dx12.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Graphics.h">
@@ -158,7 +158,7 @@
     <ClInclude Include="Wavefront_obj_file.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\MS\DDSTextureLoader12.h">
+    <ClInclude Include="3rdparty\MS\DDSTextureLoader12.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Depth_pass.h">

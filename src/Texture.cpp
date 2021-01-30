@@ -7,8 +7,8 @@
 
 #include "Texture.h"
 #include "util.h"
-#include "../MS/WICTextureLoader12.h"
-#include "../MS/DDSTextureLoader12.h"
+#include "3rdparty/MS/WICTextureLoader12.h"
+#include "3rdparty/MS/DDSTextureLoader12.h"
 
 
 using namespace DirectX;

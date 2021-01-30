@@ -7,8 +7,8 @@ additional terms that is dictated by the text below (namely that those
 copyright and permission notices have to be included in all copies or 
 substantial portions).
 
-The source files under the MS\ subdirectory have the following license 
-(also found in the file MS\LICENSE-MS.txt): 
+The source files under the 3rdparty\MS\ subdirectory have the following license 
+(also found in the file 3rdparty\MS\LICENSE-MS.txt): 
 
                                The MIT License (MIT)
 

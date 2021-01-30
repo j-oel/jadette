@@ -258,8 +258,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\MS\DDSTextureLoader12.cpp" />
-    <ClCompile Include="..\MS\WICTextureLoader12.cpp" />
+    <ClCompile Include="3rdparty\MS\DDSTextureLoader12.cpp" />
+    <ClCompile Include="3rdparty\MS\WICTextureLoader12.cpp" />
     <ClCompile Include="Commands.cpp" />
     <ClCompile Include="Depth_pass.cpp" />
     <ClCompile Include="Depth_stencil.cpp" />
@@ -284,9 +284,9 @@
     <ClCompile Include="View_controller.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\MS\d3dx12.h" />
-    <ClInclude Include="..\MS\DDSTextureLoader12.h" />
-    <ClInclude Include="..\MS\WICTextureLoader12.h" />
+    <ClInclude Include="3rdparty\MS\d3dx12.h" />
+    <ClInclude Include="3rdparty\MS\DDSTextureLoader12.h" />
+    <ClInclude Include="3rdparty\MS\WICTextureLoader12.h" />
     <ClInclude Include="Commands.h" />
     <ClInclude Include="Depth_pass.h" />
     <ClInclude Include="Depth_stencil.h" />

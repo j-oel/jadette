@@ -11,4 +11,4 @@
 #include <wrl/client.h> // For ComPtr
 #define COM_NO_WINDOWS_H
 #include <ole2.h>
-#include "../MS/d3dx12.h"
+#include "3rdparty/MS/d3dx12.h"
