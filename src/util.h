@@ -35,7 +35,7 @@ static_assert(sizeof(DirectX::XMVECTOR) == size_of_xmvector,
 constexpr int bytes_per_word = 4;
 constexpr int size_in_words_of_XMMATRIX = size_of_xmmatrix / bytes_per_word;
 constexpr int size_in_words_of_XMVECTOR = size_of_xmvector / bytes_per_word;
-
+constexpr auto data_path = "../data/";
 
 
 class Time_impl;

@@ -479,7 +479,6 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             m_static_objects.push_back(object);
     };
 
-    auto subdir = "../resources/";
 
     while (file)
     {
@@ -564,7 +563,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             file >> name;
             string texture_file;
             file >> texture_file;
-            string texture_file_path = subdir + texture_file;
+            string texture_file_path = data_path + texture_file;
             throw_if_file_not_openable(texture_file_path);
             texture_files[name] = texture_file_path;
         }
@@ -581,7 +580,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                 meshes[name] = std::make_shared<Plane>(device, command_list);
             else
             {
-                string model_file = subdir + model;
+                string model_file = data_path + model;
                 throw_if_file_not_openable(model_file);
 
                 auto collection = read_obj_file(model_file, device, command_list);
@@ -591,7 +590,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                 {
                     if (!file_name.empty())
                     {
-                        string texture_file_path = subdir + file_name;
+                        string texture_file_path = data_path + file_name;
                         throw_if_file_not_openable(texture_file_path);
                         texture_files[file_name] = texture_file_path;
                     }

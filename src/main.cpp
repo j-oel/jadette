@@ -138,7 +138,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int cmd_show)
 {
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     
-    std::string config_file("../resources/init.cfg");
+    std::string config_file(data_path + std::string("init.cfg"));
 
     try
     {

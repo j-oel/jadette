@@ -6,6 +6,7 @@
 
 
 #include "Wavefront_obj_file.h"
+#include "util.h"
 
 #include <fstream>
 
@@ -194,7 +195,7 @@ bool read_obj_file(std::ifstream& file, Vertices& vertices, vector<int>& indices
         {
             string mtl_file;
             file >> mtl_file;
-            read_mtl_file("../resources/" + mtl_file, *materials);
+            read_mtl_file(data_path + mtl_file, *materials);
         }
         else if (input == "usemtl")
         {

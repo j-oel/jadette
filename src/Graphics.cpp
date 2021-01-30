@@ -79,7 +79,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     m_depth_pass(m_device, m_depth_stencil.dsv_format()),
     m_shadow_map(m_device, m_texture_descriptor_heap, texture_index_for_shadow_map()),
     m_root_signature(m_device, m_shadow_map),
-    m_scene(m_device, "../resources/" + config.scene_file, texture_index_for_diffuse_textures(),
+    m_scene(m_device, data_path + config.scene_file, texture_index_for_diffuse_textures(),
         m_texture_descriptor_heap, m_root_signature.m_root_param_index_of_textures,
         m_root_signature.m_root_param_index_of_values,
         m_root_signature.m_root_param_index_of_normal_maps,
