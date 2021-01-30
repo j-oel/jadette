@@ -11,7 +11,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        build_configuration: ['Release', 'Debug']
+        build_configuration: ['Release', 'Debug', 'Minimal']
         build_platform: ['x64', 'x86']
 
     steps:
