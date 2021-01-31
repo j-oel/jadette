@@ -101,8 +101,6 @@ void Simple_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> comm
     Scene* scene, const View* view, Shadow_map* shadow_map)
 {
     view->set_view(command_list, m_root_param_index_of_matrices);
-    scene->set_static_instance_data_shader_constant(command_list,
-        m_root_param_index_of_instance_data);
 }
 
 void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineState>& pipeline_state,

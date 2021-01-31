@@ -15,10 +15,12 @@
 Commands::Commands(ComPtr<ID3D12GraphicsCommandList> command_list, 
     Depth_stencil* depth_stencil, Texture_mapping texture_mapping,
     const View* view, Scene* scene, Depth_pass* depth_pass, Root_signature* root_signature,
+    int root_param_index_of_instance_data,
     Shadow_map* shadow_map/* = nullptr*/) :
     m_command_list(command_list),
     m_texture_mapping(texture_mapping), m_depth_stencil(depth_stencil),
-    m_scene(scene), m_view(view), m_depth_pass(depth_pass), m_root_signature(root_signature), 
+    m_scene(scene), m_view(view), m_depth_pass(depth_pass), m_root_signature(root_signature),
+    m_root_param_index_of_instance_data(root_param_index_of_instance_data),
     m_shadow_map(shadow_map), m_dsv_handle(m_depth_stencil->cpu_handle())
 {
 }
@@ -80,6 +82,8 @@ void Commands::draw_static_objects(ComPtr<ID3D12PipelineState> pipeline_state,
 {
     assert(m_scene);
     m_command_list->SetPipelineState(pipeline_state.Get());
+    m_scene->set_static_instance_data_shader_constant(m_command_list,
+        m_root_param_index_of_instance_data);
     m_scene->draw_static_objects(m_command_list, m_texture_mapping, input_element_model);
 }
 
@@ -88,18 +92,17 @@ void Commands::draw_dynamic_objects(ComPtr<ID3D12PipelineState> pipeline_state,
 {
     assert(m_scene);
     m_command_list->SetPipelineState(pipeline_state.Get());
+    m_scene->set_dynamic_instance_data_shader_constant(m_command_list,
+        m_root_param_index_of_instance_data);
     m_scene->draw_dynamic_objects(m_command_list, m_texture_mapping, input_element_model);
 }
 
 void Commands::simple_render_pass(ComPtr<ID3D12PipelineState> dynamic_objects_pipeline_state,
-    ComPtr<ID3D12PipelineState> static_objects_pipeline_state,
-    int root_param_index_of_instance_data)
+    ComPtr<ID3D12PipelineState> static_objects_pipeline_state)
 {
     set_root_signature();
     set_shader_constants();
     clear_depth_stencil();
     draw_dynamic_objects(dynamic_objects_pipeline_state, Input_layout::position);
-    m_scene->set_dynamic_instance_data_shader_constant(m_command_list,
-        root_param_index_of_instance_data);
     draw_static_objects(static_objects_pipeline_state, Input_layout::position);
 }

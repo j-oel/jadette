@@ -29,7 +29,8 @@ class Commands
 public:
     Commands(ComPtr<ID3D12GraphicsCommandList> command_list, Depth_stencil* depth_stencil,
         Texture_mapping texture_mapping, const View* view, Scene* scene, Depth_pass* depth_pass,
-        Root_signature* root_signature, Shadow_map* shadow_map = nullptr);
+        Root_signature* root_signature, int root_param_index_of_instance_data,
+        Shadow_map* shadow_map = nullptr);
 
     void upload_instance_data();
     void record_shadow_map_generation_commands_in_command_list();
@@ -44,8 +45,7 @@ public:
         const Input_layout& input_element_model);
     void close();
     void simple_render_pass(ComPtr<ID3D12PipelineState> dynamic_objects_pipeline_state,
-        ComPtr<ID3D12PipelineState> static_objects_pipeline_state,
-        int root_param_index_of_instance_data);
+        ComPtr<ID3D12PipelineState> static_objects_pipeline_state);
 private:
     ComPtr<ID3D12GraphicsCommandList> m_command_list;
     Texture_mapping m_texture_mapping;
@@ -54,6 +54,7 @@ private:
     const View* m_view;
     Depth_pass* m_depth_pass;
     Root_signature* m_root_signature;
+    int m_root_param_index_of_instance_data;
     Depth_stencil* m_depth_stencil;
     D3D12_CPU_DESCRIPTOR_HANDLE m_dsv_handle;
 };

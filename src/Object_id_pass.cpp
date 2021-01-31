@@ -72,9 +72,9 @@ void Object_id_pass::record_commands(Scene& scene, const View& view,
     set_and_clear_render_target(command_list, depth_stencil);
 
     Commands c(command_list, &depth_stencil, Texture_mapping::disabled,
-        &view, &scene, nullptr, &m_root_signature);
-    c.simple_render_pass(m_pipeline_state_dynamic_objects, m_pipeline_state_static_objects,
+        &view, &scene, nullptr, &m_root_signature,
         m_root_signature.m_root_param_index_of_instance_data);
+    c.simple_render_pass(m_pipeline_state_dynamic_objects, m_pipeline_state_static_objects);
 
     barrier_transition(command_list, D3D12_RESOURCE_STATE_COPY_SOURCE);
 

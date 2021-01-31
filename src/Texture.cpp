@@ -34,13 +34,17 @@ Texture::Texture(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>&
     std::vector<D3D12_SUBRESOURCE_DATA> subresource;
 
     if (last_part_equals(texture_filename, "dds"))
-        throw_if_failed(LoadDDSTextureFromFile(device.Get(), widen(texture_filename).c_str(),
-            m_texture.ReleaseAndGetAddressOf(), decoded_data, subresource));
+    {
+        if (FAILED(LoadDDSTextureFromFile(device.Get(), widen(texture_filename).c_str(),
+            m_texture.ReleaseAndGetAddressOf(), decoded_data, subresource)))
+            throw Texture_read_error(texture_filename);
+    }
     else
     {
         D3D12_SUBRESOURCE_DATA data;
-        throw_if_failed(LoadWICTextureFromFile(device.Get(), widen(texture_filename).c_str(),
-            m_texture.ReleaseAndGetAddressOf(), decoded_data, data));
+        if (FAILED(LoadWICTextureFromFile(device.Get(), widen(texture_filename).c_str(),
+            m_texture.ReleaseAndGetAddressOf(), decoded_data, data)))
+            throw Texture_read_error(texture_filename);
         subresource.push_back(data);
     }
 

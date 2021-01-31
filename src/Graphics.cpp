@@ -94,7 +94,8 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     m_view(config.width, config.height, XMVectorSet(0.0f, 0.0f, -20.0f, 1.0f),
         XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 0.1f, 4000.0f, config.fov),
     m_commands(create_main_command_list(), &m_depth_stencil, Texture_mapping::enabled,
-        &m_view, &m_scene, &m_depth_pass, &m_root_signature, &m_shadow_map),
+        &m_view, &m_scene, &m_depth_pass, &m_root_signature,
+        m_root_signature.m_root_param_index_of_instance_data, &m_shadow_map),
     m_input(input),
     m_user_interface(m_dx12_display, m_texture_descriptor_heap, texture_index_for_depth_buffer(),
         m_input, window, config),
@@ -188,15 +189,11 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     if (m_user_interface.early_z_pass())
     {
         c.draw_dynamic_objects(m_pipeline_state_early_z, Input_layout::position_normal);
-        m_scene.set_dynamic_instance_data_shader_constant(m_command_list,
-            m_root_signature.m_root_param_index_of_instance_data);
         c.draw_static_objects(m_pipeline_state_early_z, Input_layout::position_normal);
     }
     else
     {
         c.draw_dynamic_objects(m_pipeline_state, Input_layout::position_normal);
-        m_scene.set_dynamic_instance_data_shader_constant(m_command_list,
-            m_root_signature.m_root_param_index_of_instance_data);
         c.draw_static_objects(m_pipeline_state, Input_layout::position_normal);
     }
 
@@ -292,6 +289,4 @@ void Main_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> comman
         m_root_param_index_of_values, m_root_param_index_of_matrices, shadow_transform_offset);
 
     view->set_view(command_list, m_root_param_index_of_matrices);
-
-    scene->set_static_instance_data_shader_constant(command_list, m_root_param_index_of_instance_data);
 }

@@ -28,3 +28,8 @@ private:
     CD3DX12_GPU_DESCRIPTOR_HANDLE m_texture_gpu_descriptor_handle;
 };
 
+struct Texture_read_error
+{
+    Texture_read_error(const std::string& texture_) : texture(texture_) {}
+    std::string texture;
+};

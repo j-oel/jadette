@@ -147,10 +147,20 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
     std::thread th(read_file_thread_function);
     th.join();
 
+    bool scene_error = false;
+
     try
     {
         if (exc)
+        {
+            scene_error = true;
+            m_graphical_objects.clear();
+            m_static_objects.clear();
+            m_dynamic_objects.clear();
+            m_rotating_objects.clear();
+            m_flying_objects.clear();
             std::rethrow_exception(exc);
+        }
     }
     catch (Read_error& e)
     {
@@ -176,6 +186,11 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
         print("Error reading file: " + scene_file + "\nTexture " +
             e.texture + " not defined", "Error");
     }
+    catch (Texture_read_error& e)
+    {
+        print("When reading file: " + scene_file + "\nError when trying to read texture " +
+            e.texture, "Error");
+    }
     catch (Object_not_defined& e)
     {
         print("Error reading file: " + scene_file + "\nObject " +
@@ -185,13 +200,18 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
     {
         print("Error reading file: " + scene_file + "\nMaterial " +
             e.material + " referenced by " + e.object + " not defined", "Error");
-        return;
     }
+
+    if (scene_error)
+        return;
 
     m_dynamic_instance_data = std::make_unique<Instance_data>(device, command_list,
         static_cast<UINT>(m_dynamic_objects.size()), Per_instance_transform(), texture_descriptor_heap,
         descriptor_index_of_dynamic_instance_data);
     m_static_instance_data = std::make_unique<Instance_data>(device, command_list,
+        // It's graphical_objects here because every graphical_object has a an entry in
+        // m_static_model_transforms. This is mainly (only?) because the fly_around_in_circle
+        // function requires that currently. This is all quite messy and should be fixed.
         static_cast<UINT>(m_graphical_objects.size()), Per_instance_transform(), texture_descriptor_heap,
         descriptor_index_of_static_instance_data);
 
@@ -281,6 +301,8 @@ void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
         constexpr UINT offset = 0;
         constexpr UINT size_in_words_of_value = 1;
         int object_id = static_cast<int>(dynamic ? i : graphical_object->id());
+        // It's graphical_object->id for static objects here because every graphical_object 
+        // has a an entry in m_static_model_transforms. 
         command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
             size_in_words_of_value, &object_id, offset);
         if (texture_mapping == Texture_mapping::enabled)
@@ -308,7 +330,7 @@ void Scene::draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list
 
 void Scene::upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
-    if (!m_graphical_objects.empty())
+    if (!m_static_objects.empty())
         upload_static_instance_data(command_list);
     if (!m_dynamic_objects.empty())
         m_dynamic_instance_data->upload_new_data_to_gpu(command_list, m_dynamic_model_transforms);
@@ -327,15 +349,17 @@ void Scene::upload_static_instance_data(ComPtr<ID3D12GraphicsCommandList>& comma
 void Scene::set_static_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
     int root_param_index_of_instance_data)
 {
-    command_list->SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
-        m_dynamic_instance_data->srv_gpu_handle());
+    if (!m_static_objects.empty())
+        command_list->SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
+            m_static_instance_data->srv_gpu_handle());
 }
 
 void Scene::set_dynamic_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
     int root_param_index_of_instance_data)
 {
-    command_list->SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
-        m_static_instance_data->srv_gpu_handle());
+    if (!m_dynamic_objects.empty())
+        command_list->SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
+            m_dynamic_instance_data->srv_gpu_handle());
 }
 
 void Scene::manipulate_object(DirectX::XMVECTOR delta_pos, DirectX::XMVECTOR delta_rotation)

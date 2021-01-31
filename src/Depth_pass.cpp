@@ -44,7 +44,6 @@ void Depth_pass::record_commands(Scene& scene, const View& view, Depth_stencil& 
 
     set_render_target(command_list, depth_stencil);
     Commands c(command_list, &depth_stencil, Texture_mapping::disabled,
-        &view, &scene, this, &m_root_signature);
-    c.simple_render_pass(m_pipeline_state, m_pipeline_state,
-        m_root_signature.m_root_param_index_of_instance_data);
+        &view, &scene, this, &m_root_signature, m_root_signature.m_root_param_index_of_instance_data);
+    c.simple_render_pass(m_pipeline_state, m_pipeline_state);
 }
