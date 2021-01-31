@@ -79,10 +79,10 @@ void Shadow_map::calculate_shadow_transform(const View& view)
 // is regular texture space plus the Z buffer: ([0, 1], [0, 1], [0, 1]) where the 
 // Y-axis has the opposite direction,  we have to flip the Y coordinate, 
 // and scale and bias both the X and Y coordinates:
-    XMMATRIX transform_to_texture_space = XMMatrixSet(0.5f, 0.0f, 0.0f, 0.0f,
-        0.0f, -0.5f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.5f, 0.5f, 0.0f, 1.0f);
+    XMMATRIX transform_to_texture_space = XMMatrixSet(0.5f,  0.0f, 0.0f, 0.0f,
+                                                      0.0f, -0.5f, 0.0f, 0.0f,
+                                                      0.0f,  0.0f, 1.0f, 0.0f,
+                                                      0.5f,  0.5f, 0.0f, 1.0f);
     m_shadow_transform = XMMatrixMultiply(view.view_projection_matrix(),
         transform_to_texture_space);
 }
