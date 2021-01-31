@@ -78,7 +78,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
         m_texture_descriptor_heap, texture_index_for_depth_buffer()),
     m_depth_pass(m_device, m_depth_stencil.dsv_format()),
     m_shadow_map(m_device, m_texture_descriptor_heap, texture_index_for_shadow_map()),
-    m_root_signature(m_device, m_shadow_map, config.mirror_texture_addressing),
+    m_root_signature(m_device, m_shadow_map, config.mirror_texture_addressing, &m_render_settings),
     m_scene(m_device, data_path + config.scene_file, texture_index_for_diffuse_textures(),
         m_texture_descriptor_heap, m_root_signature.m_root_param_index_of_textures,
         m_root_signature.m_root_param_index_of_values,
@@ -103,6 +103,9 @@ void Graphics_impl::update()
 {
     m_user_interface.update(m_scene, m_view);
     m_scene.update();
+
+    constexpr UINT texture_mapping_enabled = 1;
+    m_render_settings = m_user_interface.texture_mapping() ? texture_mapping_enabled : 0;
 }
 
 void Graphics_impl::render()
@@ -199,7 +202,8 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
 
 
 Main_root_signature::Main_root_signature(ComPtr<ID3D12Device> device,
-    const Shadow_map& shadow_map, bool mirror_texture_addressing)
+    const Shadow_map& shadow_map, bool mirror_texture_addressing, UINT* render_settings) :
+    m_render_settings(render_settings)
 {
     constexpr int root_parameters_count = 7;
     CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count] {};
@@ -260,7 +264,12 @@ Main_root_signature::Main_root_signature(ComPtr<ID3D12Device> device,
 void Main_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> command_list, 
     Scene* scene, const View* view, Shadow_map* shadow_map)
 {
-    int offset = 0;
+    int offset = 3;
+    constexpr UINT size_in_words_of_value = 1;
+    command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
+        size_in_words_of_value, m_render_settings, offset);
+
+    offset = 0;
     command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_vectors,
         size_in_words_of_XMVECTOR, &view->eye_position(), offset);
 

@@ -10,6 +10,7 @@ struct values_struct
     uint object_id;
     int shadow_map_size;
     uint normal_map_settings;
+    uint render_settings;
 };
 ConstantBuffer<values_struct> values : register(b0);
 
@@ -17,6 +18,7 @@ static const uint normal_mapping_enabled = 1;
 static const uint invert_y_in_normal_map = 1 << 2;
 static const uint two_channel_normal_map = 1 << 3;
 
+static const uint texture_mapping_enabled = 1;
 
 struct matrices_struct
 {
@@ -245,7 +247,9 @@ float4 pixel_shader(pixel_shader_input input) : SV_TARGET
     const float shininess = 0.4f;
     const float specular = shininess * saturate(pow(saturate(dot(2 * dot(normal, -light) * normal + light,
         normalize(input.position.xyz - eye))), 30));
-    const float4 color = tex.Sample(texture_sampler, input.texcoord);
+    float4 color = float4(0.4, 0.4, 0.4, 1.0f);
+    if (values.render_settings & texture_mapping_enabled)
+        color = tex.Sample(texture_sampler, input.texcoord);
     const float4 ambient_light = float4(0.2f, 0.2f, 0.2f, 1.0f);
     const float4 ambient = color * ambient_light;
     const float4 result = ambient + shadow * (color * saturate(dot(normal, light)) +

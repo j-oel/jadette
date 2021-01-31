@@ -29,7 +29,7 @@ class Main_root_signature : public Root_signature
 {
 public:
     Main_root_signature(ComPtr<ID3D12Device> device, const Shadow_map& shadow_map,
-        bool mirror_texture_addressing);
+        bool mirror_texture_addressing, UINT* render_settings);
     virtual void set_constants(ComPtr<ID3D12GraphicsCommandList> command_list, 
         Scene* scene, const View* view, Shadow_map* shadow_map);
 
@@ -40,6 +40,8 @@ public:
     const int m_root_param_index_of_shadow_map = 4;
     const int m_root_param_index_of_normal_maps = 5;
     const int m_root_param_index_of_instance_data = 6;
+private:
+    UINT* m_render_settings;
 };
 
 
@@ -76,6 +78,8 @@ private:
     Commands m_commands;
     Input& m_input;
     User_interface m_user_interface;
+
+    UINT m_render_settings;
 
     UINT m_width;
     UINT m_height;

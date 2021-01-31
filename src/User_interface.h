@@ -34,6 +34,7 @@ public:
     void render_2d_text(size_t objects_count, int triangles_count);
     void scaling_changed(float dpi);
     bool early_z_pass() const { return m_early_z_pass; }
+    bool texture_mapping() const { return m_texture_mapping; }
 private:
     void create_selection_command_list();
     void object_selection_and_mouse_pointer_update(Scene& scene, View& view,
@@ -64,5 +65,6 @@ private:
 
     bool m_early_z_pass;
     bool m_show_help;
+    bool m_texture_mapping;
 };
 

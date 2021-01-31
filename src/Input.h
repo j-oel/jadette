@@ -38,6 +38,7 @@ public:
     bool f1();
     bool e();
     bool i();
+    bool t();
     bool z();
 
     void set_mouse_position(POINT position, HWND window);
@@ -73,6 +74,7 @@ private:
     bool m_f1;
     bool m_e;
     bool m_i;
+    bool m_t;
     bool m_z;
 };
 
