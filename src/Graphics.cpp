@@ -105,7 +105,9 @@ void Graphics_impl::update()
     m_scene.update();
 
     constexpr UINT texture_mapping_enabled = 1;
-    m_render_settings = m_user_interface.texture_mapping() ? texture_mapping_enabled : 0;
+    constexpr UINT normal_mapping_enabled = 1 << 2;
+    m_render_settings = (m_user_interface.texture_mapping() ? texture_mapping_enabled : 0) |
+                        (m_user_interface.normal_mapping()  ? normal_mapping_enabled  : 0);
 }
 
 void Graphics_impl::render()

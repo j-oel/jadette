@@ -42,7 +42,8 @@ User_interface::User_interface(std::shared_ptr<Dx12_display> dx12_display,
     m_height(config.height),
     m_early_z_pass(config.early_z_pass),
     m_show_help(false),
-    m_texture_mapping(true)
+    m_texture_mapping(true),
+    m_normal_mapping(true)
 {
     create_selection_command_list();
 
@@ -119,11 +120,14 @@ void User_interface::update(Scene& scene, View& view)
     if (m_input.f1())
         m_show_help = !m_show_help;
 
-    if (m_input.z())
-        m_early_z_pass = !m_early_z_pass;
+    if (m_input.n())
+        m_normal_mapping = !m_normal_mapping;
 
     if (m_input.t())
         m_texture_mapping = !m_texture_mapping;
+
+    if (m_input.z())
+        m_early_z_pass = !m_early_z_pass;
 }
 
 void User_interface::create_selection_command_list()
@@ -326,7 +330,8 @@ void User_interface::render_2d_text(size_t objects_count, int triangles_count)
         ss << "Press F1 to hide help\n\n"
               "Press Esc to exit.\n\n"
               "Press z to toggle early Z pass\n\n"
-              "Press t to toggle texture mapping\n\n";
+              "Press t to toggle texture mapping\n\n"
+              "Press n to toggle normal mapping\n\n";
         if (m_view_controller.is_edit_mode())
             ss << "Edit mode controls:\n"
             "Left mouse button drag to rotate view, orbit style.\n"

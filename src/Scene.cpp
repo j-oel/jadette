@@ -518,7 +518,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                 if (!normal_map.empty())
                 {
                     normal_map_tex = get_texture(normal_map);
-                    normal_map_settings = normal_mapping_enabled;
+                    normal_map_settings = normal_map_exists;
                 }
                 auto diffuse_map_tex = get_texture(diffuse_map);
                 create_object(name, mesh, diffuse_map_tex, dynamic, position, 1,
@@ -549,7 +549,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                         normal_map_tex = get_texture(normal_map);
                         // This is for the case when a normal map is not defined in the mtl-file but
                         // is defined directly in the scene file.
-                        normal_map_settings |= normal_mapping_enabled;
+                        normal_map_settings |= normal_map_exists;
                     }
                     auto diffuse_map_tex = get_texture(diffuse_map);
                     create_object(name, m.mesh, diffuse_map_tex, dynamic, position, 1,
@@ -658,7 +658,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             if (!normal_map.empty())
             {
                 normal_map_tex = get_texture(normal_map);
-                normal_map_settings = normal_mapping_enabled;
+                normal_map_settings = normal_map_exists;
             }
 
             for (int x = 0; x < count.x; ++x)

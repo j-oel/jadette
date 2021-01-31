@@ -35,6 +35,7 @@ public:
     void scaling_changed(float dpi);
     bool early_z_pass() const { return m_early_z_pass; }
     bool texture_mapping() const { return m_texture_mapping; }
+    bool normal_mapping() const { return m_normal_mapping; }
 private:
     void create_selection_command_list();
     void object_selection_and_mouse_pointer_update(Scene& scene, View& view,
@@ -66,5 +67,6 @@ private:
     bool m_early_z_pass;
     bool m_show_help;
     bool m_texture_mapping;
+    bool m_normal_mapping;
 };
 

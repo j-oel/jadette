@@ -286,7 +286,7 @@ void read_mtl_file(const string file_name, map<string, Material>& materials)
         else if (input == "map_Bump")
         {
             file >> material.normal_map;
-            material.normal_map_settings |= normal_mapping_enabled;
+            material.normal_map_settings |= normal_map_exists;
         }
         else if (input == "normal_map_invert_y") // My extension
         {

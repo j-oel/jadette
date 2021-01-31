@@ -14,11 +14,12 @@ struct values_struct
 };
 ConstantBuffer<values_struct> values : register(b0);
 
-static const uint normal_mapping_enabled = 1;
+static const uint normal_map_exists = 1;
 static const uint invert_y_in_normal_map = 1 << 2;
 static const uint two_channel_normal_map = 1 << 3;
 
 static const uint texture_mapping_enabled = 1;
+static const uint normal_mapping_enabled = 1 << 2;
 
 struct matrices_struct
 {
@@ -236,7 +237,8 @@ float4 pixel_shader(pixel_shader_input input) : SV_TARGET
     float shadow = shadow_value(input);
 
     float3 normal;
-    if (values.normal_map_settings & normal_mapping_enabled)
+    if (values.render_settings & normal_mapping_enabled &&
+        values.normal_map_settings & normal_map_exists)
         normal = tangent_space_normal_mapping(input);
     else
         normal = normalize(input.normal);

@@ -71,11 +71,11 @@ void Graphical_object::draw_textured(ComPtr<ID3D12GraphicsCommandList> command_l
         size_in_words_of_value, &m_normal_map_settings, m_normal_map_settings_offset);
 
     m_diffuse_map->set_texture_for_shader(command_list, m_root_param_index_of_textures);
-    if (m_normal_map_settings & normal_mapping_enabled)
+    if (m_normal_map_settings & normal_map_exists)
         m_normal_map->set_texture_for_shader(command_list, m_root_param_index_of_normal_maps);
     else
         // The descriptor table of the normal map needs to be set, so just set it to the
-        // diffuse map. The shader will check the normal_map_flag.
+        // diffuse map. The shader will check the normal_map_exists flag.
         m_diffuse_map->set_texture_for_shader(command_list, m_root_param_index_of_normal_maps);
 
 

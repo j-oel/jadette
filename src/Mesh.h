@@ -110,7 +110,7 @@ void calculate_and_add_tangent_and_bitangent(DirectX::XMVECTOR v[vertex_count_pe
 
 // This is not the most natural place to define these, conceptually. The reason to define them here
 // is that they are then visible for those who need it, without including additional files.
-constexpr UINT normal_mapping_enabled = 1;
+constexpr UINT normal_map_exists = 1;
 constexpr UINT invert_y_in_normal_map = 1 << 2;
 constexpr UINT two_channel_normal_map = 1 << 3;
 
