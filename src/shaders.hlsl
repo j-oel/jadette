@@ -20,6 +20,7 @@ static const uint two_channel_normal_map = 1 << 3;
 
 static const uint texture_mapping_enabled = 1;
 static const uint normal_mapping_enabled = 1 << 2;
+static const uint shadow_mapping_enabled = 1 << 3;
 
 struct matrices_struct
 {
@@ -234,7 +235,9 @@ float3 tangent_space_normal_mapping(pixel_shader_input input)
 
 float4 pixel_shader(pixel_shader_input input) : SV_TARGET
 {
-    float shadow = shadow_value(input);
+    float shadow = 1.0f;
+    if (values.render_settings & shadow_mapping_enabled)
+        shadow = shadow_value(input);
 
     float3 normal;
     if (values.render_settings & normal_mapping_enabled &&

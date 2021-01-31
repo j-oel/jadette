@@ -38,35 +38,41 @@ void Graphics::scaling_changed(float dpi)
 
 using DirectX::XMVectorSet;
 
-
-UINT texture_index_for_depth_buffer()
+namespace
 {
-    return 0;
-}
+    constexpr UINT texture_mapping_enabled = 1;
+    constexpr UINT normal_mapping_enabled  = 1 << 2;
+    constexpr UINT shadow_mapping_enabled  = 1 << 3;
 
-UINT texture_index_for_shadow_map()
-{
-    return 1;
-}
+    UINT texture_index_for_depth_buffer()
+    {
+        return 0;
+    }
 
-UINT descriptor_index_for_dynamic_instance_data()
-{
-    return 2;
-}
+    UINT texture_index_for_shadow_map()
+    {
+        return 1;
+    }
 
-UINT descriptor_index_for_static_instance_data()
-{
-    return 3;
-}
+    UINT descriptor_index_for_dynamic_instance_data()
+    {
+        return 2;
+    }
 
-UINT texture_index_for_diffuse_textures()
-{
-    return 4;
-}
+    UINT descriptor_index_for_static_instance_data()
+    {
+        return 3;
+    }
 
-UINT value_offset_for_normal_map_settings()
-{
-    return 2;
+    UINT texture_index_for_diffuse_textures()
+    {
+        return 4;
+    }
+
+    UINT value_offset_for_normal_map_settings()
+    {
+        return 2;
+    }
 }
 
 Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
@@ -104,9 +110,8 @@ void Graphics_impl::update()
     m_user_interface.update(m_scene, m_view);
     m_scene.update();
 
-    constexpr UINT texture_mapping_enabled = 1;
-    constexpr UINT normal_mapping_enabled = 1 << 2;
     m_render_settings = (m_user_interface.texture_mapping() ? texture_mapping_enabled : 0) |
+                        (m_user_interface.shadow_mapping() ? shadow_mapping_enabled : 0) |
                         (m_user_interface.normal_mapping()  ? normal_mapping_enabled  : 0);
 }
 
@@ -171,7 +176,8 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     Commands& c = m_commands;
     c.upload_instance_data();
     c.set_descriptor_heap(m_texture_descriptor_heap);
-    c.record_shadow_map_generation_commands_in_command_list();
+    if (m_render_settings & shadow_mapping_enabled)
+        c.record_shadow_map_generation_commands_in_command_list();
     if (m_user_interface.early_z_pass())
         c.early_z_pass();
     else

@@ -38,6 +38,7 @@ public:
     bool f1();
     bool e();
     bool i();
+    bool m();
     bool n();
     bool t();
     bool z();
@@ -75,6 +76,7 @@ private:
     bool m_f1;
     bool m_e;
     bool m_i;
+    bool m_m;
     bool m_n;
     bool m_t;
     bool m_z;

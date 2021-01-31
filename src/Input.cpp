@@ -55,6 +55,10 @@ void Input::key_down(WPARAM key_code)
             m_i = true;
             break;
 
+        case 'M':
+            m_m = true;
+            break;
+
         case 'N':
             m_n = true;
             break;
@@ -165,6 +169,13 @@ bool Input::i()
     bool i = m_i;
     m_i = false;
     return i;
+}
+
+bool Input::m()
+{
+    bool m = m_m;
+    m_m = false;
+    return m;
 }
 
 bool Input::n()
