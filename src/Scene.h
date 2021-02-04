@@ -41,6 +41,7 @@ public:
         Texture_mapping texture_mapping, const Input_layout& input_element_model) const;
     void upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
     int triangles_count() const { return m_triangles_count; }
+    size_t vertices_count() const { return m_vertices_count; }
     size_t objects_count() const { return m_graphical_objects.size(); }
     DirectX::XMVECTOR light_position() const { return m_light_position; }
     DirectX::XMVECTOR light_focus_point() const { return m_light_focus_point; }
@@ -84,6 +85,7 @@ private:
     int m_root_param_index_of_values;
 
     int m_triangles_count;
+    size_t m_vertices_count;
 
     int m_selected_object_id;
     bool m_object_selected;

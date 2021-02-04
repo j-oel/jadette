@@ -92,3 +92,8 @@ int Graphical_object::triangles_count()
 {
     return m_mesh->triangles_count();
 }
+
+size_t Graphical_object::vertices_count()
+{
+    return m_mesh->vertices_count();
+}

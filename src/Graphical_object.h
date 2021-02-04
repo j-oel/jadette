@@ -40,6 +40,7 @@ public:
         const Input_layout& input_element_model);
     void release_temp_resources();
     int triangles_count();
+    size_t vertices_count();
     int instances() { return m_instances; }
     int id() { return m_id; }
 

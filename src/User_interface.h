@@ -31,7 +31,8 @@ public:
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index,
         Input& input, HWND window, const Config& config);
     void update(Scene& scene, View& view);
-    void render_2d_text(size_t objects_count, int triangles_count);
+    void render_2d_text(size_t objects_count, int triangles_count,
+        size_t vertices_count);
     void scaling_changed(float dpi);
     bool early_z_pass() const { return m_early_z_pass; }
     bool texture_mapping() const { return m_texture_mapping; }

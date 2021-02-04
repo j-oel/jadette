@@ -67,6 +67,7 @@ public:
         const Input_layout& input_element_model);
 
     int triangles_count();
+    size_t vertices_count();
 
 private:
 
@@ -91,6 +92,7 @@ private:
     ComPtr<ID3D12Resource> m_index_buffer;
     D3D12_INDEX_BUFFER_VIEW m_index_buffer_view;
     UINT m_index_count;
+    size_t m_vertices_count;
 
     ComPtr<ID3D12Resource> m_temp_upload_resource_vb_pos;
     ComPtr<ID3D12Resource> m_temp_upload_resource_vb_normals;

@@ -90,7 +90,7 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
     int descriptor_index_of_static_instance_data) :
     m_light_position(XMVectorSet(0.0f, 20.0f, 5.0f, 1.0f)),
     m_root_param_index_of_values(root_param_index_of_values),
-    m_triangles_count(0), m_selected_object_id(-1), m_object_selected(false)
+    m_triangles_count(0), m_vertices_count(0), m_selected_object_id(-1), m_object_selected(false)
 {
 
     // Initialize COM, needed by Windows Imaging Component (WIC)
@@ -220,6 +220,7 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
     {
         g->release_temp_resources();
         m_triangles_count += g->triangles_count();
+        m_vertices_count += g->vertices_count();
     }
 }
 

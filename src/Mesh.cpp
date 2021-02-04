@@ -73,6 +73,11 @@ int Mesh::triangles_count()
     return m_index_count / 3;
 }
 
+size_t Mesh::vertices_count()
+{
+    return m_vertices_count;
+}
+
 
 namespace
 {
@@ -165,6 +170,8 @@ namespace
 void Mesh::create_and_fill_vertex_buffers(const Vertices& vertices,
     ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
+    m_vertices_count = vertices.positions.size();
+
     create_and_fill_vertex_buffer(device, command_list, m_vertex_positions_buffer,
         m_temp_upload_resource_vb_pos, vertices.positions, m_vertex_positions_buffer_view);
     SET_DEBUG_NAME(m_vertex_positions_buffer, L"Vertex Positions Buffer");

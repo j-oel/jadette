@@ -124,7 +124,8 @@ void Graphics_impl::render()
 
     m_dx12_display->execute_command_list(m_command_list);
 
-    m_user_interface.render_2d_text(m_scene.objects_count(), m_scene.triangles_count());
+    m_user_interface.render_2d_text(m_scene.objects_count(), m_scene.triangles_count(),
+        m_scene.vertices_count());
 
     m_dx12_display->end_render();
 }
