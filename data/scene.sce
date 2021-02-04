@@ -22,8 +22,8 @@ object spaceship dynamic spaceship_model spaceship_diff 0 0 10 1
 
 texture normal_map plane_normal_map.jpg
 texture pattern pattern.jpg
-texture pattern2 pattern2.dds
-model plane_model plane
+model plane_model plane.obj
+model cube_from_file cube.obj
 
 
 # The syntax for a graphical object that has a normal map defined is the same
@@ -31,12 +31,6 @@ model plane_model plane
 # "object" and that an additional argument at the end is added, a 
 # <texture_name> referencing the normal map that should be a previously 
 # defined texture.
-
-normal_mapped_object plane1 static plane_model pattern2 -20 -10 0 30 normal_map
-normal_mapped_object plane2 static plane_model pattern2 10 -8 0 30 normal_map
-
-
-model cube_from_file cube.obj
 
 
 # To define multiple object at the same time use array:
@@ -60,7 +54,9 @@ model platform_model platform.obj
 # If a model file (.obj file) references materials defined in an .mtl file, 
 # the <texture_name> argument is ignored:
 
-object platform static platform_model pattern 20 -7 4 1
+object plane1 static plane_model not_used -20 -10 0 30
+object plane2 static plane_model not_used 10 -8 0 30
+object platform static platform_model not_used 20 -7 4 1
 
 
 # To define a light:

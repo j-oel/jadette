@@ -29,7 +29,7 @@ class Main_root_signature : public Root_signature
 {
 public:
     Main_root_signature(ComPtr<ID3D12Device> device, const Shadow_map& shadow_map,
-        bool mirror_texture_addressing, UINT* render_settings);
+        UINT* render_settings);
     virtual void set_constants(ComPtr<ID3D12GraphicsCommandList> command_list, 
         Scene* scene, const View* view, Shadow_map* shadow_map);
 

@@ -9,7 +9,7 @@ struct values_struct
 {
     uint object_id;
     int shadow_map_size;
-    uint normal_map_settings;
+    uint material_settings;
     uint render_settings;
 };
 ConstantBuffer<values_struct> values : register(b0);
@@ -17,6 +17,7 @@ ConstantBuffer<values_struct> values : register(b0);
 static const uint normal_map_exists = 1;
 static const uint invert_y_in_normal_map = 1 << 2;
 static const uint two_channel_normal_map = 1 << 3;
+static const uint mirror_texture_addressing = 1 << 4;
 
 static const uint texture_mapping_enabled = 1;
 static const uint normal_mapping_enabled = 1 << 2;
@@ -50,7 +51,9 @@ StructuredBuffer<instance_trans_rot_struct> instance : register(t3);
 
 
 sampler texture_sampler : register(s0);
-SamplerComparisonState shadow_sampler : register(s1);
+sampler texture_mirror_sampler : register(s1);
+SamplerComparisonState shadow_sampler : register(s2);
+
 
 struct pixel_shader_input
 {
@@ -207,16 +210,21 @@ float shadow_value(pixel_shader_input input)
 
 float3 tangent_space_normal_mapping(pixel_shader_input input)
 {
-    float3 normal = normal_map.Sample(texture_sampler, input.texcoord).xyz;
+    float3 normal;
+    
+    if (values.material_settings & mirror_texture_addressing)
+        normal = normal_map.Sample(texture_mirror_sampler, input.texcoord).xyz;
+    else
+        normal = normal_map.Sample(texture_sampler, input.texcoord).xyz;
 
     // Each channel is encoded as a value [0,1] in the normal map, where 0 signifies -1,
     // 0.5 means 0 and 1 means 1. This gets it back to [-1, 1].
     normal = 2 * normal - 1.0f;
 
-    if (values.normal_map_settings & invert_y_in_normal_map)
+    if (values.material_settings & invert_y_in_normal_map)
         normal.y = -normal.y;
 
-    if (values.normal_map_settings & two_channel_normal_map)
+    if (values.material_settings & two_channel_normal_map)
         normal.z = sqrt(1.0f - normal.x * normal.x - normal.y * normal.y);
 
 
@@ -241,7 +249,7 @@ float4 pixel_shader(pixel_shader_input input) : SV_TARGET
 
     float3 normal;
     if (values.render_settings & normal_mapping_enabled &&
-        values.normal_map_settings & normal_map_exists)
+        values.material_settings & normal_map_exists)
         normal = tangent_space_normal_mapping(input);
     else
         normal = normalize(input.normal);
@@ -253,8 +261,14 @@ float4 pixel_shader(pixel_shader_input input) : SV_TARGET
     const float specular = shininess * saturate(pow(saturate(dot(2 * dot(normal, -light) * normal + light,
         normalize(input.position.xyz - eye))), 30));
     float4 color = float4(0.4, 0.4, 0.4, 1.0f);
+    
     if (values.render_settings & texture_mapping_enabled)
-        color = tex.Sample(texture_sampler, input.texcoord);
+    {
+        if (values.material_settings & mirror_texture_addressing)
+            color = tex.Sample(texture_mirror_sampler, input.texcoord);
+        else
+            color = tex.Sample(texture_sampler, input.texcoord);
+    }
     const float4 ambient_light = float4(0.2f, 0.2f, 0.2f, 1.0f);
     const float4 ambient = color * ambient_light;
     const float4 result = ambient + shadow * (color * saturate(dot(normal, light)) +

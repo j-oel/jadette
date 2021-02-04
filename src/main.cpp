@@ -96,10 +96,6 @@ Config read_config(const std::string& config_file)
         {
             file >> config.early_z_pass;
         }
-        else if (input == "mirror_texture_addressing")
-        {
-            file >> config.mirror_texture_addressing;
-        }
         else if (input == "monitor")
         {
             file >> config.monitor;

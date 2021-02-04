@@ -31,8 +31,8 @@ public:
         ComPtr<ID3D12GraphicsCommandList>& command_list,
         int m_root_param_index_of_textures, std::shared_ptr<Texture> diffuse_map,
         int root_param_index_of_values, int root_param_index_of_normal_maps,
-        int normal_map_flag_offset, std::shared_ptr<Texture> normal_map, int id,
-        UINT normal_map_settings = 0, int instances = 1);
+        int material_settings_offset, std::shared_ptr<Texture> normal_map, int id,
+        UINT material_settings = 0, int instances = 1);
 
     void draw(ComPtr<ID3D12GraphicsCommandList> command_list,
         const Input_layout& input_element_model);
@@ -51,8 +51,8 @@ private:
     int m_root_param_index_of_textures;
     int m_root_param_index_of_values;
     int m_root_param_index_of_normal_maps;
-    int m_normal_map_settings_offset;
+    int m_material_settings_offset;
     int m_id;
     int m_instances;
-    int m_normal_map_settings;
+    int m_material_settings;
 };

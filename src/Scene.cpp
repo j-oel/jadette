@@ -476,7 +476,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
 
     auto create_object = [&](const string& name, shared_ptr<Mesh> mesh,
         shared_ptr<Texture> diffuse_map, bool dynamic, XMFLOAT4 position, int instances = 1,
-        shared_ptr<Texture> normal_map = nullptr, UINT normal_map_settings = 0, bool rotating = false)
+        shared_ptr<Texture> normal_map = nullptr, UINT material_settings = 0, bool rotating = false)
     {
         Per_instance_transform transform = { convert_float4_to_half4(position),
         convert_vector_to_half4(DirectX::XMQuaternionIdentity()) };
@@ -484,7 +484,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
         auto object = std::make_shared<Graphical_object>(device, mesh,
             command_list, root_param_index_of_textures, diffuse_map,
             root_param_index_of_values, root_param_index_of_normal_maps, normal_map_settings_offset,
-            normal_map, object_id++, normal_map_settings, instances);
+            normal_map, object_id++, material_settings, instances);
 
         m_graphical_objects.push_back(object);
 
@@ -538,15 +538,15 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                 auto mesh = meshes[model];
 
                 shared_ptr<Texture> normal_map_tex = nullptr;
-                UINT normal_map_settings = 0;
+                UINT material_settings = 0;
                 if (!normal_map.empty())
                 {
                     normal_map_tex = get_texture(normal_map);
-                    normal_map_settings = normal_map_exists;
+                    material_settings = normal_map_exists;
                 }
                 auto diffuse_map_tex = get_texture(diffuse_map);
                 create_object(name, mesh, diffuse_map_tex, dynamic, position, 1,
-                    normal_map_tex, normal_map_settings);
+                    normal_map_tex, material_settings);
             }
             else
             {
@@ -556,7 +556,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
 
                 for (auto& m : model_collection->models)
                 {
-                    UINT normal_map_settings = 0;
+                    UINT material_settings = 0;
                     if (m.material != "")
                     {
                         auto material_iter = model_collection->materials.find(m.material);
@@ -565,7 +565,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                         auto& material = material_iter->second;
                         diffuse_map = material.diffuse_map;
                         normal_map = material.normal_map;
-                        normal_map_settings = material.normal_map_settings;
+                        material_settings = material.settings;
                     }
                     shared_ptr<Texture> normal_map_tex = nullptr;
                     if (!normal_map.empty())
@@ -573,11 +573,11 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                         normal_map_tex = get_texture(normal_map);
                         // This is for the case when a normal map is not defined in the mtl-file but
                         // is defined directly in the scene file.
-                        normal_map_settings |= normal_map_exists;
+                        material_settings |= normal_map_exists;
                     }
                     auto diffuse_map_tex = get_texture(diffuse_map);
                     create_object(name, m.mesh, diffuse_map_tex, dynamic, position, 1,
-                        normal_map_tex, normal_map_settings);
+                        normal_map_tex, material_settings);
                 }
             }
         }

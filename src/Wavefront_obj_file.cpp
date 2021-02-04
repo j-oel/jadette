@@ -275,7 +275,7 @@ void read_mtl_file(const string file_name, map<string, Material>& materials)
                 materials[name] = material;
                 material.normal_map = "";         // Since the lifetime of the variable material is
                 material.diffuse_map = "";        // longer than the loop, we have to reset the
-                material.normal_map_settings = 0; // the components for the new material.
+                material.settings = 0;            // the components for the new material.
             }
             file >> name;
         }
@@ -286,21 +286,28 @@ void read_mtl_file(const string file_name, map<string, Material>& materials)
         else if (input == "map_Bump")
         {
             file >> material.normal_map;
-            material.normal_map_settings |= normal_map_exists;
+            material.settings |= normal_map_exists;
         }
         else if (input == "normal_map_invert_y") // My extension
         {
             bool invert_y;
             file >> invert_y;
             if (invert_y)
-                material.normal_map_settings |= invert_y_in_normal_map;
+                material.settings |= invert_y_in_normal_map;
         }
         else if (input == "two_channel_normal_map") // My extension
         {
             bool two_channel;
             file >> two_channel;
             if (two_channel)
-                material.normal_map_settings |= two_channel_normal_map;
+                material.settings |= two_channel_normal_map;
+        }
+        else if (input == "mirror_texture_addressing") // My extension
+        {
+            bool mirror;
+            file >> mirror;
+            if (mirror)
+                material.settings |= mirror_texture_addressing;
         }
     }
     
