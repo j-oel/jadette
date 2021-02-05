@@ -17,7 +17,7 @@
 enum Data_written { not_done, done };
 
 Object_id_pass::Object_id_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format, UINT width,
-    UINT height) : m_root_signature(device), m_dsv_format(dsv_format),
+    UINT height, bool backface_culling) : m_root_signature(device), m_dsv_format(dsv_format),
     m_rtv_format(DXGI_FORMAT_R32_SINT), m_width(width), m_height(height),
     m_current_state(D3D12_RESOURCE_STATE_COPY_SOURCE)
 {
@@ -25,13 +25,15 @@ Object_id_pass::Object_id_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_form
 
     create_pipeline_state(device, m_pipeline_state_dynamic_objects, m_root_signature.get(),
         "object_ids_vertex_shader_srv_instance_data", "pixel_shader_object_ids",
-        dsv_format, render_targets_count, Input_layout::position, Depth_write::enabled, m_rtv_format);
+        dsv_format, render_targets_count, Input_layout::position, backface_culling,
+        Depth_write::enabled, m_rtv_format);
     SET_DEBUG_NAME(m_pipeline_state_dynamic_objects,
         L"Object Id Pipeline State Object Dynamic Objects");
 
     create_pipeline_state(device, m_pipeline_state_static_objects, m_root_signature.get(),
         "object_ids_vertex_shader_srv_instance_data_static_objects", "pixel_shader_object_ids",
-        dsv_format, render_targets_count, Input_layout::position, Depth_write::enabled, m_rtv_format);
+        dsv_format, render_targets_count, Input_layout::position, backface_culling,
+        Depth_write::enabled, m_rtv_format);
     SET_DEBUG_NAME(m_pipeline_state_static_objects,
         L"Object Id Pipeline State Object Static Objects");
 

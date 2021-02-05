@@ -13,15 +13,15 @@
 #include "Commands.h"
 
 
-Depth_pass::Depth_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format) :
-m_root_signature(device), m_dsv_format(dsv_format)
+Depth_pass::Depth_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format, bool backface_culling)
+    : m_root_signature(device), m_dsv_format(dsv_format)
 {
     UINT render_targets_count = 0;
     const char* empty_pixel_shader = nullptr;
 
     create_pipeline_state(device, m_pipeline_state, m_root_signature.get(),
         "depths_vertex_shader_srv_instance_data", empty_pixel_shader,
-        dsv_format, render_targets_count, Input_layout::position);
+        dsv_format, render_targets_count, Input_layout::position, backface_culling);
     SET_DEBUG_NAME(m_pipeline_state, L"Depths Pipeline State Object");
 }
 

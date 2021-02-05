@@ -92,6 +92,10 @@ Config read_config(const std::string& config_file)
         {
             file >> config.vsync;
         }
+        else if (input == "backface_culling")
+        {
+            file >> config.backface_culling;
+        }
         else if (input == "early_z_pass")
         {
             file >> config.early_z_pass;

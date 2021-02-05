@@ -58,7 +58,7 @@ private:
     void record_frame_rendering_commands_in_command_list();
     void set_and_clear_render_target();
     int create_texture_descriptor_heap();
-    void create_pipeline_states();
+    void create_pipeline_states(const Config& config);
     ComPtr<ID3D12GraphicsCommandList> create_main_command_list();
 
     std::shared_ptr<Dx12_display> m_dx12_display;

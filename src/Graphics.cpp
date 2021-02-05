@@ -82,7 +82,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     m_depth_stencil(m_device, config.width, config.height, 
         Bit_depth::bpp16, D3D12_RESOURCE_STATE_DEPTH_WRITE,
         m_texture_descriptor_heap, texture_index_for_depth_buffer()),
-    m_depth_pass(m_device, m_depth_stencil.dsv_format()),
+    m_depth_pass(m_device, m_depth_stencil.dsv_format(), config.backface_culling),
     m_shadow_map(m_device, m_texture_descriptor_heap, texture_index_for_shadow_map()),
     m_root_signature(m_device, m_shadow_map, &m_render_settings),
     m_scene(m_device, data_path + config.scene_file, texture_index_for_diffuse_textures(),
@@ -103,7 +103,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     m_height(config.height)
 {
     m_depth_stencil.set_debug_names(L"DSV Heap", L"Depth Buffer");
-    create_pipeline_states();
+    create_pipeline_states(config);
 }
 
 void Graphics_impl::update()
@@ -146,18 +146,20 @@ int Graphics_impl::create_texture_descriptor_heap()
     return textures_count;
 }
 
-void Graphics_impl::create_pipeline_states()
+void Graphics_impl::create_pipeline_states(const Config& config)
 {
     UINT render_targets_count = 1;
 
     create_pipeline_state(m_device, m_pipeline_state, m_root_signature.get(),
         "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
-        render_targets_count, Input_layout::position_normal, Depth_write::enabled);
+        render_targets_count, Input_layout::position_normal, config.backface_culling,
+        Depth_write::enabled);
     SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering");
 
     create_pipeline_state(m_device, m_pipeline_state_early_z, m_root_signature.get(),
         "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
-        render_targets_count, Input_layout::position_normal, Depth_write::disabled);
+        render_targets_count, Input_layout::position_normal, config.backface_culling,
+        Depth_write::disabled);
     SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering Early Z");
 }
 

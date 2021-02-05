@@ -22,7 +22,7 @@ class Depth_stencil;
 class Depth_pass
 {
 public:
-    Depth_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format);
+    Depth_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format, bool backface_culling);
     void record_commands(Scene& scene, const View& view, Depth_stencil& depth_stencil,
         ComPtr<ID3D12GraphicsCommandList> command_list);
 private:

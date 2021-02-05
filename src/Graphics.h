@@ -16,14 +16,15 @@ class Input;
 struct Config
 {
     Config() : width(800), height(600), monitor(1), borderless_windowed_fullscreen(false),
-        vsync(false), early_z_pass(false), edit_mode(false), invert_mouse(false),
-        mouse_sensitivity(0.3f), fov(70.0f) {}
+        vsync(false), backface_culling(true), early_z_pass(false), edit_mode(false),
+        invert_mouse(false), mouse_sensitivity(0.3f), fov(70.0f) {}
     int width;
     int height;
     std::string scene_file;
     int monitor;
     bool borderless_windowed_fullscreen;
     bool vsync;
+    bool backface_culling;
     bool early_z_pass;
     bool edit_mode;
     bool invert_mouse;
