@@ -61,6 +61,7 @@ private:
     void create_pipeline_states(const Config& config);
     ComPtr<ID3D12GraphicsCommandList> create_main_command_list();
 
+    Config m_config;
     std::shared_ptr<Dx12_display> m_dx12_display;
     ComPtr<ID3D12Device> m_device;
     ComPtr<ID3D12GraphicsCommandList> m_command_list;

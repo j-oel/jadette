@@ -30,7 +30,9 @@ public:
         ComPtr<ID3D12GraphicsCommandList> command_list);
     void signal_done(ComPtr<ID3D12CommandQueue> command_queue);
     void read_data_from_gpu(std::vector<int>& data);
+    void reload_shaders(ComPtr<ID3D12Device> device, bool backface_culling);
 private:
+    void create_pipeline_states(ComPtr<ID3D12Device> device, bool backface_culling);
     void create_render_target(ComPtr<ID3D12Device> device);
     void set_and_clear_render_target(ComPtr<ID3D12GraphicsCommandList> command_list,
         const Depth_stencil& depth_stencil);

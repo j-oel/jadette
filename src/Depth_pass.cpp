@@ -16,6 +16,12 @@ Depth_pass::Depth_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format, bool
     UINT* render_settings) : m_root_signature(device),
     m_alpha_cut_out_root_signature(device, render_settings), m_dsv_format(dsv_format)
 {
+    create_pipeline_states(device, dsv_format, backface_culling);
+}
+
+void Depth_pass::create_pipeline_states(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format,
+    bool backface_culling)
+{
     UINT render_targets_count = 0;
     const char* empty_pixel_shader = nullptr;
 
@@ -59,6 +65,12 @@ void Depth_pass::record_commands(Scene& scene, const View& view, Depth_stencil& 
     f.set_root_signature();
     f.set_shader_constants();
     f.draw_alpha_cut_out_objects(m_pipeline_state_alpha_cut_out);
+}
+
+void Depth_pass::reload_shaders(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format,
+    bool backface_culling)
+{
+    create_pipeline_states(device, dsv_format, backface_culling);
 }
 
 Depths_alpha_cut_out_root_signature::Depths_alpha_cut_out_root_signature(ComPtr<ID3D12Device> device, UINT* render_settings) :

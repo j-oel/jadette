@@ -44,7 +44,8 @@ User_interface::User_interface(std::shared_ptr<Dx12_display> dx12_display,
     m_show_help(false),
     m_texture_mapping(true),
     m_normal_mapping(true),
-    m_shadow_mapping(true)
+    m_shadow_mapping(true),
+    m_reload_shaders(false)
 {
     create_selection_command_list();
 
@@ -121,6 +122,9 @@ void User_interface::update(Scene& scene, View& view)
     if (m_input.f1())
         m_show_help = !m_show_help;
 
+    if (m_input.f5())
+        m_reload_shaders = true;
+
     if (m_input.m())
         m_shadow_mapping = !m_shadow_mapping;
 
@@ -132,6 +136,11 @@ void User_interface::update(Scene& scene, View& view)
 
     if (m_input.z())
         m_early_z_pass = !m_early_z_pass;
+}
+
+void User_interface::reload_shaders(ComPtr<ID3D12Device> device, bool backface_culling)
+{
+    m_object_id_pass.reload_shaders(device, backface_culling);
 }
 
 void User_interface::create_selection_command_list()

@@ -9,12 +9,24 @@
 
 #include "dx12min.h"
 
+#include <string>
 
 class Shadow_map;
 class View;
 class Scene;
 
 using Microsoft::WRL::ComPtr;
+
+struct Shader_compilation_error
+{
+    Shader_compilation_error(const std::string& shader) : m_shader(shader) {}
+    std::string m_shader;
+};
+
+struct Root_signature_serialization_error
+{
+};
+
 
 class Root_signature
 {

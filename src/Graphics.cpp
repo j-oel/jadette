@@ -76,6 +76,7 @@ namespace
 }
 
 Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
+    m_config(config),
     m_dx12_display(std::make_shared<Dx12_display>(window, config.width, config.height, config.vsync)),
     m_device(m_dx12_display->device()),
     m_textures_count(create_texture_descriptor_heap()),
@@ -109,6 +110,21 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
 void Graphics_impl::update()
 {
     m_user_interface.update(m_scene, m_view);
+
+    try
+    {
+        if (m_user_interface.reload_shaders_requested())
+        {
+            create_pipeline_states(m_config);
+            m_depth_pass.reload_shaders(m_device, m_depth_stencil.dsv_format(), m_config.backface_culling);
+            m_user_interface.reload_shaders(m_device, m_config.backface_culling);
+        }
+    }
+    catch (Shader_compilation_error& e)
+    {
+        print("Shader compilation of " + e.m_shader + " failed. See output window if you run in debugger.");
+    }
+
     m_scene.update();
 
     m_render_settings = (m_user_interface.texture_mapping() ? texture_mapping_enabled : 0) |

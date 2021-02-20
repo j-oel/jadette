@@ -42,7 +42,11 @@ public:
         UINT* render_settings);
     void record_commands(Scene& scene, const View& view, Depth_stencil& depth_stencil,
         ComPtr<ID3D12GraphicsCommandList> command_list);
+    void reload_shaders(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format,
+        bool backface_culling);
 private:
+    void create_pipeline_states(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format,
+        bool backface_culling);
     ComPtr<ID3D12PipelineState> m_pipeline_state;
     ComPtr<ID3D12PipelineState> m_pipeline_state_alpha_cut_out;
     Simple_root_signature m_root_signature;

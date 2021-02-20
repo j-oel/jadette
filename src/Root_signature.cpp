@@ -15,12 +15,15 @@
 
 namespace
 {
-    void handle_errors(HRESULT hr, ComPtr<ID3DBlob> error_messages)
+    void handle_errors(HRESULT hr, const std::string& shader, ComPtr<ID3DBlob> error_messages)
     {
         if (error_messages)
         {
             OutputDebugStringA(static_cast<LPCSTR>(error_messages->GetBufferPointer()));
-            throw com_exception(hr);
+            if (shader.empty())
+                throw Root_signature_serialization_error();
+            else
+                throw Shader_compilation_error(shader);
         }
     }
 }
@@ -40,7 +43,7 @@ void Root_signature::create(ComPtr<ID3D12Device> device,
     ComPtr<ID3DBlob> error_messages;
     HRESULT hr = D3DX12SerializeVersionedRootSignature(&root_signature_description,
         D3D_ROOT_SIGNATURE_VERSION_1_1, &root_signature, &error_messages);
-    handle_errors(hr, error_messages);
+    handle_errors(hr, "", error_messages);
 
     constexpr UINT node_mask = 0; // Single GPU
     throw_if_failed(device->CreateRootSignature(node_mask, root_signature->GetBufferPointer(),
@@ -129,14 +132,14 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
     ComPtr<ID3DBlob> vertex_shader;
     HRESULT hr = D3DCompileFromFile(shader_path, defines, include, vertex_shader_entry_function,
         "vs_5_1", compile_flags, flags2_not_used, &vertex_shader, &error_messages);
-    handle_errors(hr, error_messages);
+    handle_errors(hr, vertex_shader_entry_function, error_messages);
 
     ComPtr<ID3DBlob> pixel_shader;
     if (pixel_shader_entry_function)
     {
         hr = D3DCompileFromFile(shader_path, defines, include, pixel_shader_entry_function,
             "ps_5_1", compile_flags, flags2_not_used, &pixel_shader, &error_messages);
-        handle_errors(hr, error_messages);
+        handle_errors(hr, pixel_shader_entry_function, error_messages);
     }
 
     D3D12_INPUT_ELEMENT_DESC input_element_desc_position_normal_tangents[] =

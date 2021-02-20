@@ -21,23 +21,7 @@ Object_id_pass::Object_id_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_form
     m_rtv_format(DXGI_FORMAT_R32_SINT), m_width(width), m_height(height),
     m_current_state(D3D12_RESOURCE_STATE_COPY_SOURCE)
 {
-    UINT render_targets_count = 1;
-
-    create_pipeline_state(device, m_pipeline_state_dynamic_objects, m_root_signature.get(),
-        "object_ids_vertex_shader_srv_instance_data", "pixel_shader_object_ids",
-        dsv_format, render_targets_count, Input_layout::position, backface_culling ?
-        Backface_culling::enabled : Backface_culling::disabled, Alpha_blending::disabled,
-        Depth_write::enabled, m_rtv_format);
-    SET_DEBUG_NAME(m_pipeline_state_dynamic_objects,
-        L"Object Id Pipeline State Object Dynamic Objects");
-
-    create_pipeline_state(device, m_pipeline_state_static_objects, m_root_signature.get(),
-        "object_ids_vertex_shader_srv_instance_data_static_objects", "pixel_shader_object_ids",
-        dsv_format, render_targets_count, Input_layout::position, backface_culling ?
-        Backface_culling::enabled : Backface_culling::disabled, Alpha_blending::disabled,
-        Depth_write::enabled, m_rtv_format);
-    SET_DEBUG_NAME(m_pipeline_state_static_objects,
-        L"Object Id Pipeline State Object Static Objects");
+    create_pipeline_states(device, backface_culling);
 
     create_render_target(device);
 
@@ -47,6 +31,32 @@ Object_id_pass::Object_id_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_form
     constexpr BOOL initial_state = FALSE;
     constexpr LPSECURITY_ATTRIBUTES attributes = nullptr;
     m_data_written = CreateEvent(attributes, manual_reset, initial_state, L"Data written");
+}
+
+void Object_id_pass::create_pipeline_states(ComPtr<ID3D12Device> device, bool backface_culling)
+{
+    UINT render_targets_count = 1;
+
+    create_pipeline_state(device, m_pipeline_state_dynamic_objects, m_root_signature.get(),
+        "object_ids_vertex_shader_srv_instance_data", "pixel_shader_object_ids",
+        m_dsv_format, render_targets_count, Input_layout::position, backface_culling ?
+        Backface_culling::enabled : Backface_culling::disabled, Alpha_blending::disabled,
+        Depth_write::enabled, m_rtv_format);
+    SET_DEBUG_NAME(m_pipeline_state_dynamic_objects,
+        L"Object Id Pipeline State Object Dynamic Objects");
+
+    create_pipeline_state(device, m_pipeline_state_static_objects, m_root_signature.get(),
+        "object_ids_vertex_shader_srv_instance_data_static_objects", "pixel_shader_object_ids",
+        m_dsv_format, render_targets_count, Input_layout::position, backface_culling ?
+        Backface_culling::enabled : Backface_culling::disabled, Alpha_blending::disabled,
+        Depth_write::enabled, m_rtv_format);
+    SET_DEBUG_NAME(m_pipeline_state_static_objects,
+        L"Object Id Pipeline State Object Static Objects");
+}
+
+void Object_id_pass::reload_shaders(ComPtr<ID3D12Device> device, bool backface_culling)
+{
+    create_pipeline_states(device, backface_culling);
 }
 
 void Object_id_pass::set_and_clear_render_target(ComPtr<ID3D12GraphicsCommandList> command_list,

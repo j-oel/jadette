@@ -79,8 +79,12 @@ void Input::key_down(WPARAM key_code)
             m_down = true;
             break;
 
-        case  VK_F1:
+        case VK_F1:
             m_f1 = true;
+            break;
+
+        case VK_F5:
+            m_f5 = true;
             break;
     }
 }
@@ -155,6 +159,13 @@ bool Input::f1()
     bool f1 = m_f1;
     m_f1 = false;
     return f1;
+}
+
+bool Input::f5()
+{
+    bool f5 = m_f5;
+    m_f5 = false;
+    return f5;
 }
 
 bool Input::e()

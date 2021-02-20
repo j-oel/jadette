@@ -38,6 +38,8 @@ public:
     bool texture_mapping() const { return m_texture_mapping; }
     bool normal_mapping() const { return m_normal_mapping; }
     bool shadow_mapping() const { return m_shadow_mapping; }
+    bool reload_shaders_requested() { bool r = m_reload_shaders; m_reload_shaders = false; return r; }
+    void reload_shaders(ComPtr<ID3D12Device> device, bool backface_culling);
 private:
     void create_selection_command_list();
     void object_selection_and_mouse_pointer_update(Scene& scene, View& view,
@@ -71,5 +73,6 @@ private:
     bool m_texture_mapping;
     bool m_normal_mapping;
     bool m_shadow_mapping;
+    bool m_reload_shaders;
 };
 

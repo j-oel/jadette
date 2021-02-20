@@ -36,6 +36,7 @@ public:
     bool down() const { return m_down; }
 
     bool f1();
+    bool f5();
     bool e();
     bool i();
     bool m();
@@ -74,6 +75,7 @@ private:
     bool m_up;
     bool m_down;
     bool m_f1;
+    bool m_f5;
     bool m_e;
     bool m_i;
     bool m_m;
