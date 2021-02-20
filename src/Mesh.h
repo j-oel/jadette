@@ -70,6 +70,9 @@ public:
     size_t vertices_count();
     DirectX::XMVECTOR center() const;
 
+    static int draw_calls() { return s_draw_calls; }
+    static void reset_draw_calls() { s_draw_calls = 0; }
+
 private:
 
     void create_and_fill_vertex_buffers(const Vertices& vertices,
@@ -95,6 +98,8 @@ private:
     UINT m_index_count;
     size_t m_vertices_count;
     DirectX::XMFLOAT3 m_center;
+
+    static int s_draw_calls;
 
     ComPtr<ID3D12Resource> m_temp_upload_resource_vb_pos;
     ComPtr<ID3D12Resource> m_temp_upload_resource_vb_normals;

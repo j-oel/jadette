@@ -320,7 +320,7 @@ void record_frame_time(double& frame_time, double& fps)
 }
 
 void User_interface::render_2d_text(size_t objects_count, int triangles_count,
-    size_t vertices_count)
+    size_t vertices_count, int draw_calls)
 {
 #ifndef NO_TEXT
 
@@ -336,6 +336,7 @@ void User_interface::render_2d_text(size_t objects_count, int triangles_count,
         << "Number of objects: " << objects_count << endl
         << "Number of triangles: " << triangles_count << endl
         << "Number of vertices: " << vertices_count << endl
+        << "Number of draw calls: " << draw_calls << endl
         << "Early Z pass " << (m_early_z_pass? "enabled": "disabled") << "\n\n";
 
     bool invert_mouse = m_view_controller.is_mouse_inverted();

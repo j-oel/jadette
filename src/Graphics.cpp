@@ -141,7 +141,7 @@ void Graphics_impl::render()
     m_dx12_display->execute_command_list(m_command_list);
 
     m_user_interface.render_2d_text(m_scene.objects_count(), m_scene.triangles_count(),
-        m_scene.vertices_count());
+        m_scene.vertices_count(), Mesh::draw_calls());
 
     m_dx12_display->end_render();
 }
@@ -215,6 +215,7 @@ void Graphics_impl::set_and_clear_render_target()
 
 void Graphics_impl::record_frame_rendering_commands_in_command_list()
 {
+    Mesh::reset_draw_calls();
     Commands& c = m_commands;
     c.upload_instance_data();
     c.set_descriptor_heap(m_texture_descriptor_heap);

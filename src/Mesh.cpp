@@ -12,6 +12,7 @@
 
 #include <vector>
 
+int Mesh::s_draw_calls = 0;
 
 Mesh::Mesh(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list, 
     const std::string& filename)
@@ -73,6 +74,7 @@ void Mesh::draw(ComPtr<ID3D12GraphicsCommandList> command_list, int draw_instanc
 
     command_list->IASetIndexBuffer(&m_index_buffer_view);
     command_list->DrawIndexedInstanced(m_index_count, draw_instances_count, 0, 0, 0);
+    ++s_draw_calls;
 }
 
 int Mesh::triangles_count()
