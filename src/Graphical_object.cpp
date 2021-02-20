@@ -71,7 +71,7 @@ void Graphical_object::draw_textured(ComPtr<ID3D12GraphicsCommandList> command_l
         size_in_words_of_value, &m_material_settings, m_material_settings_offset);
 
     m_diffuse_map->set_texture_for_shader(command_list, m_root_param_index_of_textures);
-    if (m_material_settings & normal_map_exists)
+    if (m_material_settings & Material_settings::normal_map_exists)
         m_normal_map->set_texture_for_shader(command_list, m_root_param_index_of_normal_maps);
     else
         // The descriptor table of the normal map needs to be set, so just set it to the
@@ -96,4 +96,14 @@ int Graphical_object::triangles_count()
 size_t Graphical_object::vertices_count()
 {
     return m_mesh->vertices_count();
+}
+
+DirectX::XMVECTOR Graphical_object::center() const
+{
+    return DirectX::XMLoadFloat3(&m_transformed_center);
+}
+
+void Graphical_object::transform_center(DirectX::XMMATRIX model_view)
+{
+    XMStoreFloat3(&m_transformed_center, DirectX::XMVector3Transform(m_mesh->center(), model_view));
 }

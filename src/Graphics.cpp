@@ -82,8 +82,8 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     m_depth_stencil(m_device, config.width, config.height, 
         Bit_depth::bpp16, D3D12_RESOURCE_STATE_DEPTH_WRITE,
         m_texture_descriptor_heap, texture_index_for_depth_buffer()),
-    m_depth_pass(m_device, m_depth_stencil.dsv_format(), config.backface_culling),
     m_shadow_map(m_device, m_texture_descriptor_heap, texture_index_for_shadow_map()),
+    m_depth_pass(m_device, m_depth_stencil.dsv_format(), config.backface_culling, &m_render_settings),
     m_root_signature(m_device, m_shadow_map, &m_render_settings),
     m_scene(m_device, data_path + config.scene_file, texture_index_for_diffuse_textures(),
         m_texture_descriptor_heap, m_root_signature.m_root_param_index_of_textures,
@@ -94,8 +94,8 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     m_view(config.width, config.height, XMVectorSet(0.0f, 0.0f, -20.0f, 1.0f),
         XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 0.1f, 4000.0f, config.fov),
     m_commands(create_main_command_list(), &m_depth_stencil, Texture_mapping::enabled,
-        &m_view, &m_scene, &m_depth_pass, &m_root_signature,
-        m_root_signature.m_root_param_index_of_instance_data, &m_shadow_map),
+        Input_layout::position_normal_tangents, &m_view, &m_scene, &m_depth_pass,
+        &m_root_signature, m_root_signature.m_root_param_index_of_instance_data, &m_shadow_map),
     m_input(input),
     m_user_interface(m_dx12_display, m_texture_descriptor_heap, texture_index_for_depth_buffer(),
         m_input, window, config),
@@ -150,17 +150,39 @@ void Graphics_impl::create_pipeline_states(const Config& config)
 {
     UINT render_targets_count = 1;
 
+    auto backface_culling = config.backface_culling ? Backface_culling::enabled :
+        Backface_culling::disabled;
     create_pipeline_state(m_device, m_pipeline_state, m_root_signature.get(),
         "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
-        render_targets_count, Input_layout::position_normal, config.backface_culling,
-        Depth_write::enabled);
+        render_targets_count, Input_layout::position_normal_tangents, backface_culling,
+        Alpha_blending::disabled, Depth_write::enabled);
     SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering");
 
     create_pipeline_state(m_device, m_pipeline_state_early_z, m_root_signature.get(),
         "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
-        render_targets_count, Input_layout::position_normal, config.backface_culling,
-        Depth_write::disabled);
+        render_targets_count, Input_layout::position_normal_tangents, backface_culling,
+        Alpha_blending::disabled, Depth_write::disabled);
     SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering Early Z");
+
+    backface_culling = Backface_culling::disabled;
+
+    create_pipeline_state(m_device, m_pipeline_state_transparency, m_root_signature.get(),
+        "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
+        render_targets_count, Input_layout::position_normal_tangents, backface_culling,
+        Alpha_blending::enabled, Depth_write::alpha_blending);
+    SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering Transparency");
+
+    create_pipeline_state(m_device, m_pipeline_state_alpha_cut_out, m_root_signature.get(),
+        "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
+        render_targets_count, Input_layout::position_normal_tangents, backface_culling,
+        Alpha_blending::enabled, Depth_write::enabled);
+    SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering Alpha Cut Out");
+
+    create_pipeline_state(m_device, m_pipeline_state_alpha_cut_out_early_z, m_root_signature.get(),
+        "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
+        render_targets_count, Input_layout::position_normal_tangents, backface_culling,
+        Alpha_blending::enabled, Depth_write::alpha_blending);
+    SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering Alpha Cut Out Early Z");
 }
 
 ComPtr<ID3D12GraphicsCommandList> Graphics_impl::create_main_command_list()
@@ -189,15 +211,22 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     c.set_root_signature();
     set_and_clear_render_target();
     c.set_shader_constants();
+
+    m_scene.sort_transparent_objects_back_to_front(m_view);
+
     if (m_user_interface.early_z_pass())
     {
-        c.draw_dynamic_objects(m_pipeline_state_early_z, Input_layout::position_normal);
-        c.draw_static_objects(m_pipeline_state_early_z, Input_layout::position_normal);
+        c.draw_dynamic_objects(m_pipeline_state_early_z);
+        c.draw_static_objects(m_pipeline_state_early_z);
+        c.draw_alpha_cut_out_objects(m_pipeline_state_alpha_cut_out_early_z);
+        c.draw_transparent_objects(m_pipeline_state_transparency);
     }
     else
     {
-        c.draw_dynamic_objects(m_pipeline_state, Input_layout::position_normal);
-        c.draw_static_objects(m_pipeline_state, Input_layout::position_normal);
+        c.draw_dynamic_objects(m_pipeline_state);
+        c.draw_static_objects(m_pipeline_state);
+        c.draw_alpha_cut_out_objects(m_pipeline_state_alpha_cut_out);
+        c.draw_transparent_objects(m_pipeline_state_transparency);
     }
 
     // If text is enabled, the text object takes care of the render target state transition.

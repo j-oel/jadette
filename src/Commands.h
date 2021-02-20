@@ -28,9 +28,9 @@ class Commands
 {
 public:
     Commands(ComPtr<ID3D12GraphicsCommandList> command_list, Depth_stencil* depth_stencil,
-        Texture_mapping texture_mapping, const View* view, Scene* scene, Depth_pass* depth_pass,
-        Root_signature* root_signature, int root_param_index_of_instance_data,
-        Shadow_map* shadow_map = nullptr);
+        Texture_mapping texture_mapping, Input_layout input_layout, const View* view, Scene* scene,
+        Depth_pass* depth_pass, Root_signature* root_signature,
+        int root_param_index_of_instance_data, Shadow_map* shadow_map = nullptr);
 
     void upload_instance_data();
     void record_shadow_map_generation_commands_in_command_list();
@@ -39,16 +39,17 @@ public:
     void clear_depth_stencil();
     void set_descriptor_heap(ComPtr<ID3D12DescriptorHeap> descriptor_heap);
     void set_shader_constants();
-    void draw_static_objects(ComPtr<ID3D12PipelineState> pipeline_state,
-        const Input_layout& input_element_model);
-    void draw_dynamic_objects(ComPtr<ID3D12PipelineState> pipeline_state,
-        const Input_layout& input_element_model);
+    void draw_static_objects(ComPtr<ID3D12PipelineState> pipeline_state);
+    void draw_dynamic_objects(ComPtr<ID3D12PipelineState> pipeline_state);
+    void draw_transparent_objects(ComPtr<ID3D12PipelineState> pipeline_state);
+    void draw_alpha_cut_out_objects(ComPtr<ID3D12PipelineState> pipeline_state);
     void close();
     void simple_render_pass(ComPtr<ID3D12PipelineState> dynamic_objects_pipeline_state,
         ComPtr<ID3D12PipelineState> static_objects_pipeline_state);
 private:
     ComPtr<ID3D12GraphicsCommandList> m_command_list;
     Texture_mapping m_texture_mapping;
+    Input_layout m_input_layout;
     Shadow_map* m_shadow_map;
     Scene* m_scene;
     const View* m_view;

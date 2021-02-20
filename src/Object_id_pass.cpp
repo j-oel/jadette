@@ -25,14 +25,16 @@ Object_id_pass::Object_id_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_form
 
     create_pipeline_state(device, m_pipeline_state_dynamic_objects, m_root_signature.get(),
         "object_ids_vertex_shader_srv_instance_data", "pixel_shader_object_ids",
-        dsv_format, render_targets_count, Input_layout::position, backface_culling,
+        dsv_format, render_targets_count, Input_layout::position, backface_culling ?
+        Backface_culling::enabled : Backface_culling::disabled, Alpha_blending::disabled,
         Depth_write::enabled, m_rtv_format);
     SET_DEBUG_NAME(m_pipeline_state_dynamic_objects,
         L"Object Id Pipeline State Object Dynamic Objects");
 
     create_pipeline_state(device, m_pipeline_state_static_objects, m_root_signature.get(),
         "object_ids_vertex_shader_srv_instance_data_static_objects", "pixel_shader_object_ids",
-        dsv_format, render_targets_count, Input_layout::position, backface_culling,
+        dsv_format, render_targets_count, Input_layout::position, backface_culling ?
+        Backface_culling::enabled : Backface_culling::disabled, Alpha_blending::disabled,
         Depth_write::enabled, m_rtv_format);
     SET_DEBUG_NAME(m_pipeline_state_static_objects,
         L"Object Id Pipeline State Object Static Objects");
@@ -74,7 +76,7 @@ void Object_id_pass::record_commands(Scene& scene, const View& view,
     set_and_clear_render_target(command_list, depth_stencil);
 
     Commands c(command_list, &depth_stencil, Texture_mapping::disabled,
-        &view, &scene, nullptr, &m_root_signature,
+        Input_layout::position, &view, &scene, nullptr, &m_root_signature,
         m_root_signature.m_root_param_index_of_instance_data);
     c.simple_render_pass(m_pipeline_state_dynamic_objects, m_pipeline_state_static_objects);
 

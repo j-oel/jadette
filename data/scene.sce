@@ -58,6 +58,14 @@ object plane1 static plane_model not_used -20 -10 0 30
 object plane2 static plane_model not_used 10 -8 0 30
 object platform static platform_model not_used 20 -7 4 1
 
+model cube_transparent cube_transparent.obj
+object transparent_cube dynamic cube_transparent not_used 0 3 -5 2
+object transparent_cube2 dynamic cube_transparent not_used 8 4 -4 1.4
+
+model grating plane_grating.obj
+object grating1 static grating not_used 4 3 -3 2
+object grating2 static grating not_used 4.2 3.3 -5 2
+object grating3 static grating not_used 3.9 3.3 -6 2.5
 
 # To define a light:
 # light <position_x> <position_y> <position_z> <focus_point_x> <focus_point_y> <focus_point_z>

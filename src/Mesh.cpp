@@ -48,11 +48,18 @@ void Mesh::draw(ComPtr<ID3D12GraphicsCommandList> command_list, int draw_instanc
 {
     switch (input_element_model)
     {
-        case Input_layout::position_normal:
+        case Input_layout::position_normal_tangents:
         {
             D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_positions_buffer_view,
             m_vertex_normals_buffer_view, m_vertex_tangents_buffer_view,
                 m_vertex_bitangents_buffer_view };
+            command_list->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
+            break;
+        }
+        case Input_layout::position_normal:
+        {
+            D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_positions_buffer_view,
+            m_vertex_normals_buffer_view, };
             command_list->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
             break;
         }
@@ -78,6 +85,10 @@ size_t Mesh::vertices_count()
     return m_vertices_count;
 }
 
+DirectX::XMVECTOR Mesh::center() const
+{
+    return DirectX::XMLoadFloat3(&m_center);
+}
 
 namespace
 {
@@ -167,10 +178,24 @@ namespace
     }
 }
 
+DirectX::XMVECTOR calculate_center(const Vertices& vertices)
+{
+    using namespace DirectX;
+
+    XMVECTOR accumulation = XMVectorZero();
+    for (auto p : vertices.positions)
+        accumulation += convert_half4_to_vector(p.position);
+
+    auto center = accumulation / static_cast<float>(vertices.positions.size());
+    return center;
+}
+
 void Mesh::create_and_fill_vertex_buffers(const Vertices& vertices,
     ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
     m_vertices_count = vertices.positions.size();
+
+    DirectX::XMStoreFloat3(&m_center, calculate_center(vertices));
 
     create_and_fill_vertex_buffer(device, command_list, m_vertex_positions_buffer,
         m_temp_upload_resource_vb_pos, vertices.positions, m_vertex_positions_buffer_view);

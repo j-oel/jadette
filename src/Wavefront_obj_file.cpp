@@ -229,9 +229,31 @@ void read_obj_file(const string& filename, Vertices& vertices, vector<int>& indi
         input_tangents, input_bitangents, not_used, nullptr);
 }
 
+void create_one_model_per_triangle(std::shared_ptr<Model_collection> collection,
+    ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
+    const Vertices& vertices, const vector<int>& indices, const string& material)
+{
+    constexpr size_t vertex_count_per_triangle = 3;
+    vector<int> new_indices = { 0, 1, 2 };
+    for (size_t i = 0; i < indices.size(); i += vertex_count_per_triangle)
+    {
+        Vertices new_vertices;
+        for (size_t j = i; j < i + vertex_count_per_triangle; ++j)
+        {
+            new_vertices.positions.push_back(vertices.positions[indices[j]]);
+            new_vertices.normals.push_back(vertices.normals[indices[j]]);
+            new_vertices.tangents.push_back(vertices.tangents[indices[j]]);
+            new_vertices.bitangents.push_back(vertices.bitangents[indices[j]]);
+        }
+        collection->models.push_back({
+            std::make_shared<Mesh>(device, command_list, new_vertices, new_indices), material });
+    }
+}
+
 std::shared_ptr<Model_collection> read_obj_file(const string& filename, 
     ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
+    using namespace Material_settings;
     std::ifstream file(filename);
 
     vector<XMHALF4> input_vertices;
@@ -249,7 +271,16 @@ std::shared_ptr<Model_collection> read_obj_file(const string& filename,
         string material;
         more_objects = read_obj_file(file, vertices, indices, input_vertices, input_normals,
             input_texture_coords, input_tangents, input_bitangents, material, &collection->materials);
-        collection->models.push_back({ std::make_shared<Mesh>(device,
+
+        auto material_iter = collection->materials.find(material);
+        if (material_iter != collection->materials.end() && // We don't require the obj-file to
+            material_iter->second.settings & transparency)  // reference an mtl file.
+            // We do this to be able to sort the triangles and hence be able to render the
+            // transparent objects with (most of the time) correct alpha blending.
+            create_one_model_per_triangle(collection, device, command_list,
+                vertices, indices, material);
+        else
+            collection->models.push_back({ std::make_shared<Mesh>(device,
                 command_list, vertices, indices), material });
     }
 
@@ -259,6 +290,7 @@ std::shared_ptr<Model_collection> read_obj_file(const string& filename,
 
 void read_mtl_file(const string file_name, map<string, Material>& materials)
 {
+    using namespace Material_settings;
     ifstream file(file_name);
     string input;
     string name;
@@ -288,6 +320,16 @@ void read_mtl_file(const string file_name, map<string, Material>& materials)
             file >> material.normal_map;
             material.settings |= normal_map_exists;
         }
+        else if (input == "d")
+        {
+            float d;
+            file >> d;  // I don't actually use the d value as transparency for the object,
+            if (d < 1)  // instead I use the alpha channel of the map_Kd texture.
+                material.settings |= transparency; // If this flag is set I create one
+                                                   // Graphical_object per triangle, so that
+                                                   // they can be drawn in back to front order
+                                                   // and (somewhat) correctly alpha blended.
+        }
         else if (input == "normal_map_invert_y") // My extension
         {
             bool invert_y;
@@ -308,6 +350,13 @@ void read_mtl_file(const string file_name, map<string, Material>& materials)
             file >> mirror;
             if (mirror)
                 material.settings |= mirror_texture_addressing;
+        }
+        else if (input == "alpha_cut_out") // My extension
+        {
+            bool cut_out;
+            file >> cut_out;
+            if (cut_out)
+                material.settings |= alpha_cut_out;
         }
     }
     

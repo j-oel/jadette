@@ -1,0 +1,4 @@
+newmtl transparent
+d 0.5
+map_Kd transparent.dds
+map_Bump plane_normal_map.jpg

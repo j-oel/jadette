@@ -13,12 +13,12 @@
 #include "util.h"
 
 Commands::Commands(ComPtr<ID3D12GraphicsCommandList> command_list, 
-    Depth_stencil* depth_stencil, Texture_mapping texture_mapping,
+    Depth_stencil* depth_stencil, Texture_mapping texture_mapping, Input_layout input_layout,
     const View* view, Scene* scene, Depth_pass* depth_pass, Root_signature* root_signature,
     int root_param_index_of_instance_data,
     Shadow_map* shadow_map/* = nullptr*/) :
-    m_command_list(command_list),
-    m_texture_mapping(texture_mapping), m_depth_stencil(depth_stencil),
+    m_command_list(command_list), m_texture_mapping(texture_mapping),
+    m_input_layout(input_layout), m_depth_stencil(depth_stencil),
     m_scene(scene), m_view(view), m_depth_pass(depth_pass), m_root_signature(root_signature),
     m_root_param_index_of_instance_data(root_param_index_of_instance_data),
     m_shadow_map(shadow_map), m_dsv_handle(m_depth_stencil->cpu_handle())
@@ -77,24 +77,40 @@ void Commands::close()
     throw_if_failed(m_command_list->Close());
 }
 
-void Commands::draw_static_objects(ComPtr<ID3D12PipelineState> pipeline_state,
-    const Input_layout& input_element_model)
+void Commands::draw_static_objects(ComPtr<ID3D12PipelineState> pipeline_state)
 {
     assert(m_scene);
     m_command_list->SetPipelineState(pipeline_state.Get());
     m_scene->set_static_instance_data_shader_constant(m_command_list,
         m_root_param_index_of_instance_data);
-    m_scene->draw_static_objects(m_command_list, m_texture_mapping, input_element_model);
+    m_scene->draw_static_objects(m_command_list, m_texture_mapping, m_input_layout);
 }
 
-void Commands::draw_dynamic_objects(ComPtr<ID3D12PipelineState> pipeline_state,
-    const Input_layout& input_element_model)
+void Commands::draw_dynamic_objects(ComPtr<ID3D12PipelineState> pipeline_state)
 {
     assert(m_scene);
     m_command_list->SetPipelineState(pipeline_state.Get());
     m_scene->set_dynamic_instance_data_shader_constant(m_command_list,
         m_root_param_index_of_instance_data);
-    m_scene->draw_dynamic_objects(m_command_list, m_texture_mapping, input_element_model);
+    m_scene->draw_dynamic_objects(m_command_list, m_texture_mapping, m_input_layout);
+}
+
+void Commands::draw_transparent_objects(ComPtr<ID3D12PipelineState> pipeline_state)
+{
+    assert(m_scene);
+    m_command_list->SetPipelineState(pipeline_state.Get());
+    m_scene->set_static_instance_data_shader_constant(m_command_list,
+        m_root_param_index_of_instance_data);
+    m_scene->draw_transparent_objects(m_command_list, Texture_mapping::enabled, m_input_layout);
+}
+
+void Commands::draw_alpha_cut_out_objects(ComPtr<ID3D12PipelineState> pipeline_state)
+{
+    assert(m_scene);
+    m_command_list->SetPipelineState(pipeline_state.Get());
+    m_scene->set_static_instance_data_shader_constant(m_command_list,
+        m_root_param_index_of_instance_data);
+    m_scene->draw_alpha_cut_out_objects(m_command_list, Texture_mapping::enabled, m_input_layout);
 }
 
 void Commands::simple_render_pass(ComPtr<ID3D12PipelineState> dynamic_objects_pipeline_state,
@@ -103,6 +119,6 @@ void Commands::simple_render_pass(ComPtr<ID3D12PipelineState> dynamic_objects_pi
     set_root_signature();
     set_shader_constants();
     clear_depth_stencil();
-    draw_dynamic_objects(dynamic_objects_pipeline_state, Input_layout::position);
-    draw_static_objects(static_objects_pipeline_state, Input_layout::position);
+    draw_dynamic_objects(dynamic_objects_pipeline_state);
+    draw_static_objects(static_objects_pipeline_state);
 }

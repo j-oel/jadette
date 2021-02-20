@@ -23,6 +23,8 @@ struct Dynamic_object
     int transform_ref;
 };
 
+class View;
+
 class Scene
 {
 public:
@@ -38,6 +40,11 @@ public:
     void draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list, 
         Texture_mapping texture_mapping, const Input_layout& input_element_model) const;
     void draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list, 
+        Texture_mapping texture_mapping, const Input_layout& input_element_model) const;
+    void sort_transparent_objects_back_to_front(const View& view);
+    void draw_transparent_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+        Texture_mapping texture_mapping, const Input_layout& input_element_model) const;
+    void draw_alpha_cut_out_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
         Texture_mapping texture_mapping, const Input_layout& input_element_model) const;
     void upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
     int triangles_count() const { return m_triangles_count; }
@@ -69,6 +76,8 @@ private:
     std::vector<std::shared_ptr<Graphical_object> > m_graphical_objects;
     std::vector<std::shared_ptr<Graphical_object> > m_static_objects;
     std::vector<std::shared_ptr<Graphical_object> > m_dynamic_objects;
+    std::vector<std::shared_ptr<Graphical_object> > m_transparent_objects;
+    std::vector<std::shared_ptr<Graphical_object> > m_alpha_cut_out_objects;
     std::vector<Dynamic_object> m_flying_objects;
     std::vector<Dynamic_object> m_rotating_objects;
 

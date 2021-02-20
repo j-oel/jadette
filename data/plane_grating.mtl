@@ -1,0 +1,3 @@
+newmtl grating
+map_Kd grating.png
+alpha_cut_out 1

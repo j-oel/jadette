@@ -43,9 +43,11 @@ public:
     size_t vertices_count();
     int instances() { return m_instances; }
     int id() { return m_id; }
-
+    DirectX::XMVECTOR center() const;
+    void transform_center(DirectX::XMMATRIX model_view);
 private:
 
+    DirectX::XMFLOAT3 m_transformed_center;
     std::shared_ptr<Mesh> m_mesh;
     std::shared_ptr<Texture> m_diffuse_map;
     std::shared_ptr<Texture> m_normal_map;

@@ -47,14 +47,16 @@ public:
 };
 
 
-enum class Input_layout { position_normal, position };
-enum class Depth_write { enabled, disabled };
+enum class Input_layout { position_normal_tangents, position_normal, position };
+enum class Depth_write { enabled, disabled, alpha_blending };
+enum class Backface_culling { enabled, disabled };
+enum class Alpha_blending { enabled, disabled };
 
-void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineState>& pipeline_state,
-    ComPtr<ID3D12RootSignature> root_signature,
+void create_pipeline_state(ComPtr<ID3D12Device> device,
+    ComPtr<ID3D12PipelineState>& pipeline_state, ComPtr<ID3D12RootSignature> root_signature,
     const char* vertex_shader_entry_function, const char* pixel_shader_entry_function,
     DXGI_FORMAT dsv_format, UINT render_targets_count, Input_layout input_layout,
-    bool backface_culling,
+    Backface_culling backface_culling, Alpha_blending alpha_blending = Alpha_blending::disabled,
     Depth_write depth_write = Depth_write::enabled,
     DXGI_FORMAT rtv_format0 = DXGI_FORMAT_R8G8B8A8_UNORM,
     DXGI_FORMAT rtv_format1 = DXGI_FORMAT_R8G8B8A8_UNORM);

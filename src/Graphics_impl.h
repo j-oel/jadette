@@ -36,9 +36,9 @@ public:
     const int m_root_param_index_of_values = 0;
     const int m_root_param_index_of_matrices = 1;
     const int m_root_param_index_of_textures = 2;
-    const int m_root_param_index_of_vectors = 3;
-    const int m_root_param_index_of_shadow_map = 4;
-    const int m_root_param_index_of_normal_maps = 5;
+    const int m_root_param_index_of_normal_maps = 3;
+    const int m_root_param_index_of_vectors = 4;
+    const int m_root_param_index_of_shadow_map = 5;
     const int m_root_param_index_of_instance_data = 6;
 private:
     UINT* m_render_settings;
@@ -69,6 +69,9 @@ private:
     Depth_stencil m_depth_stencil;
     ComPtr<ID3D12PipelineState> m_pipeline_state;
     ComPtr<ID3D12PipelineState> m_pipeline_state_early_z;
+    ComPtr<ID3D12PipelineState> m_pipeline_state_transparency;
+    ComPtr<ID3D12PipelineState> m_pipeline_state_alpha_cut_out_early_z;
+    ComPtr<ID3D12PipelineState> m_pipeline_state_alpha_cut_out;
 
     Depth_pass m_depth_pass;
     Shadow_map m_shadow_map;

@@ -173,20 +173,31 @@ pixel_shader_input vertex_shader_model_trans_rot(float4 position : POSITION, flo
         scaled_model);
 }
 
+struct Trans_rot
+{
+    float4 translation;
+    float4 rotation;
+};
+
+Trans_rot get_trans_rot(uint instance_id)
+{
+    Trans_rot result;
+    const uint index = values.object_id + instance_id;
+    uint4 v = instance[index].value;
+    result.translation = float4(f16tof32(v.x), f16tof32(v.x >> 16), f16tof32(v.y), f16tof32(v.y >> 16));
+    result.rotation = float4(f16tof32(v.z), f16tof32(v.z >> 16), f16tof32(v.w), f16tof32(v.w >> 16));
+    return result;
+}
 
 pixel_shader_input vertex_shader_srv_instance_data(uint instance_id : SV_InstanceID, 
     float4 position : POSITION, float4 normal : NORMAL, float4 tangent : TANGENT,
     float4 bitangent : BITANGENT)
 {
-    const uint index = values.object_id + instance_id; 
-    uint4 v = instance[index].value;
-
-    float4 translation = float4(f16tof32(v.x), f16tof32(v.x >> 16), f16tof32(v.y), f16tof32(v.y >> 16));
-    float4 rotation = float4(f16tof32(v.z), f16tof32(v.z >> 16), f16tof32(v.w), f16tof32(v.w >> 16));
+    Trans_rot trans_rot = get_trans_rot(instance_id);
 
     float2 texcoord = float2(position.w, normal.w);
     return vertex_shader_model_trans_rot(float4(position.xyz, 1), normal.xyz, tangent, bitangent,
-        texcoord, translation, rotation);
+        texcoord, trans_rot.translation, trans_rot.rotation);
 }
 
 
@@ -243,6 +254,20 @@ float3 tangent_space_normal_mapping(pixel_shader_input input)
 
 float4 pixel_shader(pixel_shader_input input) : SV_TARGET
 {
+    float4 color = float4(0.4, 0.4, 0.4, 1.0f);
+
+    if (values.render_settings & texture_mapping_enabled)
+    {
+        if (values.material_settings & mirror_texture_addressing)
+            color = tex.Sample(texture_mirror_sampler, input.texcoord);
+        else
+            color = tex.Sample(texture_sampler, input.texcoord);
+    }
+
+    const float alpha_cut_out_cut_off_value = 0.01;
+    if (color.a < alpha_cut_out_cut_off_value)
+        discard;
+
     float shadow = 1.0f;
     if (values.render_settings & shadow_mapping_enabled)
         shadow = shadow_value(input);
@@ -260,15 +285,7 @@ float4 pixel_shader(pixel_shader_input input) : SV_TARGET
     const float shininess = 0.4f;
     const float specular = shininess * saturate(pow(saturate(dot(2 * dot(normal, -light) * normal + light,
         normalize(input.position.xyz - eye))), 30));
-    float4 color = float4(0.4, 0.4, 0.4, 1.0f);
-    
-    if (values.render_settings & texture_mapping_enabled)
-    {
-        if (values.material_settings & mirror_texture_addressing)
-            color = tex.Sample(texture_mirror_sampler, input.texcoord);
-        else
-            color = tex.Sample(texture_sampler, input.texcoord);
-    }
+
     const float4 ambient_light = float4(0.2f, 0.2f, 0.2f, 1.0f);
     const float4 ambient = color * ambient_light;
     const float4 result = ambient + shadow * (color * saturate(dot(normal, light)) +
@@ -276,6 +293,51 @@ float4 pixel_shader(pixel_shader_input input) : SV_TARGET
 
     return result;
 }
+
+struct depths_alpha_cut_out_vertex_shader_output
+{
+    float4 sv_position : SV_POSITION;
+    half2 texcoord : TEXCOORD;
+};
+
+
+void pixel_shader_depths_alpha_cut_out(depths_alpha_cut_out_vertex_shader_output input)
+{
+    float4 color;
+    if (values.material_settings & mirror_texture_addressing)
+        color = tex.Sample(texture_mirror_sampler, input.texcoord);
+    else
+        color = tex.Sample(texture_sampler, input.texcoord);
+    if (color.a < 0.8)
+        discard;
+
+    return;
+}
+
+
+depths_alpha_cut_out_vertex_shader_output depths_alpha_cut_out_vertex_shader_model_trans_rot(
+    float4 position : POSITION, float2 texcoord : TEXCOORD,
+    half4 translation : TRANSLATION, half4 rotation : ROTATION)
+{
+    depths_alpha_cut_out_vertex_shader_output result;
+    half4x4 model = to_scaled_model_matrix(translation, rotation);
+    float4x4 model_view_projection = mul(matrices.view_projection, model);
+    result.sv_position = mul(model_view_projection, position);
+    result.texcoord = texcoord;
+    return result;
+}
+
+
+depths_alpha_cut_out_vertex_shader_output depths_alpha_cut_out_vertex_shader_srv_instance_data(
+    uint instance_id : SV_InstanceID, float4 position : POSITION, float4 normal : NORMAL)
+{
+    Trans_rot trans_rot = get_trans_rot(instance_id);
+    float2 texcoord = float2(position.w, normal.w);
+
+    return depths_alpha_cut_out_vertex_shader_model_trans_rot(float4(position.xyz, 1),
+        texcoord, trans_rot.translation, trans_rot.rotation);
+}
+
 
 struct depths_vertex_shader_output
 {
@@ -295,13 +357,9 @@ depths_vertex_shader_output depths_vertex_shader_model_trans_rot(float4 position
 depths_vertex_shader_output depths_vertex_shader_srv_instance_data(uint instance_id : SV_InstanceID,
     float3 position : POSITION)
 {
-    const uint index = values.object_id + instance_id;
-    uint4 v = instance[index].value;
-
-    float4 translation = float4(f16tof32(v.x), f16tof32(v.x >> 16), f16tof32(v.y), f16tof32(v.y >> 16));
-    float4 rotation = float4(f16tof32(v.z), f16tof32(v.z >> 16), f16tof32(v.w), f16tof32(v.w >> 16));
-
-    return depths_vertex_shader_model_trans_rot(float4(position, 1), translation, rotation);
+    Trans_rot trans_rot = get_trans_rot(instance_id);
+    return depths_vertex_shader_model_trans_rot(float4(position, 1),
+        trans_rot.translation, trans_rot.rotation);
 }
 
 
@@ -329,37 +387,21 @@ object_ids_vertex_shader_output object_ids_vertex_shader_model_trans_rot(float4 
     return result;
 }
 
-struct Trans_rot
-{
-    float4 translation;
-    float4 rotation;
-};
-
-Trans_rot get_trans_rot(uint index)
-{
-    Trans_rot result;
-    uint4 v = instance[index].value;
-    result.translation = float4(f16tof32(v.x), f16tof32(v.x >> 16), f16tof32(v.y), f16tof32(v.y >> 16));
-    result.rotation = float4(f16tof32(v.z), f16tof32(v.z >> 16), f16tof32(v.w), f16tof32(v.w >> 16));
-    return result;
-}
-
 
 object_ids_vertex_shader_output object_ids_vertex_shader_srv_instance_data(
     uint instance_id : SV_InstanceID, float3 position : POSITION)
 {
+    Trans_rot trans_rot = get_trans_rot(instance_id);
     const uint index = values.object_id + instance_id;
-    Trans_rot trans_rot = get_trans_rot(index);
     return object_ids_vertex_shader_model_trans_rot(float4(position, 1), trans_rot.translation,
         trans_rot.rotation, index);
 }
 
 
-object_ids_vertex_shader_output object_ids_vertex_shader_srv_instance_data_static_objects(uint instance_id :
-SV_InstanceID, float3 position : POSITION)
+object_ids_vertex_shader_output object_ids_vertex_shader_srv_instance_data_static_objects(
+    uint instance_id : SV_InstanceID, float3 position : POSITION)
 {
-    const uint index = values.object_id + instance_id;
-    Trans_rot trans_rot = get_trans_rot(index);
+    Trans_rot trans_rot = get_trans_rot(instance_id);
     return object_ids_vertex_shader_model_trans_rot(float4(position, 1), trans_rot.translation,
         trans_rot.rotation, -1);
 }

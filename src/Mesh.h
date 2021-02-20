@@ -68,6 +68,7 @@ public:
 
     int triangles_count();
     size_t vertices_count();
+    DirectX::XMVECTOR center() const;
 
 private:
 
@@ -93,6 +94,7 @@ private:
     D3D12_INDEX_BUFFER_VIEW m_index_buffer_view;
     UINT m_index_count;
     size_t m_vertices_count;
+    DirectX::XMFLOAT3 m_center;
 
     ComPtr<ID3D12Resource> m_temp_upload_resource_vb_pos;
     ComPtr<ID3D12Resource> m_temp_upload_resource_vb_normals;
@@ -112,11 +114,16 @@ void calculate_and_add_tangent_and_bitangent(DirectX::XMVECTOR v[vertex_count_pe
 
 // This is not the most natural place to define these, conceptually. The reason to define them here
 // is that they are then visible for those who need it, without including additional files.
-constexpr UINT normal_map_exists = 1;
-constexpr UINT invert_y_in_normal_map = 1 << 2;
-constexpr UINT two_channel_normal_map = 1 << 3;
-constexpr UINT mirror_texture_addressing = 1 << 4;
 
+namespace Material_settings
+{
+    constexpr UINT normal_map_exists = 1;
+    constexpr UINT invert_y_in_normal_map = 1 << 2;
+    constexpr UINT two_channel_normal_map = 1 << 3;
+    constexpr UINT mirror_texture_addressing = 1 << 4;
+    constexpr UINT transparency = 1 << 5;
+    constexpr UINT alpha_cut_out = 1 << 6;
+}
 
 inline DirectX::XMVECTOR convert_half4_to_vector(DirectX::PackedVector::XMHALF4 half4)
 {

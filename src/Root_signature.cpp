@@ -107,7 +107,8 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
     ComPtr<ID3D12RootSignature> root_signature,
     const char* vertex_shader_entry_function, const char* pixel_shader_entry_function,
     DXGI_FORMAT dsv_format, UINT render_targets_count, Input_layout input_layout,
-    bool backface_culling,
+    Backface_culling backface_culling,
+    Alpha_blending alpha_blending/* = Alpha_blending::disabled*/,
     Depth_write depth_write/* = Depth_write::enabled*/,
     DXGI_FORMAT rtv_format0/*= DXGI_FORMAT_R8G8B8A8_UNORM*/,
     DXGI_FORMAT rtv_format1/*= DXGI_FORMAT_R8G8B8A8_UNORM*/)
@@ -138,26 +139,36 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
         handle_errors(hr, error_messages);
     }
 
-    D3D12_INPUT_ELEMENT_DESC input_element_desc_position[] =
+    D3D12_INPUT_ELEMENT_DESC input_element_desc_position_normal_tangents[] =
     {
         { "POSITION", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         { "NORMAL", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         // Texture coordinates are stored in the w components of position and normal.
         { "TANGENT", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 2, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         { "BITANGENT", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 3, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-
     };
 
     D3D12_INPUT_ELEMENT_DESC input_element_desc_position_normal[] =
     {
         { "POSITION", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "NORMAL", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        // Texture coordinates are stored in the w components of position and normal.
+    };
+
+    D3D12_INPUT_ELEMENT_DESC input_element_desc_position[] =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
     };
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC s {};
+    if (input_layout == Input_layout::position_normal_tangents)
+        s.InputLayout = { input_element_desc_position_normal_tangents,
+        _countof(input_element_desc_position_normal_tangents) };
     if (input_layout == Input_layout::position_normal)
-        s.InputLayout = { input_element_desc_position, _countof(input_element_desc_position) };
+        s.InputLayout = { input_element_desc_position_normal,
+        _countof(input_element_desc_position_normal) };
     else if (input_layout == Input_layout::position)
-        s.InputLayout = { input_element_desc_position_normal, _countof(input_element_desc_position_normal) };
+        s.InputLayout = { input_element_desc_position, _countof(input_element_desc_position) };
     s.pRootSignature = root_signature.Get();
     s.VS = CD3DX12_SHADER_BYTECODE(vertex_shader.Get());
     if (pixel_shader_entry_function)
@@ -167,7 +178,7 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
     s.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
     s.SampleMask = UINT_MAX; // Sample mask for blend state
     s.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-    if (!backface_culling)
+    if (backface_culling == Backface_culling::disabled)
         s.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
     auto d = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
     if (depth_write == Depth_write::disabled)
@@ -175,12 +186,31 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
         d.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
         d.DepthFunc = D3D12_COMPARISON_FUNC_EQUAL;
     }
+    else if (depth_write == Depth_write::alpha_blending)
+    {
+        d.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+        d.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+    }
     s.DepthStencilState = d;
     s.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     s.NumRenderTargets = render_targets_count;
     s.DSVFormat = dsv_format;
     s.SampleDesc.Count = 1; // No multisampling
 
+    if (alpha_blending == Alpha_blending::enabled)
+    {
+        D3D12_RENDER_TARGET_BLEND_DESC b {};
+        b.BlendEnable = TRUE;
+        b.BlendOp = D3D12_BLEND_OP_ADD;
+        b.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+        b.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+        b.DestBlendAlpha = D3D12_BLEND_DEST_ALPHA;
+        b.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+        b.SrcBlendAlpha = D3D12_BLEND_ONE;
+        b.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+        b.LogicOpEnable = FALSE;
+        s.BlendState.RenderTarget[0] = b;
+    }
     if (render_targets_count > 0)
         s.RTVFormats[0] = rtv_format0;
     if (render_targets_count > 1)

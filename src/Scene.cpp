@@ -8,14 +8,15 @@
 #include "Scene.h"
 #include "util.h"
 #include "Primitives.h"
-#include "Root_signature.h" // For Input_element_model
 #include "Wavefront_obj_file.h"
+#include "View.h"
 
 #include <fstream>
 #include <string>
 #include <map>
 #include <thread>
 #include <locale.h>
+#include <algorithm>
 
 
 using namespace DirectX;
@@ -329,6 +330,59 @@ void Scene::draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list
     draw_objects(command_list, m_dynamic_objects, texture_mapping, input_element_model, true);
 }
 
+
+struct Graphical_object_z_of_center_greater
+{
+    bool operator()(const std::shared_ptr<Graphical_object>& o1, const std::shared_ptr<Graphical_object>& o2)
+    {
+        return o1->center().m128_f32[2] > o2->center().m128_f32[2];
+    }
+};
+
+XMMATRIX calculate_model_view(Per_instance_transform model, const View& view)
+{
+    XMVECTOR translation = convert_half4_to_vector(model.translation);
+    XMVECTOR rotation = convert_half4_to_vector(model.rotation);
+    XMMATRIX model_matrix = XMMatrixAffineTransformation(XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f),
+        XMVectorZero(), rotation, translation);
+    XMMATRIX model_view = XMMatrixMultiply(model_matrix, view.view_matrix());
+    return model_view;
+}
+
+void Scene::sort_transparent_objects_back_to_front(const View& view)
+{
+    // We only sort the transparent objects, not the alpha cut out objects. For better visual
+    // results they should also be sorted, but we get decent results without sorting. And for 
+    // scenes with many alpha cut out objects we save quite a bit of performance, mainly by
+    // not needing to have one Graphical_object per triangle. The sort seems to actually be
+    // quite cheap.
+    //
+    // Splitting the objects in their composing triangles and sorting those doesn't give
+    // perfect results in all cases either. The order has to be determined per pixel for that.
+
+    for (auto& g : m_transparent_objects)
+    {
+        auto model = m_static_model_transforms[g->id()];
+        auto model_view = calculate_model_view(model, view);
+        g->transform_center(model_view);
+    }
+
+    std::sort(m_transparent_objects.begin(), m_transparent_objects.end(),
+        Graphical_object_z_of_center_greater());
+}
+
+void Scene::draw_transparent_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    Texture_mapping texture_mapping, const Input_layout& input_element_model) const
+{
+    draw_objects(command_list, m_transparent_objects, texture_mapping, input_element_model, false);
+}
+
+void Scene::draw_alpha_cut_out_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    Texture_mapping texture_mapping, const Input_layout& input_element_model) const
+{
+    draw_objects(command_list, m_alpha_cut_out_objects, texture_mapping, input_element_model, false);
+}
+
 void Scene::upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
     if (!m_static_objects.empty())
@@ -442,6 +496,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
     using std::string;
     using std::ifstream;
     using DirectX::XMFLOAT3;
+    using namespace Material_settings;
 
     map<string, shared_ptr<Mesh>> meshes;
     map<string, shared_ptr<Model_collection>> model_collections;
@@ -489,7 +544,11 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
 
         m_graphical_objects.push_back(object);
 
-        if (dynamic)
+        if (material_settings & transparency)
+            m_transparent_objects.push_back(object);
+        else if (material_settings & alpha_cut_out)
+            m_alpha_cut_out_objects.push_back(object);
+        else if (dynamic)
         {
             m_dynamic_objects.push_back(object);
             m_dynamic_model_transforms.push_back(transform);
