@@ -67,6 +67,12 @@ object grating1 static grating not_used 4 3 -3 2
 object grating2 static grating not_used 4.2 3.3 -5 2
 object grating3 static grating not_used 3.9 3.3 -6 2.5
 
+
+# To define the view:
+# view <position_x> <position_y> <position_z> <focus_point_x> <focus_point_y> <focus_point_z>
+
+view -5 15 -20 0 0 0
+
 # To define a light:
 # light <position_x> <position_y> <position_z> <focus_point_x> <focus_point_y> <focus_point_z>
 

@@ -89,6 +89,8 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
     int root_param_index_of_values, int root_param_index_of_normal_maps, 
     int normal_map_settings_offset, int descriptor_index_of_dynamic_instance_data,
     int descriptor_index_of_static_instance_data) :
+    m_initial_view_position(0.0f, 0.0f, -20.0f),
+    m_initial_view_focus_point(0.0f, 0.0f, 0.0f),
     m_light_position(XMVectorSet(0.0f, 20.0f, 5.0f, 1.0f)),
     m_root_param_index_of_values(root_param_index_of_values),
     m_triangles_count(0), m_vertices_count(0), m_selected_object_id(-1), m_object_selected(false)
@@ -446,6 +448,18 @@ void Scene::select_object(int object_id)
     }
 }
 
+DirectX::XMVECTOR Scene::initial_view_position() const
+{
+    return XMVectorSet(m_initial_view_position.x, m_initial_view_position.y,
+                       m_initial_view_position.z, 1.0f);
+}
+
+DirectX::XMVECTOR Scene::initial_view_focus_point() const
+{
+    return XMVectorSet(m_initial_view_focus_point.x, m_initial_view_focus_point.y,
+                       m_initial_view_focus_point.z, 1.0f);
+}
+
 void Scene::upload_resources_to_gpu(ComPtr<ID3D12Device> device,
     ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
@@ -786,6 +800,15 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
 
             m_light_position = XMVectorSet(pos.x, pos.y, pos.z, 1.0f);
             m_light_focus_point = XMVectorSet(focus_point.x, focus_point.y, focus_point.z, 1.0f);
+        }
+        else if (input == "view")
+        {
+            file >> m_initial_view_position.x;
+            file >> m_initial_view_position.y;
+            file >> m_initial_view_position.z;
+            file >> m_initial_view_focus_point.x;
+            file >> m_initial_view_focus_point.y;
+            file >> m_initial_view_focus_point.z;
         }
         else if (!input.empty() && input[0] == '#')
         {

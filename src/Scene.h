@@ -59,6 +59,8 @@ public:
     void manipulate_object(DirectX::XMVECTOR delta_pos, DirectX::XMVECTOR delta_rotation);
     void select_object(int object_id);
     bool object_selected() { return m_object_selected; }
+    DirectX::XMVECTOR initial_view_position() const;
+    DirectX::XMVECTOR initial_view_focus_point() const;
 private:
     void upload_resources_to_gpu(ComPtr<ID3D12Device> device,
         ComPtr<ID3D12GraphicsCommandList>& command_list);
@@ -82,6 +84,9 @@ private:
     std::vector<Dynamic_object> m_rotating_objects;
 
     std::vector<std::shared_ptr<Texture>> m_textures;
+
+    DirectX::XMFLOAT3 m_initial_view_position;
+    DirectX::XMFLOAT3 m_initial_view_focus_point;
 
     DirectX::XMVECTOR m_light_position;
     DirectX::XMVECTOR m_light_focus_point;
