@@ -157,9 +157,14 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
         if (exc)
         {
             scene_error = true;
+
+            // Release all objects so that we can continue and show the screen without graphics
+            // driver errors/violations.
             m_graphical_objects.clear();
             m_static_objects.clear();
             m_dynamic_objects.clear();
+            m_transparent_objects.clear();
+            m_alpha_cut_out_objects.clear();
             m_rotating_objects.clear();
             m_flying_objects.clear();
             std::rethrow_exception(exc);
@@ -294,7 +299,7 @@ void Scene::update()
 
 void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list, 
     const std::vector<std::shared_ptr<Graphical_object> >& objects,
-    Texture_mapping texture_mapping, const Input_layout& input_element_model, bool dynamic) const
+    Texture_mapping texture_mapping, const Input_layout& input_layout, bool dynamic) const
 {
     command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -310,9 +315,9 @@ void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
         command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
             size_in_words_of_value, &object_id, offset);
         if (texture_mapping == Texture_mapping::enabled)
-            graphical_object->draw_textured(command_list, input_element_model);
+            graphical_object->draw_textured(command_list, input_layout);
         else
-            graphical_object->draw(command_list, input_element_model);
+            graphical_object->draw(command_list, input_layout);
 
         // If instances() returns more than 1, those additional instances were already drawn
         // by the last draw call and the corresponding graphical objects should hence be skipped.
@@ -321,15 +326,15 @@ void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
 }
 
 void Scene::draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    Texture_mapping texture_mapping, const Input_layout& input_element_model) const
+    Texture_mapping texture_mapping, const Input_layout& input_layout) const
 {
-    draw_objects(command_list, m_static_objects, texture_mapping, input_element_model, false);
+    draw_objects(command_list, m_static_objects, texture_mapping, input_layout, false);
 }
 
 void Scene::draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    Texture_mapping texture_mapping, const Input_layout& input_element_model) const
+    Texture_mapping texture_mapping, const Input_layout& input_layout) const
 {
-    draw_objects(command_list, m_dynamic_objects, texture_mapping, input_element_model, true);
+    draw_objects(command_list, m_dynamic_objects, texture_mapping, input_layout, true);
 }
 
 
@@ -374,15 +379,15 @@ void Scene::sort_transparent_objects_back_to_front(const View& view)
 }
 
 void Scene::draw_transparent_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    Texture_mapping texture_mapping, const Input_layout& input_element_model) const
+    Texture_mapping texture_mapping, const Input_layout& input_layout) const
 {
-    draw_objects(command_list, m_transparent_objects, texture_mapping, input_element_model, false);
+    draw_objects(command_list, m_transparent_objects, texture_mapping, input_layout, false);
 }
 
 void Scene::draw_alpha_cut_out_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    Texture_mapping texture_mapping, const Input_layout& input_element_model) const
+    Texture_mapping texture_mapping, const Input_layout& input_layout) const
 {
-    draw_objects(command_list, m_alpha_cut_out_objects, texture_mapping, input_element_model, false);
+    draw_objects(command_list, m_alpha_cut_out_objects, texture_mapping, input_layout, false);
 }
 
 void Scene::upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list)

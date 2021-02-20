@@ -44,9 +44,9 @@ void Mesh::release_temp_resources()
 
 
 void Mesh::draw(ComPtr<ID3D12GraphicsCommandList> command_list, int draw_instances_count,
-    const Input_layout& input_element_model)
+    const Input_layout& input_layout)
 {
-    switch (input_element_model)
+    switch (input_layout)
     {
         case Input_layout::position_normal_tangents:
         {

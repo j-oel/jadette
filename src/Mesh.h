@@ -64,7 +64,7 @@ public:
     void release_temp_resources();
 
     void draw(ComPtr<ID3D12GraphicsCommandList> command_list, int draw_instances_count,
-        const Input_layout& input_element_model);
+        const Input_layout& input_layout);
 
     int triangles_count();
     size_t vertices_count();

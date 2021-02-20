@@ -58,13 +58,13 @@ Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<
 }
 
 void Graphical_object::draw(ComPtr<ID3D12GraphicsCommandList> command_list,
-    const Input_layout& input_element_model)
+    const Input_layout& input_layout)
 {
-    m_mesh->draw(command_list, m_instances, input_element_model);
+    m_mesh->draw(command_list, m_instances, input_layout);
 }
 
 void Graphical_object::draw_textured(ComPtr<ID3D12GraphicsCommandList> command_list,
-    const Input_layout& input_element_model)
+    const Input_layout& input_layout)
 {
     constexpr UINT size_in_words_of_value = 1;
     command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
@@ -79,7 +79,7 @@ void Graphical_object::draw_textured(ComPtr<ID3D12GraphicsCommandList> command_l
         m_diffuse_map->set_texture_for_shader(command_list, m_root_param_index_of_normal_maps);
 
 
-    draw(command_list, input_element_model);
+    draw(command_list, input_layout);
 }
 
 void Graphical_object::release_temp_resources()

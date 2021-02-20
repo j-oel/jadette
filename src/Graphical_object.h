@@ -34,10 +34,9 @@ public:
         int material_settings_offset, std::shared_ptr<Texture> normal_map, int id,
         UINT material_settings = 0, int instances = 1);
 
-    void draw(ComPtr<ID3D12GraphicsCommandList> command_list,
-        const Input_layout& input_element_model);
+    void draw(ComPtr<ID3D12GraphicsCommandList> command_list, const Input_layout& input_layout);
     void draw_textured(ComPtr<ID3D12GraphicsCommandList> command_list,
-        const Input_layout& input_element_model);
+        const Input_layout& input_layout);
     void release_temp_resources();
     int triangles_count();
     size_t vertices_count();

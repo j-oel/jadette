@@ -38,14 +38,14 @@ public:
     void update();
 
     void draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list, 
-        Texture_mapping texture_mapping, const Input_layout& input_element_model) const;
+        Texture_mapping texture_mapping, const Input_layout& input_layout) const;
     void draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list, 
-        Texture_mapping texture_mapping, const Input_layout& input_element_model) const;
+        Texture_mapping texture_mapping, const Input_layout& input_layout) const;
     void sort_transparent_objects_back_to_front(const View& view);
     void draw_transparent_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
-        Texture_mapping texture_mapping, const Input_layout& input_element_model) const;
+        Texture_mapping texture_mapping, const Input_layout& input_layout) const;
     void draw_alpha_cut_out_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
-        Texture_mapping texture_mapping, const Input_layout& input_element_model) const;
+        Texture_mapping texture_mapping, const Input_layout& input_layout) const;
     void upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
     int triangles_count() const { return m_triangles_count; }
     size_t vertices_count() const { return m_vertices_count; }
@@ -67,7 +67,7 @@ private:
     void upload_static_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
     void draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
         const std::vector<std::shared_ptr<Graphical_object> >& objects,
-        Texture_mapping texture_mapping, const Input_layout& input_element_model,
+        Texture_mapping texture_mapping, const Input_layout& input_layout,
         bool dynamic) const;
     void read_file(const std::string& file_name, ComPtr<ID3D12Device> device, 
         ComPtr<ID3D12GraphicsCommandList>& command_list, int texture_start_index,
