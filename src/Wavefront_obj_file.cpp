@@ -311,6 +311,15 @@ void read_mtl_file(const string file_name, map<string, Material>& materials)
             }
             file >> name;
         }
+        else if (input == "Ke")
+        {
+            float Ke_r, Ke_g, Ke_b;
+            file >> Ke_r;
+            file >> Ke_g;
+            file >> Ke_b;
+            if (Ke_r != 0.0f || Ke_g != 0.0f || Ke_b != 0.0f)
+                material.settings |= emissive;
+        }
         else if (input == "map_Kd")
         {
             file >> material.diffuse_map;

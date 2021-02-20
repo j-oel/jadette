@@ -18,6 +18,8 @@ static const uint normal_map_exists = 1;
 static const uint invert_y_in_normal_map = 1 << 2;
 static const uint two_channel_normal_map = 1 << 3;
 static const uint mirror_texture_addressing = 1 << 4;
+static const uint emissive = 1 << 7;
+
 
 static const uint texture_mapping_enabled = 1;
 static const uint normal_mapping_enabled = 1 << 2;
@@ -268,6 +270,10 @@ float4 pixel_shader(pixel_shader_input input) : SV_TARGET
     if (color.a < alpha_cut_out_cut_off_value)
         discard;
 
+    const float emissive_strength = 0.5f;
+    if (values.material_settings & emissive)
+        return color * emissive_strength;
+
     float shadow = 1.0f;
     if (values.render_settings & shadow_mapping_enabled)
         shadow = shadow_value(input);
@@ -286,7 +292,7 @@ float4 pixel_shader(pixel_shader_input input) : SV_TARGET
     const float specular = shininess * saturate(pow(saturate(dot(2 * dot(normal, -light) * normal + light,
         normalize(input.position.xyz - eye))), 30));
 
-    const float4 ambient_light = float4(0.2f, 0.2f, 0.2f, 1.0f);
+    const float4 ambient_light = float4(0.3f, 0.3f, 0.3f, 1.0f);
     const float4 ambient = color * ambient_light;
     const float4 result = ambient + shadow * (color * saturate(dot(normal, light)) +
         specular * float4(1.0f, 1.0f, 1.0f, 0.0f));
