@@ -26,8 +26,8 @@ Shadow_map::Shadow_map(ComPtr<ID3D12Device> device,
     m_depth_stencil.set_debug_names(L"Shadow DSV Heap", L"Shadow Buffer");
 }
 
-void Shadow_map::record_shadow_map_generation_commands_in_command_list(Scene& scene, 
-    Depth_pass& depth_pass, ComPtr<ID3D12GraphicsCommandList> command_list)
+void Shadow_map::record_shadow_map_generation_commands_in_command_list(UINT back_buf_index,
+    Scene& scene, Depth_pass& depth_pass, ComPtr<ID3D12GraphicsCommandList> command_list)
 {
     // This is a shadow map for a kind of spotlight.
     const XMVECTOR focus_position = scene.light_focus_point();
@@ -38,7 +38,7 @@ void Shadow_map::record_shadow_map_generation_commands_in_command_list(Scene& sc
     View view(m_size, m_size, light_position, focus_position, near_z, far_z, fov);
 
     m_depth_stencil.barrier_transition(command_list, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-    depth_pass.record_commands(scene, view, m_depth_stencil, command_list);
+    depth_pass.record_commands(back_buf_index, scene, view, m_depth_stencil, command_list);
     m_depth_stencil.barrier_transition(command_list, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
     calculate_shadow_transform(view);

@@ -27,10 +27,11 @@ using Microsoft::WRL::ComPtr;
 class Commands
 {
 public:
-    Commands(ComPtr<ID3D12GraphicsCommandList> command_list, Depth_stencil* depth_stencil,
-        Texture_mapping texture_mapping, Input_layout input_layout, const View* view, Scene* scene,
-        Depth_pass* depth_pass, Root_signature* root_signature,
+    Commands(ComPtr<ID3D12GraphicsCommandList> command_list, UINT back_buf_index,
+        Depth_stencil* depth_stencil, Texture_mapping texture_mapping, Input_layout input_layout,
+        const View* view, Scene* scene, Depth_pass* depth_pass, Root_signature* root_signature,
         int root_param_index_of_instance_data, Shadow_map* shadow_map = nullptr);
+    void set_back_buf_index(UINT index) { m_back_buf_index = index; }
 
     void upload_instance_data();
     void record_shadow_map_generation_commands_in_command_list();
@@ -58,5 +59,6 @@ private:
     int m_root_param_index_of_instance_data;
     Depth_stencil* m_depth_stencil;
     D3D12_CPU_DESCRIPTOR_HANDLE m_dsv_handle;
+    UINT m_back_buf_index;
 };
 

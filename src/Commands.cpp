@@ -12,7 +12,7 @@
 #include "Root_signature.h"
 #include "util.h"
 
-Commands::Commands(ComPtr<ID3D12GraphicsCommandList> command_list, 
+Commands::Commands(ComPtr<ID3D12GraphicsCommandList> command_list, UINT back_buf_index,
     Depth_stencil* depth_stencil, Texture_mapping texture_mapping, Input_layout input_layout,
     const View* view, Scene* scene, Depth_pass* depth_pass, Root_signature* root_signature,
     int root_param_index_of_instance_data,
@@ -21,28 +21,30 @@ Commands::Commands(ComPtr<ID3D12GraphicsCommandList> command_list,
     m_input_layout(input_layout), m_depth_stencil(depth_stencil),
     m_scene(scene), m_view(view), m_depth_pass(depth_pass), m_root_signature(root_signature),
     m_root_param_index_of_instance_data(root_param_index_of_instance_data),
-    m_shadow_map(shadow_map), m_dsv_handle(m_depth_stencil->cpu_handle())
+    m_shadow_map(shadow_map), m_dsv_handle(m_depth_stencil->cpu_handle()),
+    m_back_buf_index(back_buf_index)
 {
 }
 
 void Commands::upload_instance_data()
 {
     assert(m_scene);
-    m_scene->upload_instance_data(m_command_list);
+    m_scene->upload_instance_data(m_command_list, m_back_buf_index);
 }
 
 void Commands::record_shadow_map_generation_commands_in_command_list()
 {
     assert(m_shadow_map);
     assert(m_scene);
-    m_shadow_map->record_shadow_map_generation_commands_in_command_list(*m_scene, *m_depth_pass, 
-        m_command_list);
+    m_shadow_map->record_shadow_map_generation_commands_in_command_list(m_back_buf_index,
+        *m_scene, *m_depth_pass, m_command_list);
 }
 
 void Commands::early_z_pass()
 {
     assert(m_depth_pass);
-    m_depth_pass->record_commands(*m_scene, *m_view, *m_depth_stencil, m_command_list);
+    m_depth_pass->record_commands(m_back_buf_index, *m_scene, *m_view, *m_depth_stencil,
+        m_command_list);
 }
 
 void Commands::set_root_signature()
@@ -90,7 +92,7 @@ void Commands::draw_dynamic_objects(ComPtr<ID3D12PipelineState> pipeline_state)
 {
     assert(m_scene);
     m_command_list->SetPipelineState(pipeline_state.Get());
-    m_scene->set_dynamic_instance_data_shader_constant(m_command_list,
+    m_scene->set_dynamic_instance_data_shader_constant(m_command_list, m_back_buf_index,
         m_root_param_index_of_instance_data);
     m_scene->draw_dynamic_objects(m_command_list, m_texture_mapping, m_input_layout);
 }

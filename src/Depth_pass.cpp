@@ -49,17 +49,18 @@ void set_render_target(ComPtr<ID3D12GraphicsCommandList> command_list,
         contiguous_descriptors, &dsv);
 }
 
-void Depth_pass::record_commands(Scene& scene, const View& view, Depth_stencil& depth_stencil,
-    ComPtr<ID3D12GraphicsCommandList> command_list)
+void Depth_pass::record_commands(UINT back_buf_index, Scene& scene, const View& view,
+    Depth_stencil& depth_stencil, ComPtr<ID3D12GraphicsCommandList> command_list)
 {
     assert(m_dsv_format == depth_stencil.dsv_format());
 
     set_render_target(command_list, depth_stencil);
-    Commands c(command_list, &depth_stencil, Texture_mapping::disabled, Input_layout::position,
-        &view, &scene, this, &m_root_signature, m_root_signature.m_root_param_index_of_instance_data);
+    Commands c(command_list, back_buf_index, &depth_stencil, Texture_mapping::disabled,
+        Input_layout::position, &view, &scene, this, &m_root_signature,
+        m_root_signature.m_root_param_index_of_instance_data);
     c.simple_render_pass(m_pipeline_state, m_pipeline_state);
 
-    Commands f(command_list, &depth_stencil, Texture_mapping::enabled,
+    Commands f(command_list, back_buf_index, &depth_stencil, Texture_mapping::enabled,
         Input_layout::position_normal, &view, &scene, this, &m_alpha_cut_out_root_signature,
         m_alpha_cut_out_root_signature.m_root_param_index_of_instance_data);
     f.set_root_signature();

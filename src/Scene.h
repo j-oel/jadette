@@ -28,12 +28,12 @@ class View;
 class Scene
 {
 public:
-    Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int texture_start_index,
-        ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
+    Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count, const std::string& scene_file,
+        int texture_start_index, ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
         int root_param_index_of_textures, int root_param_index_of_values,
         int root_param_index_of_normal_maps, int normal_map_flag_offset,
-        int descriptor_index_of_dynamic_instance_data,
-        int descriptor_index_of_static_instance_data);
+        int descriptor_index_of_static_instance_data,
+        int descriptor_start_index_of_dynamic_instance_data);
     ~Scene();
     void update();
 
@@ -46,7 +46,7 @@ public:
         Texture_mapping texture_mapping, const Input_layout& input_layout) const;
     void draw_alpha_cut_out_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
         Texture_mapping texture_mapping, const Input_layout& input_layout) const;
-    void upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
+    void upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list, UINT back_buf_index);
     int triangles_count() const { return m_triangles_count; }
     size_t vertices_count() const { return m_vertices_count; }
     size_t objects_count() const { return m_graphical_objects.size(); }
@@ -55,7 +55,7 @@ public:
     void set_static_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
         int root_param_index_of_instance_data);
     void set_dynamic_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
-        int root_param_index_of_instance_data);
+        UINT back_buf_index, int root_param_index_of_instance_data);
     void manipulate_object(DirectX::XMVECTOR delta_pos, DirectX::XMVECTOR delta_rotation);
     void select_object(int object_id);
     bool object_selected() { return m_object_selected; }
@@ -93,7 +93,7 @@ private:
 
     std::vector<Per_instance_transform> m_dynamic_model_transforms;
     std::vector<Per_instance_transform> m_static_model_transforms;
-    std::unique_ptr<Instance_data> m_dynamic_instance_data;
+    std::vector<std::unique_ptr<Instance_data>> m_dynamic_instance_data;
     std::unique_ptr<Instance_data> m_static_instance_data;
 
     int m_root_param_index_of_values;

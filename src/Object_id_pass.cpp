@@ -75,7 +75,7 @@ void Object_id_pass::set_and_clear_render_target(ComPtr<ID3D12GraphicsCommandLis
         value_that_means_the_whole_view);
 }
 
-void Object_id_pass::record_commands(Scene& scene, const View& view,
+void Object_id_pass::record_commands(UINT back_buf_index, Scene& scene, const View& view,
     Read_back_depth_stencil& depth_stencil,
     ComPtr<ID3D12GraphicsCommandList> command_list)
 {
@@ -85,7 +85,7 @@ void Object_id_pass::record_commands(Scene& scene, const View& view,
 
     set_and_clear_render_target(command_list, depth_stencil);
 
-    Commands c(command_list, &depth_stencil, Texture_mapping::disabled,
+    Commands c(command_list, back_buf_index, &depth_stencil, Texture_mapping::disabled,
         Input_layout::position, &view, &scene, nullptr, &m_root_signature,
         m_root_signature.m_root_param_index_of_instance_data);
     c.simple_render_pass(m_pipeline_state_dynamic_objects, m_pipeline_state_static_objects);

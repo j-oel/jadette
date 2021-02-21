@@ -25,8 +25,8 @@ class Shadow_map
 public:
     Shadow_map(ComPtr<ID3D12Device> device, ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
         UINT texture_index, Bit_depth bit_depth = Bit_depth::bpp16, int size = 1024);
-    void record_shadow_map_generation_commands_in_command_list(Scene& scene, Depth_pass& depth_pass,
-        ComPtr<ID3D12GraphicsCommandList> command_list);
+    void record_shadow_map_generation_commands_in_command_list(UINT back_buf_index, Scene& scene,
+        Depth_pass& depth_pass, ComPtr<ID3D12GraphicsCommandList> command_list);
     void set_shadow_map_for_shader(ComPtr<ID3D12GraphicsCommandList> command_list,
         int root_param_index_of_shadow_map, int root_param_index_of_values,
         int root_param_index_of_matrices, int shadow_transform_offset);

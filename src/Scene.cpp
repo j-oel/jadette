@@ -84,11 +84,13 @@ XMHALF4 convert_float4_to_half4(const XMFLOAT4& vec)
 }
 
 
-Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int texture_start_index,
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures,
-    int root_param_index_of_values, int root_param_index_of_normal_maps, 
-    int normal_map_settings_offset, int descriptor_index_of_dynamic_instance_data,
-    int descriptor_index_of_static_instance_data) :
+Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
+    const std::string& scene_file, int texture_start_index,
+    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
+    int root_param_index_of_textures, int root_param_index_of_values,
+    int root_param_index_of_normal_maps, int normal_map_settings_offset,
+    int descriptor_index_of_static_instance_data,
+    int descriptor_start_index_of_dynamic_instance_data) :
     m_initial_view_position(0.0f, 0.0f, -20.0f),
     m_initial_view_focus_point(0.0f, 0.0f, 0.0f),
     m_light_position(XMVectorSet(0.0f, 20.0f, 5.0f, 1.0f)),
@@ -213,9 +215,11 @@ Scene::Scene(ComPtr<ID3D12Device> device, const std::string& scene_file, int tex
     if (scene_error)
         return;
 
-    m_dynamic_instance_data = std::make_unique<Instance_data>(device, command_list,
-        static_cast<UINT>(m_dynamic_objects.size()), Per_instance_transform(), texture_descriptor_heap,
-        descriptor_index_of_dynamic_instance_data);
+    for (UINT i = 0; i < swap_chain_buffer_count; ++i)
+        m_dynamic_instance_data.push_back(std::make_unique<Instance_data>(device, command_list,
+            static_cast<UINT>(m_dynamic_objects.size()), Per_instance_transform(),
+            texture_descriptor_heap, descriptor_start_index_of_dynamic_instance_data + i));
+
     m_static_instance_data = std::make_unique<Instance_data>(device, command_list,
         // It's graphical_objects here because every graphical_object has a an entry in
         // m_static_model_transforms. This is mainly (only?) because the fly_around_in_circle
@@ -390,12 +394,14 @@ void Scene::draw_alpha_cut_out_objects(ComPtr<ID3D12GraphicsCommandList>& comman
     draw_objects(command_list, m_alpha_cut_out_objects, texture_mapping, input_layout, false);
 }
 
-void Scene::upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
+void Scene::upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    UINT back_buf_index)
 {
     if (!m_static_objects.empty())
         upload_static_instance_data(command_list);
     if (!m_dynamic_objects.empty())
-        m_dynamic_instance_data->upload_new_data_to_gpu(command_list, m_dynamic_model_transforms);
+        m_dynamic_instance_data[back_buf_index]->upload_new_data_to_gpu(command_list,
+            m_dynamic_model_transforms);
 }
 
 void Scene::upload_static_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
@@ -417,11 +423,11 @@ void Scene::set_static_instance_data_shader_constant(ComPtr<ID3D12GraphicsComman
 }
 
 void Scene::set_dynamic_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    int root_param_index_of_instance_data)
+    UINT back_buf_index, int root_param_index_of_instance_data)
 {
     if (!m_dynamic_objects.empty())
         command_list->SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
-            m_dynamic_instance_data->srv_gpu_handle());
+            m_dynamic_instance_data[back_buf_index]->srv_gpu_handle());
 }
 
 void Scene::manipulate_object(DirectX::XMVECTOR delta_pos, DirectX::XMVECTOR delta_rotation)

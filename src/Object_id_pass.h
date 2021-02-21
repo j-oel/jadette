@@ -26,8 +26,8 @@ class Object_id_pass
 public:
     Object_id_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format, UINT width, UINT height,
         bool backface_culling);
-    void record_commands(Scene& scene, const View& view, Read_back_depth_stencil& depth_stencil,
-        ComPtr<ID3D12GraphicsCommandList> command_list);
+    void record_commands(UINT back_buf_index, Scene& scene, const View& view,
+        Read_back_depth_stencil& depth_stencil, ComPtr<ID3D12GraphicsCommandList> command_list);
     void signal_done(ComPtr<ID3D12CommandQueue> command_queue);
     void read_data_from_gpu(std::vector<int>& data);
     void reload_shaders(ComPtr<ID3D12Device> device, bool backface_culling);

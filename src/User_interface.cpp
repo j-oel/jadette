@@ -102,7 +102,7 @@ public:
     bool stop_object_action;
 };
 
-void User_interface::update(Scene& scene, View& view)
+void User_interface::update(UINT back_buf_index, Scene& scene, View& view)
 {
     User_action u;
     u.select_object = m_input.was_right_mouse_button_just_down();
@@ -112,7 +112,7 @@ void User_interface::update(Scene& scene, View& view)
     u.stop_object_action = m_input.was_right_mouse_button_just_up();
     auto& user_action = u;
 
-    object_selection_and_mouse_pointer_update(scene, view, user_action);
+    object_selection_and_mouse_pointer_update(back_buf_index, scene, view, user_action);
 
     m_view_controller.update(view);
 
@@ -150,8 +150,8 @@ void User_interface::create_selection_command_list()
     m_command_list = create_command_list(m_dx12_display->device(), m_command_allocator);
 }
 
-void User_interface::object_selection_and_mouse_pointer_update(Scene& scene, View& view,
-    const User_action& user_action)
+void User_interface::object_selection_and_mouse_pointer_update(UINT back_buf_index,
+    Scene& scene, View& view, const User_action& user_action)
 {
     static bool mouse_cursor_changed = false;
 
@@ -198,7 +198,7 @@ void User_interface::object_selection_and_mouse_pointer_update(Scene& scene, Vie
             mouse_cursor_changed = true;
         }
 
-        object_id_pass(scene, view);
+        object_id_pass(back_buf_index, scene, view);
     }
     else if (user_action.stop_object_action && m_view_controller.is_edit_mode() &&
              mouse_cursor_changed)
@@ -280,7 +280,7 @@ void User_interface::object_update(const User_action& user_action, Input& input,
     mouse_initial_position = input.mouse_position();
 }
 
-void User_interface::object_id_pass(Scene& scene, View& view)
+void User_interface::object_id_pass(UINT back_buf_index, Scene& scene, View& view)
 {
     throw_if_failed(m_command_allocator->Reset());
 
@@ -291,7 +291,7 @@ void User_interface::object_id_pass(Scene& scene, View& view)
     ID3D12DescriptorHeap* heaps[] = { m_texture_descriptor_heap.Get() };
     m_command_list->SetDescriptorHeaps(_countof(heaps), heaps);
 
-    m_object_id_pass.record_commands(scene, view, m_depth_stencil_for_object_id,
+    m_object_id_pass.record_commands(back_buf_index, scene, view, m_depth_stencil_for_object_id,
         m_command_list);
 
     throw_if_failed(m_command_list->Close());

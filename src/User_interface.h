@@ -30,7 +30,7 @@ public:
     User_interface(std::shared_ptr<Dx12_display> dx12_display,
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index,
         Input& input, HWND window, const Config& config);
-    void update(Scene& scene, View& view);
+    void update(UINT back_buf_index, Scene& scene, View& view);
     void render_2d_text(size_t objects_count, int triangles_count, size_t vertices_count, 
         int draw_calls);
     void scaling_changed(float dpi);
@@ -42,10 +42,10 @@ public:
     void reload_shaders(ComPtr<ID3D12Device> device, bool backface_culling);
 private:
     void create_selection_command_list();
-    void object_selection_and_mouse_pointer_update(Scene& scene, View& view,
+    void object_selection_and_mouse_pointer_update(UINT back_buf_index, Scene& scene, View& view,
         const User_action& user_action);
     void object_update(const User_action& user_action, Input& input, Scene& scene, View& view);
-    void object_id_pass(Scene& scene, View& view);
+    void object_id_pass(UINT back_buf_index, Scene& scene, View& view);
 
     std::shared_ptr<Dx12_display> m_dx12_display;
     ComPtr<ID3D12DescriptorHeap> m_texture_descriptor_heap;

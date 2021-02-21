@@ -54,19 +54,19 @@ namespace
         return 1;
     }
 
-    UINT descriptor_index_for_dynamic_instance_data()
-    {
-        return 2;
-    }
-
     UINT descriptor_index_for_static_instance_data()
     {
-        return 3;
+        return texture_index_for_shadow_map() + 1;
     }
 
-    UINT texture_index_for_diffuse_textures()
+    UINT descriptor_start_index_for_dynamic_instance_data()
     {
-        return 4;
+        return descriptor_index_for_static_instance_data() + 1;
+    }
+
+    UINT texture_index_for_diffuse_textures(UINT swap_chain_buffer_count)
+    {
+        return descriptor_start_index_for_dynamic_instance_data() + swap_chain_buffer_count;
     }
 
     UINT value_offset_for_material_settings()
@@ -86,17 +86,19 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     m_shadow_map(m_device, m_texture_descriptor_heap, texture_index_for_shadow_map()),
     m_depth_pass(m_device, m_depth_stencil.dsv_format(), config.backface_culling, &m_render_settings),
     m_root_signature(m_device, m_shadow_map, &m_render_settings),
-    m_scene(m_device, data_path + config.scene_file, texture_index_for_diffuse_textures(),
+    m_scene(m_device, m_dx12_display->swap_chain_buffer_count(), data_path + config.scene_file,
+        texture_index_for_diffuse_textures(m_dx12_display->swap_chain_buffer_count()),
         m_texture_descriptor_heap, m_root_signature.m_root_param_index_of_textures,
         m_root_signature.m_root_param_index_of_values,
         m_root_signature.m_root_param_index_of_normal_maps,
-        value_offset_for_material_settings(), descriptor_index_for_dynamic_instance_data(),
-        descriptor_index_for_static_instance_data()),
+        value_offset_for_material_settings(), descriptor_index_for_static_instance_data(),
+        descriptor_start_index_for_dynamic_instance_data()),
     m_view(config.width, config.height, m_scene.initial_view_position(),
         m_scene.initial_view_focus_point(), 0.1f, 4000.0f, config.fov),
-    m_commands(create_main_command_list(), &m_depth_stencil, Texture_mapping::enabled,
-        Input_layout::position_normal_tangents, &m_view, &m_scene, &m_depth_pass,
-        &m_root_signature, m_root_signature.m_root_param_index_of_instance_data, &m_shadow_map),
+    m_commands(create_main_command_list(), m_dx12_display->back_buf_index(), &m_depth_stencil,
+        Texture_mapping::enabled, Input_layout::position_normal_tangents, &m_view, &m_scene,
+        &m_depth_pass, &m_root_signature, m_root_signature.m_root_param_index_of_instance_data,
+        &m_shadow_map),
     m_input(input),
     m_user_interface(m_dx12_display, m_texture_descriptor_heap, texture_index_for_depth_buffer(),
         m_input, window, config),
@@ -109,7 +111,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
 
 void Graphics_impl::update()
 {
-    m_user_interface.update(m_scene, m_view);
+    m_user_interface.update(m_dx12_display->back_buf_index(), m_scene, m_view);
 
     try
     {
@@ -217,6 +219,7 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
 {
     Mesh::reset_draw_calls();
     Commands& c = m_commands;
+    c.set_back_buf_index(m_dx12_display->back_buf_index());
     c.upload_instance_data();
     c.set_descriptor_heap(m_texture_descriptor_heap);
     if (m_render_settings & shadow_mapping_enabled)

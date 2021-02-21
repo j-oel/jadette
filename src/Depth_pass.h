@@ -40,8 +40,8 @@ class Depth_pass
 public:
     Depth_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format, bool backface_culling,
         UINT* render_settings);
-    void record_commands(Scene& scene, const View& view, Depth_stencil& depth_stencil,
-        ComPtr<ID3D12GraphicsCommandList> command_list);
+    void record_commands(UINT back_buf_index, Scene& scene, const View& view,
+        Depth_stencil& depth_stencil, ComPtr<ID3D12GraphicsCommandList> command_list);
     void reload_shaders(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format,
         bool backface_culling);
 private:
