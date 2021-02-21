@@ -74,7 +74,8 @@ void Depth_pass::reload_shaders(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_for
     create_pipeline_states(device, dsv_format, backface_culling);
 }
 
-Depths_alpha_cut_out_root_signature::Depths_alpha_cut_out_root_signature(ComPtr<ID3D12Device> device, UINT* render_settings) :
+Depths_alpha_cut_out_root_signature::Depths_alpha_cut_out_root_signature(
+    ComPtr<ID3D12Device> device, UINT* render_settings) :
     m_render_settings(render_settings)
 {
     constexpr int root_parameters_count = 5;
@@ -120,7 +121,8 @@ Depths_alpha_cut_out_root_signature::Depths_alpha_cut_out_root_signature(ComPtr<
     SET_DEBUG_NAME(m_root_signature, L"Depths Alpha Cut Out Root Signature");
 }
 
-void Depths_alpha_cut_out_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> command_list,
+void Depths_alpha_cut_out_root_signature::set_constants(
+    ComPtr<ID3D12GraphicsCommandList> command_list, UINT back_buf_index,
     Scene* scene, const View* view, Shadow_map* shadow_map)
 {
     int offset = 3;

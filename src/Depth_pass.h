@@ -24,7 +24,7 @@ class Depths_alpha_cut_out_root_signature : public Root_signature
 public:
     Depths_alpha_cut_out_root_signature(ComPtr<ID3D12Device> device, UINT* render_settings);
     void set_constants(ComPtr<ID3D12GraphicsCommandList> command_list,
-        Scene* scene, const View* view, Shadow_map* shadow_map);
+        UINT back_buf_index, Scene* scene, const View* view, Shadow_map* shadow_map);
 
     const int m_root_param_index_of_values = 0;
     const int m_root_param_index_of_matrices = 1;

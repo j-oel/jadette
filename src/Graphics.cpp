@@ -10,6 +10,7 @@
 #include "util.h"
 #include "Input.h"
 #include "Dx12_util.h"
+#include "Commands.h"
 
 #include <directxmath.h>
 
@@ -51,22 +52,23 @@ namespace
 
     UINT texture_index_for_shadow_map()
     {
-        return 1;
+        return texture_index_for_depth_buffer() + 1;
     }
 
-    UINT descriptor_index_for_static_instance_data()
+    UINT descriptor_index_for_static_instance_data(UINT swap_chain_buffer_count)
     {
-        return texture_index_for_shadow_map() + 1;
+        return texture_index_for_shadow_map() + swap_chain_buffer_count;
     }
 
-    UINT descriptor_start_index_for_dynamic_instance_data()
+    UINT descriptor_start_index_for_dynamic_instance_data(UINT swap_chain_buffer_count)
     {
-        return descriptor_index_for_static_instance_data() + 1;
+        return descriptor_index_for_static_instance_data(swap_chain_buffer_count) + 1;
     }
 
     UINT texture_index_for_diffuse_textures(UINT swap_chain_buffer_count)
     {
-        return descriptor_start_index_for_dynamic_instance_data() + swap_chain_buffer_count;
+        return descriptor_start_index_for_dynamic_instance_data(swap_chain_buffer_count) +
+            swap_chain_buffer_count;
     }
 
     UINT value_offset_for_material_settings()
@@ -77,35 +79,49 @@ namespace
 
 Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     m_config(config),
-    m_dx12_display(std::make_shared<Dx12_display>(window, config.width, config.height, config.vsync)),
+    m_dx12_display(
+        std::make_shared<Dx12_display>(window, config.width, config.height, config.vsync)),
     m_device(m_dx12_display->device()),
     m_textures_count(create_texture_descriptor_heap()),
-    m_depth_stencil(m_device, config.width, config.height, 
+    m_depth_stencil(1, Depth_stencil(m_device, config.width, config.height,
         Bit_depth::bpp16, D3D12_RESOURCE_STATE_DEPTH_WRITE,
-        m_texture_descriptor_heap, texture_index_for_depth_buffer()),
-    m_shadow_map(m_device, m_texture_descriptor_heap, texture_index_for_shadow_map()),
-    m_depth_pass(m_device, m_depth_stencil.dsv_format(), config.backface_culling, &m_render_settings),
+        m_texture_descriptor_heap, texture_index_for_depth_buffer())),
+    m_shadow_map(m_device, m_dx12_display->swap_chain_buffer_count(), m_texture_descriptor_heap,
+        texture_index_for_shadow_map()),
+    m_depth_pass(m_device, m_depth_stencil[0].dsv_format(), config.backface_culling,
+        &m_render_settings),
     m_root_signature(m_device, m_shadow_map, &m_render_settings),
     m_scene(m_device, m_dx12_display->swap_chain_buffer_count(), data_path + config.scene_file,
         texture_index_for_diffuse_textures(m_dx12_display->swap_chain_buffer_count()),
         m_texture_descriptor_heap, m_root_signature.m_root_param_index_of_textures,
         m_root_signature.m_root_param_index_of_values,
         m_root_signature.m_root_param_index_of_normal_maps,
-        value_offset_for_material_settings(), descriptor_index_for_static_instance_data(),
-        descriptor_start_index_for_dynamic_instance_data()),
+        value_offset_for_material_settings(),
+        descriptor_index_for_static_instance_data(m_dx12_display->swap_chain_buffer_count()),
+        descriptor_start_index_for_dynamic_instance_data(
+            m_dx12_display->swap_chain_buffer_count())),
     m_view(config.width, config.height, m_scene.initial_view_position(),
         m_scene.initial_view_focus_point(), 0.1f, 4000.0f, config.fov),
-    m_commands(create_main_command_list(), m_dx12_display->back_buf_index(), &m_depth_stencil,
-        Texture_mapping::enabled, Input_layout::position_normal_tangents, &m_view, &m_scene,
-        &m_depth_pass, &m_root_signature, m_root_signature.m_root_param_index_of_instance_data,
-        &m_shadow_map),
     m_input(input),
     m_user_interface(m_dx12_display, m_texture_descriptor_heap, texture_index_for_depth_buffer(),
         m_input, window, config),
     m_width(config.width),
     m_height(config.height)
 {
-    m_depth_stencil.set_debug_names(L"DSV Heap", L"Depth Buffer");
+    create_main_command_list();
+    for (UINT i = 1; i < m_dx12_display->swap_chain_buffer_count(); ++i)
+    {
+        m_depth_stencil.push_back(Depth_stencil(m_device, config.width, config.height,
+            Bit_depth::bpp16, D3D12_RESOURCE_STATE_DEPTH_WRITE,
+            m_texture_descriptor_heap, texture_index_for_depth_buffer()));
+    }
+
+    for (UINT i = 0; i < m_dx12_display->swap_chain_buffer_count(); ++i)
+    {
+        m_depth_stencil[i].set_debug_names((std::wstring(L"DSV Heap ") + 
+            std::to_wstring(i)).c_str(), (std::wstring(L"Depth Buffer ") +
+                std::to_wstring(i)).c_str());
+    }
     create_pipeline_states(config);
 }
 
@@ -118,7 +134,8 @@ void Graphics_impl::update()
         if (m_user_interface.reload_shaders_requested())
         {
             create_pipeline_states(m_config);
-            m_depth_pass.reload_shaders(m_device, m_depth_stencil.dsv_format(), m_config.backface_culling);
+            m_depth_pass.reload_shaders(m_device, m_depth_stencil[0].dsv_format(),
+                m_config.backface_culling);
             m_user_interface.reload_shaders(m_device, m_config.backface_culling);
         }
     }
@@ -168,16 +185,18 @@ void Graphics_impl::create_pipeline_states(const Config& config)
 {
     UINT render_targets_count = 1;
 
+    auto dsv_format = m_depth_stencil[0].dsv_format();
+
     auto backface_culling = config.backface_culling ? Backface_culling::enabled :
         Backface_culling::disabled;
     create_pipeline_state(m_device, m_pipeline_state, m_root_signature.get(),
-        "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
+        "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
         render_targets_count, Input_layout::position_normal_tangents, backface_culling,
         Alpha_blending::disabled, Depth_write::enabled);
     SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering");
 
     create_pipeline_state(m_device, m_pipeline_state_early_z, m_root_signature.get(),
-        "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
+        "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
         render_targets_count, Input_layout::position_normal_tangents, backface_culling,
         Alpha_blending::disabled, Depth_write::disabled);
     SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering Early Z");
@@ -185,19 +204,19 @@ void Graphics_impl::create_pipeline_states(const Config& config)
     backface_culling = Backface_culling::disabled;
 
     create_pipeline_state(m_device, m_pipeline_state_transparency, m_root_signature.get(),
-        "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
+        "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
         render_targets_count, Input_layout::position_normal_tangents, backface_culling,
         Alpha_blending::enabled, Depth_write::alpha_blending);
     SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering Transparency");
 
     create_pipeline_state(m_device, m_pipeline_state_alpha_cut_out, m_root_signature.get(),
-        "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
+        "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
         render_targets_count, Input_layout::position_normal_tangents, backface_culling,
         Alpha_blending::enabled, Depth_write::enabled);
     SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering Alpha Cut Out");
 
     create_pipeline_state(m_device, m_pipeline_state_alpha_cut_out_early_z, m_root_signature.get(),
-        "vertex_shader_srv_instance_data", "pixel_shader", m_depth_stencil.dsv_format(),
+        "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
         render_targets_count, Input_layout::position_normal_tangents, backface_culling,
         Alpha_blending::enabled, Depth_write::alpha_blending);
     SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering Alpha Cut Out Early Z");
@@ -212,13 +231,19 @@ ComPtr<ID3D12GraphicsCommandList> Graphics_impl::create_main_command_list()
 
 void Graphics_impl::set_and_clear_render_target()
 {
-    m_dx12_display->set_and_clear_render_target(m_depth_stencil.cpu_handle());
+    m_dx12_display->set_and_clear_render_target(
+        m_depth_stencil[m_dx12_display->back_buf_index()].cpu_handle());
 }
 
 void Graphics_impl::record_frame_rendering_commands_in_command_list()
 {
+    Commands c(m_command_list, m_dx12_display->back_buf_index(),
+        &m_depth_stencil[m_dx12_display->back_buf_index()],
+        Texture_mapping::enabled, Input_layout::position_normal_tangents, &m_view, &m_scene,
+        &m_depth_pass, &m_root_signature, m_root_signature.m_root_param_index_of_instance_data,
+        &m_shadow_map);
+
     Mesh::reset_draw_calls();
-    Commands& c = m_commands;
     c.set_back_buf_index(m_dx12_display->back_buf_index());
     c.upload_instance_data();
     c.set_descriptor_heap(m_texture_descriptor_heap);
@@ -318,7 +343,7 @@ Main_root_signature::Main_root_signature(ComPtr<ID3D12Device> device, const Shad
 }
 
 void Main_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> command_list, 
-    Scene* scene, const View* view, Shadow_map* shadow_map)
+    UINT back_buf_index, Scene* scene, const View* view, Shadow_map* shadow_map)
 {
     int offset = 3;
     constexpr UINT size_in_words_of_value = 1;
@@ -336,8 +361,9 @@ void Main_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> comman
 
     constexpr int shadow_transform_offset = size_in_words_of_XMMATRIX;
     assert(shadow_map);
-    shadow_map->set_shadow_map_for_shader(command_list, m_root_param_index_of_shadow_map,
-        m_root_param_index_of_values, m_root_param_index_of_matrices, shadow_transform_offset);
+    shadow_map->set_shadow_map_for_shader(command_list, back_buf_index,
+        m_root_param_index_of_shadow_map, m_root_param_index_of_values,
+        m_root_param_index_of_matrices, shadow_transform_offset);
 
     view->set_view(command_list, m_root_param_index_of_matrices);
 }

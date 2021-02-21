@@ -101,7 +101,7 @@ Simple_root_signature::Simple_root_signature(ComPtr<ID3D12Device> device)
 }
 
 void Simple_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> command_list,
-    Scene* scene, const View* view, Shadow_map* shadow_map)
+    UINT back_buf_index, Scene* scene, const View* view, Shadow_map* shadow_map)
 {
     view->set_view(command_list, m_root_param_index_of_matrices);
 }

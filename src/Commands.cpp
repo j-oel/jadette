@@ -71,7 +71,7 @@ void Commands::set_descriptor_heap(ComPtr<ID3D12DescriptorHeap> descriptor_heap)
 void Commands::set_shader_constants()
 {
     assert(m_root_signature);
-    m_root_signature->set_constants(m_command_list, m_scene, m_view, m_shadow_map);
+    m_root_signature->set_constants(m_command_list, m_back_buf_index, m_scene, m_view, m_shadow_map);
 }
 
 void Commands::close()

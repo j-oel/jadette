@@ -15,15 +15,20 @@
 using namespace DirectX;
 
 
-Shadow_map::Shadow_map(ComPtr<ID3D12Device> device,
+Shadow_map::Shadow_map(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index,
     Bit_depth bit_depth/* = Bit_depth::bpp16*/, int size/* = 1024*/) :
-    m_depth_stencil(device, size, size, bit_depth, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-        texture_descriptor_heap, texture_index),
     m_shadow_transform(XMMatrixIdentity()),
     m_size(size)
 {
-    m_depth_stencil.set_debug_names(L"Shadow DSV Heap", L"Shadow Buffer");
+    for (UINT i = 0; i < swap_chain_buffer_count; ++i)
+    {
+        m_depth_stencil.push_back(Depth_stencil(device, size, size, bit_depth,
+          D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, texture_descriptor_heap, texture_index + i));
+        m_depth_stencil[i].set_debug_names((std::wstring(L"Shadow DSV Heap ") +
+            std::to_wstring(i)).c_str(),
+            (std::wstring(L"Shadow Buffer ") + std::to_wstring(i)).c_str());
+    }
 }
 
 void Shadow_map::record_shadow_map_generation_commands_in_command_list(UINT back_buf_index,
@@ -37,19 +42,20 @@ void Shadow_map::record_shadow_map_generation_commands_in_command_list(UINT back
     constexpr float fov = 90.0f;
     View view(m_size, m_size, light_position, focus_position, near_z, far_z, fov);
 
-    m_depth_stencil.barrier_transition(command_list, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-    depth_pass.record_commands(back_buf_index, scene, view, m_depth_stencil, command_list);
-    m_depth_stencil.barrier_transition(command_list, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    auto& d = m_depth_stencil[back_buf_index];
+    d.barrier_transition(command_list, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+    depth_pass.record_commands(back_buf_index, scene, view, d, command_list);
+    d.barrier_transition(command_list, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
     calculate_shadow_transform(view);
 }
 
 void Shadow_map::set_shadow_map_for_shader(ComPtr<ID3D12GraphicsCommandList> command_list, 
-    int root_param_index_of_shadow_map, int root_param_index_of_values,
+    UINT back_buf_index, int root_param_index_of_shadow_map, int root_param_index_of_values,
     int root_param_index_of_matrices, int shadow_transform_offset)
 {
     command_list->SetGraphicsRootDescriptorTable(root_param_index_of_shadow_map,
-        m_depth_stencil.gpu_handle());
+        m_depth_stencil[back_buf_index].gpu_handle());
     constexpr UINT offset = 1;
     constexpr UINT size_in_words_of_value = 1;
     command_list->SetGraphicsRoot32BitConstants(root_param_index_of_values,

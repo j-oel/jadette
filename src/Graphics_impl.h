@@ -15,7 +15,6 @@
 #include "View.h"
 #include "Root_signature.h"
 #include "Dx12_display.h"
-#include "Commands.h"
 #include "User_interface.h"
 
 #include <memory>
@@ -31,7 +30,7 @@ public:
     Main_root_signature(ComPtr<ID3D12Device> device, const Shadow_map& shadow_map,
         UINT* render_settings);
     virtual void set_constants(ComPtr<ID3D12GraphicsCommandList> command_list, 
-        Scene* scene, const View* view, Shadow_map* shadow_map);
+        UINT back_buf_index, Scene* scene, const View* view, Shadow_map* shadow_map);
 
     const int m_root_param_index_of_values = 0;
     const int m_root_param_index_of_matrices = 1;
@@ -67,7 +66,7 @@ private:
     ComPtr<ID3D12GraphicsCommandList> m_command_list;
     ComPtr<ID3D12DescriptorHeap> m_texture_descriptor_heap;
     int m_textures_count;
-    Depth_stencil m_depth_stencil;
+    std::vector<Depth_stencil> m_depth_stencil;
     ComPtr<ID3D12PipelineState> m_pipeline_state;
     ComPtr<ID3D12PipelineState> m_pipeline_state_early_z;
     ComPtr<ID3D12PipelineState> m_pipeline_state_transparency;
@@ -79,7 +78,6 @@ private:
     Main_root_signature m_root_signature;
     Scene m_scene;
     View m_view;
-    Commands m_commands;
     Input& m_input;
     User_interface m_user_interface;
 
