@@ -79,18 +79,12 @@ void Depth_stencil::create_depth_stencil_view(ComPtr<ID3D12Device> device)
 }
 
 void Depth_stencil::create_shader_resource_view(ComPtr<ID3D12Device> device, DXGI_FORMAT format,
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
-    UINT texture_index)
+    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index)
 {
-    UINT descriptor_handle_increment_size =
-        device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-    UINT texture_position_in_descriptor_heap = descriptor_handle_increment_size *
-        texture_index;
+    UINT position = descriptor_position_in_descriptor_heap(device, texture_index);
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE destination_descriptor(
-        texture_descriptor_heap->GetCPUDescriptorHandleForHeapStart(),
-        texture_position_in_descriptor_heap);
+        texture_descriptor_heap->GetCPUDescriptorHandleForHeapStart(), position);
 
     D3D12_SHADER_RESOURCE_VIEW_DESC s = { format, D3D12_SRV_DIMENSION_TEXTURE2D,
                                           D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, 0 };
@@ -98,8 +92,7 @@ void Depth_stencil::create_shader_resource_view(ComPtr<ID3D12Device> device, DXG
     device->CreateShaderResourceView(m_depth_buffer.Get(), &s, destination_descriptor);
 
     m_depth_buffer_gpu_descriptor_handle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
-        texture_descriptor_heap->GetGPUDescriptorHandleForHeapStart(),
-        texture_position_in_descriptor_heap);
+        texture_descriptor_heap->GetGPUDescriptorHandleForHeapStart(), position);
 }
 
 void Depth_stencil::barrier_transition(ComPtr<ID3D12GraphicsCommandList> command_list, 

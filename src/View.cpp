@@ -13,11 +13,12 @@ using namespace DirectX;
 
 
 View::View(UINT width, UINT height, DirectX::XMVECTOR eye_position, DirectX::XMVECTOR focus_point,
-    float near_z, float far_z, float fov) :
+    float near_z, float far_z, float fov, DirectX::XMVECTOR up) :
     m_view_matrix(XMMatrixIdentity()),
     m_projection_matrix(XMMatrixIdentity()),
     m_eye_position(eye_position),
     m_focus_point(focus_point),
+    m_up(up) /* = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)*/,
     m_viewport(CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height))),
     m_scissor_rect({ 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) }),
     m_width(width),
@@ -31,8 +32,7 @@ View::View(UINT width, UINT height, DirectX::XMVECTOR eye_position, DirectX::XMV
 
 void View::update()
 {
-    const XMVECTOR up_direction = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    m_view_matrix = XMMatrixLookAtLH(m_eye_position, m_focus_point, up_direction);
+    m_view_matrix = XMMatrixLookAtLH(m_eye_position, m_focus_point, m_up);
 
     const float aspect_ratio = static_cast<float>(m_width) / m_height;
     m_projection_matrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_fov),

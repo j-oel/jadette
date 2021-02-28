@@ -6,10 +6,12 @@
 
 
 #include "Scene.h"
+#include "Shadow_map.h"
 #include "util.h"
 #include "Primitives.h"
 #include "Wavefront_obj_file.h"
 #include "View.h"
+#include "Dx12_util.h"
 
 #include <fstream>
 #include <string>
@@ -90,10 +92,11 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
     int root_param_index_of_textures, int root_param_index_of_values,
     int root_param_index_of_normal_maps, int normal_map_settings_offset,
     int descriptor_index_of_static_instance_data,
-    int descriptor_start_index_of_dynamic_instance_data) :
+    int descriptor_start_index_of_dynamic_instance_data,
+    int descriptor_start_index_of_lights_data,
+    int descriptor_start_index_of_shadow_maps) :
     m_initial_view_position(0.0f, 0.0f, -20.0f),
     m_initial_view_focus_point(0.0f, 0.0f, 0.0f),
-    m_light_position(XMVectorSet(0.0f, 20.0f, 5.0f, 1.0f)),
     m_root_param_index_of_values(root_param_index_of_values),
     m_triangles_count(0), m_vertices_count(0), m_selected_object_id(-1), m_object_selected(false)
 {
@@ -215,10 +218,34 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
     if (scene_error)
         return;
 
+    const UINT descriptor_index_increment = static_cast<UINT>(m_lights.size());
+
+    for (UINT i = 0; i < m_lights.size(); ++i)
+    {
+        m_shadow_maps.push_back(Shadow_map(device, swap_chain_buffer_count,
+            texture_descriptor_heap, descriptor_start_index_of_shadow_maps + i,
+            descriptor_index_increment));
+    }
+
+    for (UINT i = descriptor_index_increment * swap_chain_buffer_count;
+        i < Shadow_map::max_shadow_maps_count * swap_chain_buffer_count; ++i)
+    {
+        UINT descriptor_index = descriptor_start_index_of_shadow_maps + i;
+        // On Tier 1 hardware, all descriptors must be set, even if not used,
+        // hence set them to null descriptors.
+        create_null_descriptor(device, texture_descriptor_heap, descriptor_index);
+    }
+
     for (UINT i = 0; i < swap_chain_buffer_count; ++i)
+    {
         m_dynamic_instance_data.push_back(std::make_unique<Instance_data>(device, command_list,
             static_cast<UINT>(m_dynamic_objects.size()), Per_instance_transform(),
             texture_descriptor_heap, descriptor_start_index_of_dynamic_instance_data + i));
+
+        m_lights_data.push_back(std::make_unique<Constant_buffer>(device, command_list,
+            static_cast<UINT>(m_lights.size()), Light(),
+            texture_descriptor_heap, descriptor_start_index_of_lights_data + i));
+    }
 
     m_static_instance_data = std::make_unique<Instance_data>(device, command_list,
         // It's graphical_objects here because every graphical_object has a an entry in
@@ -394,14 +421,27 @@ void Scene::draw_alpha_cut_out_objects(ComPtr<ID3D12GraphicsCommandList>& comman
     draw_objects(command_list, m_alpha_cut_out_objects, texture_mapping, input_layout, false);
 }
 
-void Scene::upload_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
+void Scene::upload_data_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list,
     UINT back_buf_index)
 {
+    for (UINT i = 0; i < m_shadow_maps.size(); ++i)
+        m_shadow_maps[i].update(m_lights[i]);
+
+    if (!m_lights.empty())
+        m_lights_data[back_buf_index]->upload_new_data_to_gpu(command_list, m_lights);
+
     if (!m_static_objects.empty())
         upload_static_instance_data(command_list);
     if (!m_dynamic_objects.empty())
         m_dynamic_instance_data[back_buf_index]->upload_new_data_to_gpu(command_list,
             m_dynamic_model_transforms);
+}
+
+void Scene::record_shadow_map_generation_commands_in_command_list(UINT back_buf_index,
+    Depth_pass& depth_pass, ComPtr<ID3D12GraphicsCommandList> command_list)
+{
+    for (auto& s : m_shadow_maps)
+        s.generate(back_buf_index, *this, depth_pass, command_list);
 }
 
 void Scene::upload_static_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
@@ -428,6 +468,18 @@ void Scene::set_dynamic_instance_data_shader_constant(ComPtr<ID3D12GraphicsComma
     if (!m_dynamic_objects.empty())
         command_list->SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
             m_dynamic_instance_data[back_buf_index]->srv_gpu_handle());
+}
+
+void Scene::set_lights_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    UINT back_buf_index, int root_param_index_of_lights_data, int root_param_index_of_shadow_map)
+{
+    if (!m_lights.empty())
+        command_list->SetGraphicsRootDescriptorTable(root_param_index_of_lights_data,
+            m_lights_data[back_buf_index]->gpu_handle());
+
+    if (!m_shadow_maps.empty())
+        m_shadow_maps[0].set_shadow_map_for_shader(command_list, back_buf_index,
+            root_param_index_of_shadow_map);
 }
 
 void Scene::manipulate_object(DirectX::XMVECTOR delta_pos, DirectX::XMVECTOR delta_rotation)
@@ -809,8 +861,8 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             file >> focus_point.y;
             file >> focus_point.z;
 
-            m_light_position = XMVectorSet(pos.x, pos.y, pos.z, 1.0f);
-            m_light_focus_point = XMVectorSet(focus_point.x, focus_point.y, focus_point.z, 1.0f);
+            m_lights.push_back({ XMFLOAT4X4(), XMFLOAT4(pos.x, pos.y, pos.z, 1.0f),
+                XMFLOAT4(focus_point.x, focus_point.y, focus_point.z, 1.0f) });
         }
         else if (input == "view")
         {
@@ -833,5 +885,39 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
     }
 }
 
+Constant_buffer::Constant_buffer(ComPtr<ID3D12Device> device,
+    ComPtr<ID3D12GraphicsCommandList>& command_list, UINT count, Light data,
+    ComPtr<ID3D12DescriptorHeap> descriptor_heap, UINT descriptor_index)
+{
+    if (count == 0)
+        return;
 
+    constexpr int alignment = 256;
+    m_constant_buffer_size = static_cast<UINT>(count * sizeof(Light));
+    if (m_constant_buffer_size % alignment)
+        m_constant_buffer_size = ((m_constant_buffer_size / alignment) + 1) * alignment;
+    std::vector<Light> buffer_data;
+    buffer_data.resize(count);
 
+    D3D12_CONSTANT_BUFFER_VIEW_DESC buffer_view_desc {};
+
+    create_and_fill_buffer(device, command_list, m_constant_buffer,
+        m_upload_resource, buffer_data, m_constant_buffer_size, buffer_view_desc,
+        D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+
+    UINT position = descriptor_position_in_descriptor_heap(device, descriptor_index);
+    CD3DX12_CPU_DESCRIPTOR_HANDLE destination_descriptor(
+        descriptor_heap->GetCPUDescriptorHandleForHeapStart(), position);
+
+    device->CreateConstantBufferView(&buffer_view_desc, destination_descriptor);
+
+    m_constant_buffer_gpu_descriptor_handle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
+        descriptor_heap->GetGPUDescriptorHandleForHeapStart(), position);
+}
+
+void Constant_buffer::upload_new_data_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    const std::vector<Light>& light_data)
+{
+    upload_new_data(command_list, light_data, m_constant_buffer, m_upload_resource,
+        m_constant_buffer_size, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+}

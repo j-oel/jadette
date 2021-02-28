@@ -50,30 +50,41 @@ namespace
         return 0;
     }
 
-    UINT texture_index_for_shadow_map()
+    UINT descriptor_index_for_static_instance_data()
     {
         return texture_index_for_depth_buffer() + 1;
     }
 
-    UINT descriptor_index_for_static_instance_data(UINT swap_chain_buffer_count)
+    UINT descriptor_start_index_for_dynamic_instance_data()
     {
-        return texture_index_for_shadow_map() + swap_chain_buffer_count;
+        return descriptor_index_for_static_instance_data() + 1;
     }
 
-    UINT descriptor_start_index_for_dynamic_instance_data(UINT swap_chain_buffer_count)
+    UINT descriptor_start_index_for_lights_data(UINT swap_chain_buffer_count)
     {
-        return descriptor_index_for_static_instance_data(swap_chain_buffer_count) + 1;
+        return descriptor_start_index_for_dynamic_instance_data() + swap_chain_buffer_count;
+    }
+
+    UINT descriptor_start_index_for_shadow_maps(UINT swap_chain_buffer_count)
+    {
+        return descriptor_start_index_for_lights_data(swap_chain_buffer_count) +
+            swap_chain_buffer_count;
     }
 
     UINT texture_index_for_diffuse_textures(UINT swap_chain_buffer_count)
     {
-        return descriptor_start_index_for_dynamic_instance_data(swap_chain_buffer_count) +
-            swap_chain_buffer_count;
+        return descriptor_start_index_for_shadow_maps(swap_chain_buffer_count) +
+            swap_chain_buffer_count * Shadow_map::max_shadow_maps_count;
     }
 
     UINT value_offset_for_material_settings()
     {
-        return 2;
+        return 1;
+    }
+
+    UINT value_offset_for_render_settings()
+    {
+        return value_offset_for_material_settings() + 1;
     }
 }
 
@@ -86,20 +97,19 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     m_depth_stencil(1, Depth_stencil(m_device, config.width, config.height,
         Bit_depth::bpp16, D3D12_RESOURCE_STATE_DEPTH_WRITE,
         m_texture_descriptor_heap, texture_index_for_depth_buffer())),
-    m_shadow_map(m_device, m_dx12_display->swap_chain_buffer_count(), m_texture_descriptor_heap,
-        texture_index_for_shadow_map()),
     m_depth_pass(m_device, m_depth_stencil[0].dsv_format(), config.backface_culling,
         &m_render_settings),
-    m_root_signature(m_device, m_shadow_map, &m_render_settings),
+    m_root_signature(m_device, &m_render_settings),
     m_scene(m_device, m_dx12_display->swap_chain_buffer_count(), data_path + config.scene_file,
         texture_index_for_diffuse_textures(m_dx12_display->swap_chain_buffer_count()),
         m_texture_descriptor_heap, m_root_signature.m_root_param_index_of_textures,
         m_root_signature.m_root_param_index_of_values,
         m_root_signature.m_root_param_index_of_normal_maps,
         value_offset_for_material_settings(),
-        descriptor_index_for_static_instance_data(m_dx12_display->swap_chain_buffer_count()),
-        descriptor_start_index_for_dynamic_instance_data(
-            m_dx12_display->swap_chain_buffer_count())),
+        descriptor_index_for_static_instance_data(),
+        descriptor_start_index_for_dynamic_instance_data(),
+        descriptor_start_index_for_lights_data(m_dx12_display->swap_chain_buffer_count()),
+        descriptor_start_index_for_shadow_maps(m_dx12_display->swap_chain_buffer_count())),
     m_view(config.width, config.height, m_scene.initial_view_position(),
         m_scene.initial_view_focus_point(), 0.1f, 4000.0f, config.fov),
     m_input(input),
@@ -160,7 +170,7 @@ void Graphics_impl::render()
     m_dx12_display->execute_command_list(m_command_list);
 
     m_user_interface.render_2d_text(m_scene.objects_count(), m_scene.triangles_count(),
-        m_scene.vertices_count(), Mesh::draw_calls());
+        m_scene.vertices_count(), m_scene.lights_count(), Mesh::draw_calls());
 
     m_dx12_display->end_render();
 }
@@ -240,12 +250,11 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     Commands c(m_command_list, m_dx12_display->back_buf_index(),
         &m_depth_stencil[m_dx12_display->back_buf_index()],
         Texture_mapping::enabled, Input_layout::position_normal_tangents, &m_view, &m_scene,
-        &m_depth_pass, &m_root_signature, m_root_signature.m_root_param_index_of_instance_data,
-        &m_shadow_map);
+        &m_depth_pass, &m_root_signature, m_root_signature.m_root_param_index_of_instance_data);
 
     Mesh::reset_draw_calls();
     c.set_back_buf_index(m_dx12_display->back_buf_index());
-    c.upload_instance_data();
+    c.upload_data_to_gpu();
     c.set_descriptor_heap(m_texture_descriptor_heap);
     if (m_render_settings & shadow_mapping_enabled)
         c.record_shadow_map_generation_commands_in_command_list();
@@ -283,11 +292,10 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
 }
 
 
-Main_root_signature::Main_root_signature(ComPtr<ID3D12Device> device, const Shadow_map& shadow_map,
-    UINT* render_settings) : 
+Main_root_signature::Main_root_signature(ComPtr<ID3D12Device> device, UINT* render_settings) :
     m_render_settings(render_settings)
 {
-    constexpr int root_parameters_count = 7;
+    constexpr int root_parameters_count = 8;
     CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count] {};
 
     constexpr int values_count = 4; // Needs to be a multiple of 4, because constant buffers are
@@ -299,7 +307,7 @@ Main_root_signature::Main_root_signature(ComPtr<ID3D12Device> device, const Shad
     root_parameters[m_root_param_index_of_values].InitAsConstants(
         values_count, shader_register, register_space, D3D12_SHADER_VISIBILITY_ALL);
 
-    constexpr int matrices_count = 2;
+    constexpr int matrices_count = 1;
     ++shader_register;
     init_matrices(root_parameters[m_root_param_index_of_matrices], matrices_count, shader_register);
     constexpr int vectors_count = 2;
@@ -310,18 +318,27 @@ Main_root_signature::Main_root_signature(ComPtr<ID3D12Device> device, const Shad
 
     UINT base_register = 0;
     CD3DX12_DESCRIPTOR_RANGE1 descriptor_range1, descriptor_range2, descriptor_range3,
-        descriptor_range4;
-    init_descriptor_table(root_parameters[m_root_param_index_of_textures], 
+        descriptor_range4, descriptor_range5;
+    init_descriptor_table(root_parameters[m_root_param_index_of_textures],
         descriptor_range1, base_register);
-    init_descriptor_table(root_parameters[m_root_param_index_of_shadow_map], 
-        descriptor_range2, ++base_register);
+    UINT register_space_for_shadow_map = 1;
+    init_descriptor_table(root_parameters[m_root_param_index_of_shadow_map],
+        descriptor_range2, ++base_register, register_space_for_shadow_map,
+        Shadow_map::max_shadow_maps_count);
     init_descriptor_table(root_parameters[m_root_param_index_of_normal_maps],
         descriptor_range3, ++base_register);
     init_descriptor_table(root_parameters[m_root_param_index_of_instance_data],
         descriptor_range4, ++base_register);
 
-    root_parameters[m_root_param_index_of_instance_data].ShaderVisibility = 
+    root_parameters[m_root_param_index_of_instance_data].ShaderVisibility =
         D3D12_SHADER_VISIBILITY_VERTEX;
+
+    constexpr UINT descriptors_count = 1;
+    base_register = 3;
+    descriptor_range5.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, descriptors_count, base_register);
+    constexpr UINT descriptor_range_count = 1;
+    root_parameters[m_root_param_index_of_lights_data].InitAsDescriptorTable(descriptor_range_count,
+        &descriptor_range5, D3D12_SHADER_VISIBILITY_PIXEL);
 
     UINT sampler_shader_register = 0;
     CD3DX12_STATIC_SAMPLER_DESC texture_sampler_description(sampler_shader_register);
@@ -331,7 +348,7 @@ Main_root_signature::Main_root_signature(ComPtr<ID3D12Device> device, const Shad
         D3D12_TEXTURE_ADDRESS_MODE_MIRROR, D3D12_TEXTURE_ADDRESS_MODE_MIRROR);
 
     D3D12_STATIC_SAMPLER_DESC shadow_sampler_description = 
-        shadow_map.shadow_map_sampler(++sampler_shader_register);
+        Shadow_map::shadow_map_sampler(++sampler_shader_register);
 
     D3D12_STATIC_SAMPLER_DESC samplers[] = { texture_sampler_description,
                                              texture_mirror_sampler_description,
@@ -343,27 +360,20 @@ Main_root_signature::Main_root_signature(ComPtr<ID3D12Device> device, const Shad
 }
 
 void Main_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> command_list, 
-    UINT back_buf_index, Scene* scene, const View* view, Shadow_map* shadow_map)
+    UINT back_buf_index, Scene* scene, const View* view)
 {
-    int offset = 3;
     constexpr UINT size_in_words_of_value = 1;
     command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
-        size_in_words_of_value, m_render_settings, offset);
+        size_in_words_of_value, m_render_settings, value_offset_for_render_settings());
 
-    offset = 0;
+    int offset = 0;
+    auto eye = view->eye_position();
+    eye.m128_f32[3] = static_cast<float>(scene->lights_count()); // Hijack the unused w component.
     command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_vectors,
-        size_in_words_of_XMVECTOR, &view->eye_position(), offset);
+        size_in_words_of_XMVECTOR, &eye, offset);
 
-    offset = size_in_words_of_XMVECTOR;
-    auto light_position = scene->light_position();
-    command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_vectors,
-        size_in_words_of_XMVECTOR, &light_position, offset);
-
-    constexpr int shadow_transform_offset = size_in_words_of_XMMATRIX;
-    assert(shadow_map);
-    shadow_map->set_shadow_map_for_shader(command_list, back_buf_index,
-        m_root_param_index_of_shadow_map, m_root_param_index_of_values,
-        m_root_param_index_of_matrices, shadow_transform_offset);
+    scene->set_lights_data_shader_constant(command_list, back_buf_index,
+        m_root_param_index_of_lights_data, m_root_param_index_of_shadow_map);
 
     view->set_view(command_list, m_root_param_index_of_matrices);
 }

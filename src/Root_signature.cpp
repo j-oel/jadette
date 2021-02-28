@@ -51,10 +51,11 @@ void Root_signature::create(ComPtr<ID3D12Device> device,
 }
 
 void Root_signature::init_descriptor_table(CD3DX12_ROOT_PARAMETER1& root_parameter, 
-    CD3DX12_DESCRIPTOR_RANGE1& descriptor_range, UINT base_register)
+    CD3DX12_DESCRIPTOR_RANGE1& descriptor_range, UINT base_register, UINT register_space /* = 0*/,
+    UINT descriptors_count /* = 1 */)
 {
-    constexpr UINT descriptors_count = 1;
-    descriptor_range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, descriptors_count, base_register);
+    descriptor_range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, descriptors_count, base_register,
+        register_space);
     constexpr UINT descriptor_range_count = 1;
     root_parameter.InitAsDescriptorTable(descriptor_range_count, &descriptor_range,
         D3D12_SHADER_VISIBILITY_PIXEL);
@@ -101,7 +102,7 @@ Simple_root_signature::Simple_root_signature(ComPtr<ID3D12Device> device)
 }
 
 void Simple_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> command_list,
-    UINT back_buf_index, Scene* scene, const View* view, Shadow_map* shadow_map)
+    UINT back_buf_index, Scene* scene, const View* view)
 {
     view->set_view(command_list, m_root_param_index_of_matrices);
 }

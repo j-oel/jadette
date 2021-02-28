@@ -8,7 +8,6 @@
 struct values_struct
 {
     uint object_id;
-    int shadow_map_size;
     uint material_settings;
     uint render_settings;
 };
@@ -28,20 +27,33 @@ static const uint shadow_mapping_enabled = 1 << 3;
 struct matrices_struct
 {
     float4x4 view_projection;
-    float4x4 transform_to_shadow_map_space;
 };
 ConstantBuffer<matrices_struct> matrices : register(b1);
 
 struct vectors_struct
 {
     float4 eye_position;
-    float4 light_position;
 };
 ConstantBuffer<vectors_struct> vectors : register(b2);
 
+struct Light
+{
+    float4x4 transform_to_shadow_map_space;
+    float4 position;
+    float4 focus_point;
+};
+
+static const int max_lights = 16;
+struct lights_array
+{
+    Light l[max_lights];
+};
+ConstantBuffer<lights_array> lights : register(b3);
+
 
 Texture2D<float4> tex : register(t0);
-Texture2D<float> shadow_map : register(t1);
+static const int max_shadow_maps = 16;
+Texture2D<float> shadow_map[max_shadow_maps] : register(t1, space1);
 Texture2D<float4> normal_map : register(t2);
 
 struct instance_trans_rot_struct
@@ -61,7 +73,6 @@ struct pixel_shader_input
 {
     float4 sv_position : SV_POSITION;
     float4 position : POSITION;
-    float4 position_in_shadow_map_space : POSITION1;
     float3 normal : NORMAL;
     float3 tangent : TANGENT;
     float3 bitangent : BITANGENT;
@@ -150,9 +161,6 @@ pixel_shader_input vertex_shader_model_matrix(float4 position : POSITION, float3
     float4x4 model_view_projection = mul(matrices.view_projection, scaled_model);
     result.sv_position = mul(model_view_projection, position);
     result.position = mul(scaled_model, position);
-    float4x4 transform_to_shadow_map_space = mul(matrices.transform_to_shadow_map_space, scaled_model);
-    result.position_in_shadow_map_space = mul(transform_to_shadow_map_space, position);
-    result.position_in_shadow_map_space /= result.position_in_shadow_map_space.w;
     result.normal = mul(model, float4(normal, 0)).xyz;
     result.tangent = mul(model, tangent).xyz;
     result.bitangent = mul(model, bitangent).xyz;
@@ -203,20 +211,28 @@ pixel_shader_input vertex_shader_srv_instance_data(uint instance_id : SV_Instanc
 }
 
 
-float sample_shadow_map(pixel_shader_input input, float2 offset)
+float sample_shadow_map(pixel_shader_input input, int light_index,
+    float4 position_in_shadow_map_space, float2 offset, int shadow_map_size)
 {
     const float bias = 0.0005f;
-    float2 coord = input.position_in_shadow_map_space.xy + offset * (1.0f / values.shadow_map_size);
-    return shadow_map.SampleCmp(shadow_sampler, coord,
-        input.position_in_shadow_map_space.z - bias);
+    float2 coord = position_in_shadow_map_space.xy + offset * (1.0f / shadow_map_size);
+    return shadow_map[light_index].SampleCmpLevelZero(shadow_sampler, coord,
+        position_in_shadow_map_space.z - bias);
 }
 
-float shadow_value(pixel_shader_input input)
+float shadow_value(pixel_shader_input input, int light_index)
 {
+    float4 position_in_shadow_map_space = mul(lights.l[light_index].transform_to_shadow_map_space,
+        input.position);
+    position_in_shadow_map_space /= position_in_shadow_map_space.w;
+
+    int shadow_map_size = lights.l[light_index].focus_point.w;
+
     float shadow = 0.0f;
     for (float y = -1.5f; y <= 1.5f; y += 1.0f)
         for (float x = -1.5f; x <= 1.5f; x += 1.0f)
-            shadow += sample_shadow_map(input, float2(x, y));
+            shadow += sample_shadow_map(input, light_index, position_in_shadow_map_space,
+                float2(x, y), shadow_map_size);
 
     return shadow / 16.0f;
 }
@@ -274,10 +290,6 @@ float4 pixel_shader(pixel_shader_input input) : SV_TARGET
     if (values.material_settings & emissive)
         return color * emissive_strength;
 
-    float shadow = 1.0f;
-    if (values.render_settings & shadow_mapping_enabled)
-        shadow = shadow_value(input);
-
     float3 normal;
     if (values.render_settings & normal_mapping_enabled &&
         values.material_settings & normal_map_exists)
@@ -285,17 +297,30 @@ float4 pixel_shader(pixel_shader_input input) : SV_TARGET
     else
         normal = normalize(input.normal);
 
+    float4 accumulated_light = float4(0, 0, 0, 0);
     const float3 eye = vectors.eye_position.xyz;
-    const float3 light_unorm = vectors.light_position.xyz - input.position.xyz;
-    const float3 light = normalize(light_unorm);
-    const float shininess = 0.4f;
-    const float specular = shininess * saturate(pow(saturate(dot(2 * dot(normal, -light) * normal + light,
-        normalize(input.position.xyz - eye))), 30));
+
+    const int lights_count = vectors.eye_position.w;
+    for (int i = 0; i < lights_count; ++i)
+    {
+        const float3 light_unorm = lights.l[i].position.xyz - input.position.xyz;
+        const float3 light = normalize(light_unorm);
+        const float shininess = 0.4f;
+        const float specular = shininess * saturate(pow(saturate(
+            dot(2 * dot(normal, -light) * normal + light,
+            normalize(input.position.xyz - eye))), 30));
+
+        float shadow = 1.0f;
+        if (values.render_settings & shadow_mapping_enabled)
+            shadow = shadow_value(input, i);
+
+        accumulated_light += shadow * (color * saturate(dot(normal, light)) +
+            specular * float4(1.0f, 1.0f, 1.0f, 0.0f));
+    }
 
     const float4 ambient_light = float4(0.3f, 0.3f, 0.3f, 1.0f);
     const float4 ambient = color * ambient_light;
-    const float4 result = ambient + shadow * (color * saturate(dot(normal, light)) +
-        specular * float4(1.0f, 1.0f, 1.0f, 0.0f));
+    const float4 result = ambient + accumulated_light;
 
     return result;
 }

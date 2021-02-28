@@ -123,7 +123,7 @@ Depths_alpha_cut_out_root_signature::Depths_alpha_cut_out_root_signature(
 
 void Depths_alpha_cut_out_root_signature::set_constants(
     ComPtr<ID3D12GraphicsCommandList> command_list, UINT back_buf_index,
-    Scene* scene, const View* view, Shadow_map* shadow_map)
+    Scene* scene, const View* view)
 {
     int offset = 3;
     constexpr UINT size_in_words_of_value = 1;

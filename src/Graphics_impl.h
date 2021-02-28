@@ -10,7 +10,6 @@
 #include "dx12min.h"
 #include "Scene.h"
 #include "Depth_stencil.h"
-#include "Shadow_map.h"
 #include "View_controller.h"
 #include "View.h"
 #include "Root_signature.h"
@@ -27,10 +26,9 @@ using Microsoft::WRL::ComPtr;
 class Main_root_signature : public Root_signature
 {
 public:
-    Main_root_signature(ComPtr<ID3D12Device> device, const Shadow_map& shadow_map,
-        UINT* render_settings);
+    Main_root_signature(ComPtr<ID3D12Device> device, UINT* render_settings);
     virtual void set_constants(ComPtr<ID3D12GraphicsCommandList> command_list, 
-        UINT back_buf_index, Scene* scene, const View* view, Shadow_map* shadow_map);
+        UINT back_buf_index, Scene* scene, const View* view);
 
     const int m_root_param_index_of_values = 0;
     const int m_root_param_index_of_matrices = 1;
@@ -39,6 +37,7 @@ public:
     const int m_root_param_index_of_vectors = 4;
     const int m_root_param_index_of_shadow_map = 5;
     const int m_root_param_index_of_instance_data = 6;
+    const int m_root_param_index_of_lights_data = 7;
 private:
     UINT* m_render_settings;
 };
@@ -74,7 +73,6 @@ private:
     ComPtr<ID3D12PipelineState> m_pipeline_state_alpha_cut_out;
 
     Depth_pass m_depth_pass;
-    Shadow_map m_shadow_map;
     Main_root_signature m_root_signature;
     Scene m_scene;
     View m_view;

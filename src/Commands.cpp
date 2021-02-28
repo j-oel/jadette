@@ -6,7 +6,6 @@
 
 
 #include "Commands.h"
-#include "Shadow_map.h"
 #include "Scene.h"
 #include "Depth_stencil.h"
 #include "Root_signature.h"
@@ -15,29 +14,27 @@
 Commands::Commands(ComPtr<ID3D12GraphicsCommandList> command_list, UINT back_buf_index,
     Depth_stencil* depth_stencil, Texture_mapping texture_mapping, Input_layout input_layout,
     const View* view, Scene* scene, Depth_pass* depth_pass, Root_signature* root_signature,
-    int root_param_index_of_instance_data,
-    Shadow_map* shadow_map/* = nullptr*/) :
+    int root_param_index_of_instance_data) :
     m_command_list(command_list), m_texture_mapping(texture_mapping),
     m_input_layout(input_layout), m_depth_stencil(depth_stencil),
     m_scene(scene), m_view(view), m_depth_pass(depth_pass), m_root_signature(root_signature),
     m_root_param_index_of_instance_data(root_param_index_of_instance_data),
-    m_shadow_map(shadow_map), m_dsv_handle(m_depth_stencil->cpu_handle()),
+    m_dsv_handle(m_depth_stencil->cpu_handle()),
     m_back_buf_index(back_buf_index)
 {
 }
 
-void Commands::upload_instance_data()
+void Commands::upload_data_to_gpu()
 {
     assert(m_scene);
-    m_scene->upload_instance_data(m_command_list, m_back_buf_index);
+    m_scene->upload_data_to_gpu(m_command_list, m_back_buf_index);
 }
 
 void Commands::record_shadow_map_generation_commands_in_command_list()
 {
-    assert(m_shadow_map);
     assert(m_scene);
-    m_shadow_map->record_shadow_map_generation_commands_in_command_list(m_back_buf_index,
-        *m_scene, *m_depth_pass, m_command_list);
+    m_scene->record_shadow_map_generation_commands_in_command_list(m_back_buf_index,
+        *m_depth_pass, m_command_list);
 }
 
 void Commands::early_z_pass()
@@ -71,7 +68,7 @@ void Commands::set_descriptor_heap(ComPtr<ID3D12DescriptorHeap> descriptor_heap)
 void Commands::set_shader_constants()
 {
     assert(m_root_signature);
-    m_root_signature->set_constants(m_command_list, m_back_buf_index, m_scene, m_view, m_shadow_map);
+    m_root_signature->set_constants(m_command_list, m_back_buf_index, m_scene, m_view);
 }
 
 void Commands::close()

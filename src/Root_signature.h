@@ -11,7 +11,6 @@
 
 #include <string>
 
-class Shadow_map;
 class View;
 class Scene;
 
@@ -32,14 +31,15 @@ class Root_signature
 {
 public:
     virtual void set_constants(ComPtr<ID3D12GraphicsCommandList> command_list,
-        UINT back_buf_index, Scene* scene, const View* view, Shadow_map* shadow_map) = 0;
+        UINT back_buf_index, Scene* scene, const View* view) = 0;
     ComPtr<ID3D12RootSignature> get() { return m_root_signature; }
 protected:
     void create(ComPtr<ID3D12Device> device, const CD3DX12_ROOT_PARAMETER1* root_parameters,
         UINT root_parameters_count, const D3D12_STATIC_SAMPLER_DESC* samplers,
         UINT samplers_count);
     void init_descriptor_table(CD3DX12_ROOT_PARAMETER1& root_parameter, 
-        CD3DX12_DESCRIPTOR_RANGE1& descriptor_range, UINT base_register);
+        CD3DX12_DESCRIPTOR_RANGE1& descriptor_range, UINT base_register,
+        UINT register_space = 0, UINT descriptors_count = 1);
     void init_matrices(CD3DX12_ROOT_PARAMETER1& root_parameter, UINT count, 
         UINT shader_register);
     ComPtr<ID3D12RootSignature> m_root_signature;
@@ -51,7 +51,7 @@ class Simple_root_signature : public Root_signature
 public:
     Simple_root_signature(ComPtr<ID3D12Device> device);
     virtual void set_constants(ComPtr<ID3D12GraphicsCommandList> command_list,
-        UINT back_buf_index, Scene* scene, const View* view, Shadow_map* shadow_map);
+        UINT back_buf_index, Scene* scene, const View* view);
 
     const int m_root_param_index_of_values = 0;
     const int m_root_param_index_of_matrices = 1;

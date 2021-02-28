@@ -13,7 +13,6 @@
 
 
 class Scene;
-class Shadow_map;
 class View;
 class Depth_stencil;
 class Depth_pass;
@@ -30,10 +29,10 @@ public:
     Commands(ComPtr<ID3D12GraphicsCommandList> command_list, UINT back_buf_index,
         Depth_stencil* depth_stencil, Texture_mapping texture_mapping, Input_layout input_layout,
         const View* view, Scene* scene, Depth_pass* depth_pass, Root_signature* root_signature,
-        int root_param_index_of_instance_data, Shadow_map* shadow_map = nullptr);
+        int root_param_index_of_instance_data);
     void set_back_buf_index(UINT index) { m_back_buf_index = index; }
 
-    void upload_instance_data();
+    void upload_data_to_gpu();
     void record_shadow_map_generation_commands_in_command_list();
     void early_z_pass();
     void set_root_signature();
@@ -51,7 +50,6 @@ private:
     ComPtr<ID3D12GraphicsCommandList> m_command_list;
     Texture_mapping m_texture_mapping;
     Input_layout m_input_layout;
-    Shadow_map* m_shadow_map;
     Scene* m_scene;
     const View* m_view;
     Depth_pass* m_depth_pass;

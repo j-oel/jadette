@@ -28,3 +28,26 @@ void create_descriptor_heap(ComPtr<ID3D12Device> device,
     d.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
     throw_if_failed(device->CreateDescriptorHeap(&d, IID_PPV_ARGS(&render_target_view_heap)));
 }
+
+UINT descriptor_position_in_descriptor_heap(ComPtr<ID3D12Device> device, UINT descriptor_index)
+{
+    UINT descriptor_handle_increment_size =
+        device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+    return descriptor_handle_increment_size * descriptor_index;
+}
+
+void create_null_descriptor(ComPtr<ID3D12Device> device,
+    ComPtr<ID3D12DescriptorHeap> descriptor_heap, UINT descriptor_index)
+{
+    UINT position = descriptor_position_in_descriptor_heap(device, descriptor_index);
+
+    CD3DX12_CPU_DESCRIPTOR_HANDLE destination_descriptor(
+        descriptor_heap->GetCPUDescriptorHandleForHeapStart(), position);
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC s = { DXGI_FORMAT_R16_UNORM, D3D12_SRV_DIMENSION_TEXTURE2D,
+                                      D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, 0 };
+    s.Texture2D = { 0, 1, 0, 0 };
+
+    device->CreateShaderResourceView(nullptr, &s, destination_descriptor);
+}

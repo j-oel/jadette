@@ -17,11 +17,13 @@ class View
 {
 public:
     View(UINT width, UINT height, DirectX::XMVECTOR eye_position, DirectX::XMVECTOR focus_point,
-        float near_z, float far_z, float fov);
+        float near_z, float far_z, float fov,
+        DirectX::XMVECTOR up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
     void update();
     const DirectX::XMVECTOR& eye_position() const { return m_eye_position; }
     DirectX::XMVECTOR& eye_position() { return m_eye_position; }
     DirectX::XMVECTOR& focus_point() { return m_focus_point; }
+    DirectX::XMVECTOR& up() { return m_up; }
     void set_view(ComPtr<ID3D12GraphicsCommandList> command_list, 
         int root_param_index_of_matrices) const;
     const DirectX::XMMATRIX& view_projection_matrix() const { return m_view_projection_matrix; }
@@ -36,6 +38,7 @@ private:
 
     DirectX::XMVECTOR m_eye_position;
     DirectX::XMVECTOR m_focus_point;
+    DirectX::XMVECTOR m_up;
 
     D3D12_VIEWPORT m_viewport;
     D3D12_RECT m_scissor_rect;

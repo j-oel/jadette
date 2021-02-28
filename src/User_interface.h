@@ -32,7 +32,7 @@ public:
         Input& input, HWND window, const Config& config);
     void update(UINT back_buf_index, Scene& scene, View& view);
     void render_2d_text(size_t objects_count, int triangles_count, size_t vertices_count, 
-        int draw_calls);
+        size_t lights_count, int draw_calls);
     void scaling_changed(float dpi);
     bool early_z_pass() const { return m_early_z_pass; }
     bool texture_mapping() const { return m_texture_mapping; }
