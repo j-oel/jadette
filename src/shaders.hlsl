@@ -270,7 +270,7 @@ float3 tangent_space_normal_mapping(pixel_shader_input input)
     return normal;
 }
 
-float4 pixel_shader(pixel_shader_input input) : SV_TARGET
+float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFace) : SV_TARGET
 {
     float4 color = float4(0.4, 0.4, 0.4, 1.0f);
 
@@ -291,6 +291,10 @@ float4 pixel_shader(pixel_shader_input input) : SV_TARGET
         return color * emissive_strength;
 
     float3 normal;
+
+    // Flip normal of two-sided triangle if necessary
+    input.normal *= is_front_face ? 1.0f : -1.0f;
+
     if (values.render_settings & normal_mapping_enabled &&
         values.material_settings & normal_map_exists)
         normal = tangent_space_normal_mapping(input);
