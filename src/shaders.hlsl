@@ -305,17 +305,22 @@ float4 pixel_shader(pixel_shader_input input) : SV_TARGET
     {
         const float3 light_unorm = lights.l[i].position.xyz - input.position.xyz;
         const float3 light = normalize(light_unorm);
-        const float shininess = 0.4f;
-        const float specular = shininess * saturate(pow(saturate(
-            dot(2 * dot(normal, -light) * normal + light,
-            normalize(input.position.xyz - eye))), 30));
 
-        float shadow = 1.0f;
-        if (values.render_settings & shadow_mapping_enabled)
-            shadow = shadow_value(input, i);
+        const float normal_dot_light = dot(normal, light);
+        if (normal_dot_light > 0.0f)
+        {
+            const float shininess = 0.4f;
+            const float specular = shininess * saturate(pow(saturate(
+                dot(2 * dot(normal, -light) * normal + light,
+                normalize(input.position.xyz - eye))), 30));
 
-        accumulated_light += shadow * (color * saturate(dot(normal, light)) +
-            specular * float4(1.0f, 1.0f, 1.0f, 0.0f));
+            float shadow = 1.0f;
+            if (values.render_settings & shadow_mapping_enabled)
+                shadow = shadow_value(input, i);
+
+            accumulated_light += shadow * (color * normal_dot_light +
+                specular * float4(1.0f, 1.0f, 1.0f, 0.0f));
+        }
     }
 
     const float4 ambient_light = float4(0.3f, 0.3f, 0.3f, 1.0f);
