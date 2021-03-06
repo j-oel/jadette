@@ -313,6 +313,7 @@ float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFac
     {
         const float3 light_unorm = lights.l[i].position.xyz - input.position.xyz;
         const float3 light = normalize(light_unorm);
+        bool cast_shadow = lights.l[i].position.w;
 
         const float normal_dot_light = dot(normal, light);
         if (normal_dot_light > 0.0f)
@@ -332,7 +333,7 @@ float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFac
                 normalize(input.position.xyz - eye))), specular_exponent));
 
             float shadow = 1.0f;
-            if (values.render_settings & shadow_mapping_enabled)
+            if (values.render_settings & shadow_mapping_enabled && cast_shadow)
                 shadow = shadow_value(input, i);
 
             float4 diffuse = diffuse_intensity * color * normal_dot_light;

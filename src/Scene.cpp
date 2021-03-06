@@ -97,7 +97,7 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
     int descriptor_start_index_of_shadow_maps) :
     m_initial_view_position(0.0f, 0.0f, -20.0f),
     m_initial_view_focus_point(0.0f, 0.0f, 0.0f),
-    m_root_param_index_of_values(root_param_index_of_values),
+    m_root_param_index_of_values(root_param_index_of_values), m_shadow_casting_lights_count(0),
     m_triangles_count(0), m_vertices_count(0), m_selected_object_id(-1), m_object_selected(false)
 {
 
@@ -218,9 +218,14 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
     if (scene_error)
         return;
 
-    const UINT descriptor_index_increment = static_cast<UINT>(m_lights.size());
+    auto shadow_casting_light_is_less_than =
+        [](const Light& l1, const Light& l2) -> bool { return l1.position.w > l2.position.w; };
 
-    for (UINT i = 0; i < m_lights.size(); ++i)
+    sort(m_lights.begin(), m_lights.end(), shadow_casting_light_is_less_than );
+
+    const UINT descriptor_index_increment = static_cast<UINT>(m_shadow_casting_lights_count);
+
+    for (UINT i = 0; i < m_shadow_casting_lights_count; ++i)
     {
         m_shadow_maps.push_back(Shadow_map(device, swap_chain_buffer_count,
             texture_descriptor_heap, descriptor_start_index_of_shadow_maps + i,
@@ -868,10 +873,16 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             file >> specular_intensity;
             float specular_reach;
             file >> specular_reach;
+            float cast_shadow;
+            file >> cast_shadow;
 
-            m_lights.push_back({ XMFLOAT4X4(), XMFLOAT4(pos.x, pos.y, pos.z, 1.0f),
+            Light light = { XMFLOAT4X4(), XMFLOAT4(pos.x, pos.y, pos.z, cast_shadow),
                 XMFLOAT4(focus_point.x, focus_point.y, focus_point.z, 1.0f),
-                diffuse_intensity, diffuse_reach, specular_intensity, specular_reach });
+                diffuse_intensity, diffuse_reach, specular_intensity, specular_reach };
+            m_lights.push_back(light);
+
+            if (cast_shadow)
+                ++m_shadow_casting_lights_count;
         }
         else if (input == "view")
         {

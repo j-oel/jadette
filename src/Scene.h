@@ -132,6 +132,7 @@ private:
     std::vector<std::unique_ptr<Constant_buffer>> m_lights_data;
     std::vector<Light> m_lights;
     std::vector<Shadow_map> m_shadow_maps;
+    UINT m_shadow_casting_lights_count;
 
     int m_root_param_index_of_values;
 
