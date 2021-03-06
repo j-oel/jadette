@@ -41,6 +41,10 @@ struct Light
     float4x4 transform_to_shadow_map_space;
     float4 position;
     float4 focus_point;
+    float diffuse_intensity;
+    float diffuse_reach;
+    float specular_intensity;
+    float specular_reach;
 };
 
 static const int max_lights = 16;
@@ -313,21 +317,40 @@ float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFac
         const float normal_dot_light = dot(normal, light);
         if (normal_dot_light > 0.0f)
         {
+            const float diffuse_intensity = lights.l[i].diffuse_intensity;
+            const float diffuse_reach = lights.l[i].diffuse_reach;
+            const float specular_intensity = lights.l[i].specular_intensity;
+            const float specular_reach = lights.l[i].specular_reach;
+
             const float shininess = 0.4f;
-            const float specular = shininess * saturate(pow(saturate(
+            const float inverted_light_size = 30;
+            const float specular_exponent = inverted_light_size;
+
+            float4 specular = float4(1.0f, 1.0f, 1.0f, 0.0f) * specular_intensity *
+                shininess * saturate(pow(saturate(
                 dot(2 * dot(normal, -light) * normal + light,
-                normalize(input.position.xyz - eye))), 30));
+                normalize(input.position.xyz - eye))), specular_exponent));
 
             float shadow = 1.0f;
             if (values.render_settings & shadow_mapping_enabled)
                 shadow = shadow_value(input, i);
 
-            accumulated_light += shadow * (color * normal_dot_light +
-                specular * float4(1.0f, 1.0f, 1.0f, 0.0f));
+            float4 diffuse = diffuse_intensity * color * normal_dot_light;
+
+            const float light_distance = length(light_unorm);
+
+            const float diffuse_attenuation = max(diffuse_reach - light_distance, 0) /
+                diffuse_reach;
+
+            const float specular_attenuation = max(specular_reach - light_distance, 0) /
+                specular_reach;
+
+            accumulated_light += shadow * (diffuse * diffuse_attenuation + 
+                                           specular * specular_attenuation);
         }
     }
 
-    const float4 ambient_light = float4(0.3f, 0.3f, 0.3f, 1.0f);
+    const float4 ambient_light = float4(0.1f, 0.1f, 0.1f, 1.0f);
     const float4 ambient = color * ambient_light;
     const float4 result = ambient + accumulated_light;
 

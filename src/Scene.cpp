@@ -860,9 +860,18 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             file >> focus_point.x;
             file >> focus_point.y;
             file >> focus_point.z;
+            float diffuse_intensity;
+            file >> diffuse_intensity;
+            float diffuse_reach;
+            file >> diffuse_reach;
+            float specular_intensity;
+            file >> specular_intensity;
+            float specular_reach;
+            file >> specular_reach;
 
             m_lights.push_back({ XMFLOAT4X4(), XMFLOAT4(pos.x, pos.y, pos.z, 1.0f),
-                XMFLOAT4(focus_point.x, focus_point.y, focus_point.z, 1.0f) });
+                XMFLOAT4(focus_point.x, focus_point.y, focus_point.z, 1.0f),
+                diffuse_intensity, diffuse_reach, specular_intensity, specular_reach });
         }
         else if (input == "view")
         {
