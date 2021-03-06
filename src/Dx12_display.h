@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // This file is part of Jadette.
-// Copyright (C) 2020 Joel Jansson
+// Copyright (C) 2020-2021 Joel Jansson
 // Distributed under GNU General Public License v3.0
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
@@ -36,6 +36,8 @@ public:
     ComPtr<ID3D12Device> device() { return m_device; }
     ComPtr<ID3D12CommandAllocator> command_allocator() { return m_command_allocators[m_back_buf_index]; }
 
+    void wait_for_gpu_finished_before_exit();
+
     // These functions only exists because they are needed for the 2d text drawing.
     ComPtr<ID3D12CommandQueue> command_queue() { return m_command_queue; }
     ComPtr<ID3D12Resource>* render_targets() { return m_render_targets; }
@@ -52,8 +54,6 @@ private:
     void signal_frame_done();
     void change_back_buf_index();
     void wait_for_fence(DWORD timeout);
-
-    void wait_for_gpu_finished_before_exit();
 
     ComPtr<ID3D12Device> m_device;
     ComPtr<IDXGISwapChain3> m_swap_chain;

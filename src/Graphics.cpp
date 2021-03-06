@@ -105,7 +105,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
         XMVectorZero(), 0.1f, 4000.0f, config.fov),
     m_input(input),
     m_user_interface(m_dx12_display, m_texture_descriptor_heap, texture_index_for_depth_buffer(),
-        m_input, window, config),
+        input, window, config),
     m_width(config.width),
     m_height(config.height),
     m_shaders_compiled(false),
@@ -156,6 +156,15 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
 
     m_scene_loading_thread = std::thread(load_scene);
     m_shader_compilation_thread = std::thread(compile_shaders);
+}
+
+Graphics_impl::~Graphics_impl()
+{
+    m_dx12_display->wait_for_gpu_finished_before_exit(); // This is called here because we need to
+                                                         // wait before m_scene can be destroyed,
+                                                         // to ensure that the GPU is not executing
+                                                         // a command list that is referencing
+                                                         // already destroyed objects.
 }
 
 void Graphics_impl::finish_init()

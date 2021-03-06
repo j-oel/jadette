@@ -50,6 +50,7 @@ class Graphics_impl
 
 public:
     Graphics_impl(HWND window, const Config& config, Input& input);
+    ~Graphics_impl();
 
     void update();
     void render();
