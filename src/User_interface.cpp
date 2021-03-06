@@ -377,10 +377,17 @@ void User_interface::render_2d_text(size_t objects_count, int triangles_count,
     else
         ss << "Press F1 for help";
 
+    render_2d_text(ss.str());
+
+#endif
+}
+
+void User_interface::render_2d_text(const std::wstring& message)
+{
+#ifndef NO_TEXT
     float x_position = 5.0f;
     float y_position = 5.0f;
-    m_text.draw(ss.str().c_str(), x_position, y_position, m_dx12_display->back_buf_index());
-
+    m_text.draw(message.c_str(), x_position, y_position, m_dx12_display->back_buf_index());
 #endif
 }
 

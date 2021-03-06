@@ -18,6 +18,8 @@
 
 #include <memory>
 #include <vector>
+#include <atomic>
+#include <thread>
 
 
 using Microsoft::WRL::ComPtr;
@@ -53,6 +55,8 @@ public:
     void render();
     void scaling_changed(float dpi);
 private:
+    void finish_init();
+    void render_loading_message();
     void record_frame_rendering_commands_in_command_list();
     void set_and_clear_render_target();
     int create_texture_descriptor_heap();
@@ -74,7 +78,7 @@ private:
 
     Depth_pass m_depth_pass;
     Main_root_signature m_root_signature;
-    Scene m_scene;
+    std::unique_ptr<Scene> m_scene;
     View m_view;
     Input& m_input;
     User_interface m_user_interface;
@@ -83,5 +87,11 @@ private:
 
     UINT m_width;
     UINT m_height;
+
+    std::thread m_scene_loading_thread;
+    std::thread m_shader_compilation_thread;
+    std::atomic<bool> m_shaders_compiled;
+    std::atomic<bool> m_scene_loaded;
+    bool m_init_done;
 };
 

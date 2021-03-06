@@ -38,6 +38,7 @@ void Graphics::scaling_changed(float dpi)
 
 
 using DirectX::XMVectorSet;
+using DirectX::XMVectorZero;
 
 namespace
 {
@@ -100,23 +101,16 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     m_depth_pass(m_device, m_depth_stencil[0].dsv_format(), config.backface_culling,
         &m_render_settings),
     m_root_signature(m_device, &m_render_settings),
-    m_scene(m_device, m_dx12_display->swap_chain_buffer_count(), data_path + config.scene_file,
-        texture_index_for_diffuse_textures(m_dx12_display->swap_chain_buffer_count()),
-        m_texture_descriptor_heap, m_root_signature.m_root_param_index_of_textures,
-        m_root_signature.m_root_param_index_of_values,
-        m_root_signature.m_root_param_index_of_normal_maps,
-        value_offset_for_material_settings(),
-        descriptor_index_for_static_instance_data(),
-        descriptor_start_index_for_dynamic_instance_data(),
-        descriptor_start_index_for_lights_data(m_dx12_display->swap_chain_buffer_count()),
-        descriptor_start_index_for_shadow_maps(m_dx12_display->swap_chain_buffer_count())),
-    m_view(config.width, config.height, m_scene.initial_view_position(),
-        m_scene.initial_view_focus_point(), 0.1f, 4000.0f, config.fov),
+    m_view(config.width, config.height, XMVectorSet(0.0, 0.0f, 1.0f, 1.0f),
+        XMVectorZero(), 0.1f, 4000.0f, config.fov),
     m_input(input),
     m_user_interface(m_dx12_display, m_texture_descriptor_heap, texture_index_for_depth_buffer(),
         m_input, window, config),
     m_width(config.width),
-    m_height(config.height)
+    m_height(config.height),
+    m_shaders_compiled(false),
+    m_scene_loaded(false),
+    m_init_done(false)
 {
     create_main_command_list();
     for (UINT i = 1; i < m_dx12_display->swap_chain_buffer_count(); ++i)
@@ -132,12 +126,54 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
             std::to_wstring(i)).c_str(), (std::wstring(L"Depth Buffer ") +
                 std::to_wstring(i)).c_str());
     }
-    create_pipeline_states(config);
+
+    auto load_scene = [=]()
+    {
+        auto swap_chain_buffer_count = m_dx12_display->swap_chain_buffer_count();
+        m_scene = std::make_unique<Scene>(m_device, swap_chain_buffer_count,
+            data_path + config.scene_file,
+            texture_index_for_diffuse_textures(swap_chain_buffer_count),
+            m_texture_descriptor_heap, m_root_signature.m_root_param_index_of_textures,
+            m_root_signature.m_root_param_index_of_values,
+            m_root_signature.m_root_param_index_of_normal_maps,
+            value_offset_for_material_settings(),
+            descriptor_index_for_static_instance_data(),
+            descriptor_start_index_for_dynamic_instance_data(),
+            descriptor_start_index_for_lights_data(swap_chain_buffer_count),
+            descriptor_start_index_for_shadow_maps(swap_chain_buffer_count));
+
+        m_view.eye_position() = m_scene->initial_view_position();
+        m_view.focus_point() = m_scene->initial_view_focus_point();
+        m_scene_loaded = true;
+    };
+
+    auto compile_shaders = [=]()
+    {
+        create_pipeline_states(config);
+
+        m_shaders_compiled = true;
+    };
+
+    m_scene_loading_thread = std::thread(load_scene);
+    m_shader_compilation_thread = std::thread(compile_shaders);
+}
+
+void Graphics_impl::finish_init()
+{
+    m_scene_loading_thread.join();
+    m_shader_compilation_thread.join();
+    m_init_done = true;
 }
 
 void Graphics_impl::update()
 {
-    m_user_interface.update(m_dx12_display->back_buf_index(), m_scene, m_view);
+    if (!m_scene_loaded || !m_shaders_compiled)
+        return;
+
+    if (!m_init_done)
+        finish_init();
+
+    m_user_interface.update(m_dx12_display->back_buf_index(), *m_scene.get(), m_view);
 
     try
     {
@@ -151,10 +187,11 @@ void Graphics_impl::update()
     }
     catch (Shader_compilation_error& e)
     {
-        print("Shader compilation of " + e.m_shader + " failed. See output window if you run in debugger.");
+        print("Shader compilation of " + e.m_shader +
+            " failed. See output window if you run in debugger.");
     }
 
-    m_scene.update();
+    m_scene->update();
 
     m_render_settings = (m_user_interface.texture_mapping() ? texture_mapping_enabled : 0) |
                         (m_user_interface.shadow_mapping() ? shadow_mapping_enabled : 0) |
@@ -165,14 +202,43 @@ void Graphics_impl::render()
 {
     m_dx12_display->begin_render(m_command_list);
 
-    record_frame_rendering_commands_in_command_list();
+    if (m_init_done)
+    {
+        record_frame_rendering_commands_in_command_list();
 
-    m_dx12_display->execute_command_list(m_command_list);
+        m_dx12_display->execute_command_list(m_command_list);
 
-    m_user_interface.render_2d_text(m_scene.objects_count(), m_scene.triangles_count(),
-        m_scene.vertices_count(), m_scene.lights_count(), Mesh::draw_calls());
+        m_user_interface.render_2d_text(m_scene->objects_count(), m_scene->triangles_count(),
+            m_scene->vertices_count(), m_scene->lights_count(), Mesh::draw_calls());
+    }
+    else
+    {
+        render_loading_message();
+    }
 
     m_dx12_display->end_render();
+}
+
+void Graphics_impl::render_loading_message()
+{
+    set_and_clear_render_target();
+    m_command_list->Close();
+
+#ifndef NO_TEXT
+    std::wstring message = L"Compiling shaders...";
+    if (m_shaders_compiled)
+        message += L" done.";
+    message += L"\nLoading scene...";
+    if (m_scene_loaded)
+        message += L" done.";
+    
+    m_dx12_display->execute_command_list(m_command_list);
+    m_user_interface.render_2d_text(message);
+#endif
+
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for(30ms); // It would be wasteful to render this with full frame rate,
+                                       // hence sleep for a while.
 }
 
 void Graphics_impl::scaling_changed(float dpi)
@@ -249,7 +315,7 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
 {
     Commands c(m_command_list, m_dx12_display->back_buf_index(),
         &m_depth_stencil[m_dx12_display->back_buf_index()],
-        Texture_mapping::enabled, Input_layout::position_normal_tangents, &m_view, &m_scene,
+        Texture_mapping::enabled, Input_layout::position_normal_tangents, &m_view, m_scene.get(),
         &m_depth_pass, &m_root_signature, m_root_signature.m_root_param_index_of_instance_data);
 
     Mesh::reset_draw_calls();
@@ -266,7 +332,7 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     set_and_clear_render_target();
     c.set_shader_constants();
 
-    m_scene.sort_transparent_objects_back_to_front(m_view);
+    m_scene->sort_transparent_objects_back_to_front(m_view);
 
     if (m_user_interface.early_z_pass())
     {
