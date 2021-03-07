@@ -41,6 +41,7 @@ struct Light
     float4x4 transform_to_shadow_map_space;
     float4 position;
     float4 focus_point;
+    float4 color;
     float diffuse_intensity;
     float diffuse_reach;
     float specular_intensity;
@@ -327,7 +328,7 @@ float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFac
             const float inverted_light_size = 30;
             const float specular_exponent = inverted_light_size;
 
-            float4 specular = float4(1.0f, 1.0f, 1.0f, 0.0f) * specular_intensity *
+            float4 specular = lights.l[i].color * specular_intensity *
                 shininess * saturate(pow(saturate(
                 dot(2 * dot(normal, -light) * normal + light,
                 normalize(input.position.xyz - eye))), specular_exponent));
@@ -336,7 +337,7 @@ float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFac
             if (values.render_settings & shadow_mapping_enabled && cast_shadow)
                 shadow = shadow_value(input, i);
 
-            float4 diffuse = diffuse_intensity * color * normal_dot_light;
+            float4 diffuse = diffuse_intensity * color * lights.l[i].color * normal_dot_light;
 
             const float light_distance = length(light_unorm);
 

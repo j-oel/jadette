@@ -74,16 +74,18 @@ object grating3 static grating not_used 3.9 3.3 -6 2.5
 view 10 15 -20 0 0 0
 
 # To define a light:
-# light <pos_x> <pos_y> <pos_z> <fp_x> <fp_y> <fp_z> <diff_int> <diff_r> <spec_int> <spec_r> <shadow>
-# where fp_[x|y|z] is the x, y, and z component of the focus point,
-# diff_int is the diffuse intensity, diff_r is the distance the diffuse light reaches,
-# spec_int is the specular intensity and spec_r is the distance the specular light reaches,
+# light <x> <y> <z> <fx> <fy> <fz> <diff_int> <diff_r> <spec_int> <spec_r> <r> <g> <b> <shadow>
+# where <x> <y> <z> is the position,
+# <f[x|y|z]> is the x, y, and z component of the focus point,
+# <diff_int> is the diffuse intensity, <diff_r> is the distance the diffuse light reaches,
+# <spec_int> is the specular intensity and <spec_r> is the distance the specular light reaches,
+# <r> <g> <b> is the color,
 # shadow should be 1 if the light is a shadow casting light, 0 otherwise.
 
-light 10 20 5 0 0 0 2 40 1 50 1
-light 20 0 -30 20 7 10 0.5 50 0.8 60 0
-light -15 5 -10 -15 0 -10 1 20 1.5 25 0
-light -5 7 0 -5 0 0 0.5 18 0.7 20 0
+light 10 20 5 0 0 0 4 40 3 50 0.5 0.4 0.2 1
+light 20 0 -30 20 7 10 0.5 50 0.8 60 1.0 1.0 1.0 0
+light -15 5 -10 -15 0 -10 1 20 1.5 25 1.0 0.0 0.0 0
+light -5 7 0 -5 0 0 0.5 18 0.7 20 0.0 0.0 1.0 0
 
 
 # To animate an object flying around in a circle:

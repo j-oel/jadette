@@ -873,11 +873,18 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             file >> specular_intensity;
             float specular_reach;
             file >> specular_reach;
+            float color_r;
+            file >> color_r;
+            float color_g;
+            file >> color_g;
+            float color_b;
+            file >> color_b;
             float cast_shadow;
             file >> cast_shadow;
 
             Light light = { XMFLOAT4X4(), XMFLOAT4(pos.x, pos.y, pos.z, cast_shadow),
                 XMFLOAT4(focus_point.x, focus_point.y, focus_point.z, 1.0f),
+                XMFLOAT4(color_r, color_g, color_b, 1.0f),
                 diffuse_intensity, diffuse_reach, specular_intensity, specular_reach };
             m_lights.push_back(light);
 
