@@ -273,24 +273,25 @@ Scene::~Scene()
     CoUninitialize();
 }
 
-XMMATRIX fly_around_in_circle(std::shared_ptr<Graphical_object>& object,
+XMMATRIX fly_around_in_circle(const Flying_object& object,
     const std::vector<Per_instance_transform>& transforms)
 {
-    XMVECTOR rotation_axis = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    const float angle = XMConvertToRadians(static_cast<float>(elapsed_time_in_seconds() * 100.0));
+    XMVECTOR rotation_axis = XMLoadFloat3(&object.rotation_axis);
+    const float angle = XMConvertToRadians(static_cast<float>(
+        elapsed_time_in_seconds() * object.speed));
     XMMATRIX rotation_matrix = XMMatrixRotationAxis(rotation_axis, angle);
-    XMVECTOR point_on_the_radius = XMVectorSet(12.0f, -4.0f, 0.0f, 0.0f);
+    XMVECTOR point_on_the_radius = XMLoadFloat3(&object.point_on_radius);
     XMVECTOR current_rotation_point_around_the_radius =
         XMVector3Transform(point_on_the_radius, rotation_matrix);
     XMMATRIX go_in_a_circle = XMMatrixTranslationFromVector(
         current_rotation_point_around_the_radius);
-    XMMATRIX orient_the_ship = XMMatrixRotationAxis(rotation_axis,
+    XMMATRIX orient_the_object = XMMatrixRotationAxis(rotation_axis,
         angle + XMConvertToRadians(-90.0f));
 
-    auto translation = convert_half4_to_vector(transforms[object->id()].translation);
+    auto translation = convert_half4_to_vector(transforms[object.object->id()].translation);
     XMMATRIX translate_to_the_point_on_which_to_rotate_around =
         XMMatrixTranslationFromVector(translation);
-    XMMATRIX new_model_matrix = orient_the_ship * go_in_a_circle *
+    XMMATRIX new_model_matrix = orient_the_object * go_in_a_circle *
         translate_to_the_point_on_which_to_rotate_around;
 
     new_model_matrix.r[3].m128_f32[3] = translation.m128_f32[3]; // Set the scaling component
@@ -324,7 +325,7 @@ void Scene::update()
 
     for (auto& ufo : m_flying_objects) // :-)
     {
-        XMMATRIX new_model_matrix = fly_around_in_circle(ufo.object, m_static_model_transforms);
+        XMMATRIX new_model_matrix = fly_around_in_circle(ufo, m_static_model_transforms);
         XMVECTOR quaternion = XMQuaternionRotationMatrix(new_model_matrix);
         XMVECTOR translation = new_model_matrix.r[3];
         XMHALF4 translation_half4;
@@ -845,7 +846,18 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             file >> object;
             if (!objects.count(object))
                 throw Object_not_defined(object);
-            m_flying_objects.push_back(objects[object]);
+            XMFLOAT3 point_on_radius;
+            file >> point_on_radius.x;
+            file >> point_on_radius.y;
+            file >> point_on_radius.z;
+            XMFLOAT3 rot;
+            file >> rot.x;
+            file >> rot.y;
+            file >> rot.z;
+            float speed;
+            file >> speed;
+            m_flying_objects.push_back({ objects[object].object, point_on_radius,
+                rot, speed, objects[object].transform_ref });
         }
         else if (input == "rotate")
         {

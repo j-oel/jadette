@@ -89,10 +89,12 @@ light -5 7 0 -5 0 0 0.5 18 0.7 20 0.0 0.0 1.0 0
 
 
 # To animate an object flying around in a circle:
-# fly <previously_defined_dynamic_object>
+# fly <previously_defined_dynamic_object> <r_x> <r_y> <r_z> <rot_x> <rot_y> <rot_z> <speed>
+# where <r_[x|y|z]> is a point on the radius,
+# and <rot_[x|y|z]> defines the axis of rotation.
 
-fly spaceship
-fly arrayobject11
-fly arrayobject20
+fly spaceship 12 -4 0 0 1 0 100
+fly arrayobject11 17 -4 0 0 0 1 50
+fly arrayobject20 12 -3 0 0 1 0 100
 
 rotate arrayobject9

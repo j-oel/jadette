@@ -24,6 +24,14 @@ struct Dynamic_object
     int transform_ref;
 };
 
+struct Flying_object
+{
+    std::shared_ptr<Graphical_object> object;
+    DirectX::XMFLOAT3 point_on_radius;
+    DirectX::XMFLOAT3 rotation_axis;
+    float speed;
+    int transform_ref;
+};
 
 struct Light
 {
@@ -118,7 +126,7 @@ private:
     std::vector<std::shared_ptr<Graphical_object> > m_dynamic_objects;
     std::vector<std::shared_ptr<Graphical_object> > m_transparent_objects;
     std::vector<std::shared_ptr<Graphical_object> > m_alpha_cut_out_objects;
-    std::vector<Dynamic_object> m_flying_objects;
+    std::vector<Flying_object> m_flying_objects;
     std::vector<Dynamic_object> m_rotating_objects;
 
     std::vector<std::shared_ptr<Texture>> m_textures;
