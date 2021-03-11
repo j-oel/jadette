@@ -29,7 +29,7 @@ namespace
 
 Texture::Texture(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, const std::string& texture_filename,
-    UINT texture_index)
+    UINT texture_index) : m_texture_index(texture_index)
 {
     std::unique_ptr<uint8_t[]> decoded_data;
     std::vector<D3D12_SUBRESOURCE_DATA> subresource;

@@ -296,6 +296,7 @@ void read_mtl_file(const string file_name, map<string, Material>& materials)
     string name;
     Material material {}; // There is no "end tag" for newmtl, so we have to be able to save the
                           // last material, when the whole file has been read.
+    material.id = -1;
     while (file.is_open() && !file.eof())
     {
         file >> input;
@@ -308,6 +309,7 @@ void read_mtl_file(const string file_name, map<string, Material>& materials)
                 material.normal_map = "";         // Since the lifetime of the variable material is
                 material.diffuse_map = "";        // longer than the loop, we have to reset the
                 material.settings = 0;            // the components for the new material.
+                material.id = -1;
             }
             file >> name;
         }

@@ -88,13 +88,13 @@ XMHALF4 convert_float4_to_half4(const XMFLOAT4& vec)
 
 Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
     const std::string& scene_file, int texture_start_index,
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
-    int root_param_index_of_textures, int root_param_index_of_values,
-    int root_param_index_of_normal_maps, int normal_map_settings_offset,
+    ComPtr<ID3D12DescriptorHeap> descriptor_heap,
+    int root_param_index_of_values, int material_id_offset,
     int descriptor_index_of_static_instance_data,
     int descriptor_start_index_of_dynamic_instance_data,
     int descriptor_start_index_of_lights_data,
-    int descriptor_start_index_of_shadow_maps) :
+    int descriptor_start_index_of_shadow_maps,
+    int descriptor_start_index_of_materials) :
     m_initial_view_position(0.0f, 0.0f, -20.0f),
     m_initial_view_focus_point(0.0f, 0.0f, 0.0f),
     m_root_param_index_of_values(root_param_index_of_values), m_shadow_casting_lights_count(0),
@@ -115,6 +115,8 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
         command_allocator.Get(), initial_pipeline_state, IID_PPV_ARGS(&command_list)));
     SET_DEBUG_NAME(command_list, L"Scene Upload Data Command List");
 
+    int texture_index = texture_start_index;
+
     std::exception_ptr exc = nullptr;
 
     auto read_file_thread_function = [&]()
@@ -134,10 +136,8 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
 
         try
         {
-            read_file(scene_file, device, command_list, texture_start_index,
-                texture_descriptor_heap, root_param_index_of_textures,
-                root_param_index_of_values, root_param_index_of_normal_maps,
-                normal_map_settings_offset);
+            read_file(scene_file, device, command_list, texture_index,
+                descriptor_heap, root_param_index_of_values, material_id_offset);
         }
         catch (...)
         {
@@ -218,6 +218,19 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
     if (scene_error)
         return;
 
+    m_materials_data = std::make_unique<Constant_buffer<Shader_material>>(device, command_list,
+        static_cast<UINT>(m_materials.size()), Shader_material(),
+        descriptor_heap, descriptor_start_index_of_materials);
+
+    m_materials_data->upload_new_data_to_gpu(command_list, m_materials);
+
+    for (UINT i = texture_index; i < texture_start_index + max_textures; ++i)
+    {
+        // On Tier 1 hardware, all descriptors must be set, even if not used,
+        // hence set them to null descriptors.
+        create_null_descriptor(device, descriptor_heap, i);
+    }
+
     auto shadow_casting_light_is_less_than =
         [](const Light& l1, const Light& l2) -> bool { return l1.position.w > l2.position.w; };
 
@@ -228,7 +241,7 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
     for (UINT i = 0; i < m_shadow_casting_lights_count; ++i)
     {
         m_shadow_maps.push_back(Shadow_map(device, swap_chain_buffer_count,
-            texture_descriptor_heap, descriptor_start_index_of_shadow_maps + i,
+            descriptor_heap, descriptor_start_index_of_shadow_maps + i,
             descriptor_index_increment));
     }
 
@@ -238,25 +251,25 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
         UINT descriptor_index = descriptor_start_index_of_shadow_maps + i;
         // On Tier 1 hardware, all descriptors must be set, even if not used,
         // hence set them to null descriptors.
-        create_null_descriptor(device, texture_descriptor_heap, descriptor_index);
+        create_null_descriptor(device, descriptor_heap, descriptor_index);
     }
 
     for (UINT i = 0; i < swap_chain_buffer_count; ++i)
     {
         m_dynamic_instance_data.push_back(std::make_unique<Instance_data>(device, command_list,
             static_cast<UINT>(m_dynamic_objects.size()), Per_instance_transform(),
-            texture_descriptor_heap, descriptor_start_index_of_dynamic_instance_data + i));
+            descriptor_heap, descriptor_start_index_of_dynamic_instance_data + i));
 
-        m_lights_data.push_back(std::make_unique<Constant_buffer>(device, command_list,
+        m_lights_data.push_back(std::make_unique<Constant_buffer<Light>>(device, command_list,
             static_cast<UINT>(m_lights.size()), Light(),
-            texture_descriptor_heap, descriptor_start_index_of_lights_data + i));
+            descriptor_heap, descriptor_start_index_of_lights_data + i));
     }
 
     m_static_instance_data = std::make_unique<Instance_data>(device, command_list,
         // It's graphical_objects here because every graphical_object has a an entry in
         // m_static_model_transforms. This is mainly (only?) because the fly_around_in_circle
         // function requires that currently. This is all quite messy and should be fixed.
-        static_cast<UINT>(m_graphical_objects.size()), Per_instance_transform(), texture_descriptor_heap,
+        static_cast<UINT>(m_graphical_objects.size()), Per_instance_transform(), descriptor_heap,
         descriptor_index_of_static_instance_data);
 
     upload_resources_to_gpu(device, command_list);
@@ -266,6 +279,10 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
         m_triangles_count += g->triangles_count();
         m_vertices_count += g->vertices_count();
     }
+
+    UINT position = descriptor_position_in_descriptor_heap(device, texture_start_index);
+    m_texture_gpu_descriptor_handle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
+        descriptor_heap->GetGPUDescriptorHandleForHeapStart(), position);
 }
 
 Scene::~Scene()
@@ -488,6 +505,16 @@ void Scene::set_lights_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& c
             root_param_index_of_shadow_map);
 }
 
+void Scene::set_material_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    int root_param_index_of_textures, int root_param_index_of_materials)
+{
+    command_list->SetGraphicsRootDescriptorTable(root_param_index_of_materials,
+        m_materials_data->gpu_handle());
+
+    command_list->SetGraphicsRootDescriptorTable(root_param_index_of_textures,
+        m_texture_gpu_descriptor_handle);
+}
+
 void Scene::manipulate_object(DirectX::XMVECTOR delta_pos, DirectX::XMVECTOR delta_rotation)
 {
     if (m_object_selected)
@@ -569,10 +596,9 @@ void throw_if_file_not_openable(const std::string& file_name)
 // Only performs basic error checking for the moment. Not very robust.
 // You should ensure that the scene file is valid.
 void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device, 
-    ComPtr<ID3D12GraphicsCommandList>& command_list, int texture_start_index,
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures,
-    int root_param_index_of_values, int root_param_index_of_normal_maps,
-    int normal_map_settings_offset)
+    ComPtr<ID3D12GraphicsCommandList>& command_list, int& texture_index,
+    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_values,
+    int material_id_offset)
 {
     using std::map;
     using std::shared_ptr;
@@ -590,9 +616,10 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
     ifstream file(file_name);
     if (!file.is_open())
         throw Scene_file_open_error();
-    int texture_index = texture_start_index;
     int object_id = 0;
     int transform_ref = 0;
+    int material_id = 0;
+    int texture_start_index = texture_index;
 
     auto get_texture = [&](const string& name) -> auto
     {
@@ -613,17 +640,29 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
         return texture;
     };
 
+    auto add_material = [&](UINT diff_tex_index, UINT normal_map_index, UINT material_settings)
+        -> int
+    {
+        Shader_material shader_material = { diff_tex_index - texture_start_index,
+            normal_map_index, material_settings };
+        m_materials.push_back(shader_material);
+
+        int current_material_id = material_id;
+        ++material_id;
+        return current_material_id;
+    };
+
     auto create_object = [&](const string& name, shared_ptr<Mesh> mesh,
-        shared_ptr<Texture> diffuse_map, bool dynamic, XMFLOAT4 position, int instances = 1,
-        shared_ptr<Texture> normal_map = nullptr, UINT material_settings = 0, bool rotating = false)
+        shared_ptr<Texture> diffuse_map, bool dynamic, XMFLOAT4 position, UINT material_id,
+        int instances = 1, shared_ptr<Texture> normal_map = nullptr, UINT material_settings = 0,
+        bool rotating = false)
     {
         Per_instance_transform transform = { convert_float4_to_half4(position),
         convert_vector_to_half4(DirectX::XMQuaternionIdentity()) };
         m_static_model_transforms.push_back(transform);
-        auto object = std::make_shared<Graphical_object>(device, mesh,
-            command_list, root_param_index_of_textures, diffuse_map,
-            root_param_index_of_values, root_param_index_of_normal_maps, normal_map_settings_offset,
-            normal_map, object_id++, material_settings, instances);
+        auto object = std::make_shared<Graphical_object>(device, mesh, command_list, diffuse_map,
+            root_param_index_of_values, material_id_offset, normal_map, object_id++, material_id,
+            instances);
 
         m_graphical_objects.push_back(object);
 
@@ -679,6 +718,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
             if (meshes.find(model) != meshes.end())
             {
                 auto mesh = meshes[model];
+                UINT normal_index = 0;
 
                 shared_ptr<Texture> normal_map_tex = nullptr;
                 UINT material_settings = 0;
@@ -686,9 +726,14 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                 {
                     normal_map_tex = get_texture(normal_map);
                     material_settings = normal_map_exists;
+                    normal_index = normal_map_tex->index() - texture_start_index;
                 }
                 auto diffuse_map_tex = get_texture(diffuse_map);
-                create_object(name, mesh, diffuse_map_tex, dynamic, position, 1,
+
+                int current_material = add_material(diffuse_map_tex->index(), normal_index,
+                    material_settings);
+
+                create_object(name, mesh, diffuse_map_tex, dynamic, position, current_material, 1,
                     normal_map_tex, material_settings);
             }
             else
@@ -699,7 +744,10 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
 
                 for (auto& m : model_collection->models)
                 {
+                    UINT normal_index = 0;
                     UINT material_settings = 0;
+                    int current_material_id = -1;
+                    shared_ptr<Texture> normal_map_tex = nullptr;
                     if (m.material != "")
                     {
                         auto material_iter = model_collection->materials.find(m.material);
@@ -709,18 +757,44 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                         diffuse_map = material.diffuse_map;
                         normal_map = material.normal_map;
                         material_settings = material.settings;
+
+                        bool shader_material_not_yet_created = (material.id == -1);
+                        if (shader_material_not_yet_created)
+                        {
+                            if (!normal_map.empty())
+                            {
+                                normal_map_tex = get_texture(normal_map);
+                                normal_index = normal_map_tex->index() - texture_start_index;
+                            }
+                            auto diffuse_map_tex = get_texture(diffuse_map);
+
+                            current_material_id = add_material(diffuse_map_tex->index(),
+                                normal_index, material_settings);
+                            material.id = current_material_id;
+                        }
+                        else
+                        {
+                            current_material_id = material.id;
+                        }
+
                     }
-                    shared_ptr<Texture> normal_map_tex = nullptr;
+
                     if (!normal_map.empty())
                     {
                         normal_map_tex = get_texture(normal_map);
-                        // This is for the case when a normal map is not defined in the mtl-file but
-                        // is defined directly in the scene file.
+                        // This is for the case when a normal map is not defined in the mtl-file
+                        // but is defined directly in the scene file.
                         material_settings |= normal_map_exists;
+                        normal_index = normal_map_tex->index() - texture_start_index;
                     }
                     auto diffuse_map_tex = get_texture(diffuse_map);
-                    create_object(name, m.mesh, diffuse_map_tex, dynamic, position, 1,
-                        normal_map_tex, material_settings);
+
+                    if (current_material_id == -1)
+                        current_material_id = add_material(diffuse_map_tex->index(),
+                            normal_index, material_settings);
+
+                    create_object(name, m.mesh, diffuse_map_tex, dynamic, position,
+                        current_material_id, 1, normal_map_tex, material_settings);
                 }
             }
         }
@@ -821,12 +895,17 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
 
             shared_ptr<Texture> normal_map_tex = nullptr;
 
-            UINT normal_map_settings = 0;
+            UINT normal_index = 0;
+            UINT material_settings = 0;
             if (!normal_map.empty())
             {
                 normal_map_tex = get_texture(normal_map);
-                normal_map_settings = normal_map_exists;
+                material_settings = normal_map_exists;
+                normal_index = normal_map_tex->index() - texture_start_index;
             }
+
+            int curr_material_id = add_material(diffuse_map_tex->index(),
+                normal_index, material_settings);
 
             for (int x = 0; x < count.x; ++x)
                 for (int y = 0; y < count.y; ++y)
@@ -835,8 +914,8 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
                         XMFLOAT4 position = XMFLOAT4(pos.x + offset.x * x, pos.y + offset.y * y,
                             pos.z + offset.z * z, scale);
                         create_object(dynamic? "arrayobject" + std::to_string(object_id) :"", 
-                            mesh, diffuse_map_tex, dynamic, position, instances,
-                            normal_map_tex, normal_map_settings, (input == "rotating_array" ||
+                            mesh, diffuse_map_tex, dynamic, position, curr_material_id, instances,
+                            normal_map_tex, material_settings, (input == "rotating_array" ||
                                 input == "normal_mapped_rotating_array")? true: false);
                     }
         }
@@ -924,18 +1003,19 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
     }
 }
 
-Constant_buffer::Constant_buffer(ComPtr<ID3D12Device> device,
-    ComPtr<ID3D12GraphicsCommandList>& command_list, UINT count, Light data,
+template <typename T>
+Constant_buffer<T>::Constant_buffer(ComPtr<ID3D12Device> device,
+    ComPtr<ID3D12GraphicsCommandList>& command_list, UINT count, T data,
     ComPtr<ID3D12DescriptorHeap> descriptor_heap, UINT descriptor_index)
 {
     if (count == 0)
         return;
 
     constexpr int alignment = 256;
-    m_constant_buffer_size = static_cast<UINT>(count * sizeof(Light));
+    m_constant_buffer_size = static_cast<UINT>(count * sizeof(T));
     if (m_constant_buffer_size % alignment)
         m_constant_buffer_size = ((m_constant_buffer_size / alignment) + 1) * alignment;
-    std::vector<Light> buffer_data;
+    std::vector<T> buffer_data;
     buffer_data.resize(count);
 
     D3D12_CONSTANT_BUFFER_VIEW_DESC buffer_view_desc {};
@@ -954,9 +1034,10 @@ Constant_buffer::Constant_buffer(ComPtr<ID3D12Device> device,
         descriptor_heap->GetGPUDescriptorHandleForHeapStart(), position);
 }
 
-void Constant_buffer::upload_new_data_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list,
-    const std::vector<Light>& light_data)
+template <typename T>
+void Constant_buffer<T>::upload_new_data_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    const std::vector<T>& data)
 {
-    upload_new_data(command_list, light_data, m_constant_buffer, m_upload_resource,
+    upload_new_data(command_list, data, m_constant_buffer, m_upload_resource,
         m_constant_buffer_size, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 }

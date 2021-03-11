@@ -96,15 +96,21 @@ Depths_alpha_cut_out_root_signature::Depths_alpha_cut_out_root_signature(
 
     UINT base_register = 0;
     CD3DX12_DESCRIPTOR_RANGE1 descriptor_range1, descriptor_range2, descriptor_range3;
+    UINT register_space_for_textures = 1;
     init_descriptor_table(root_parameters[m_root_param_index_of_textures],
-        descriptor_range1, base_register);
-    init_descriptor_table(root_parameters[m_root_param_index_of_normal_maps],
-        descriptor_range2, ++base_register);
-    base_register = 3;
+        descriptor_range1, base_register, register_space_for_textures, Scene::max_textures);
+    base_register = 2;
     init_descriptor_table(root_parameters[m_root_param_index_of_instance_data],
-        descriptor_range3, base_register);
+        descriptor_range2, base_register);
     root_parameters[m_root_param_index_of_instance_data].ShaderVisibility =
         D3D12_SHADER_VISIBILITY_VERTEX;
+
+    base_register = 4;
+    constexpr UINT descriptors_count = 1;
+    constexpr UINT descriptor_range_count = 1;
+    descriptor_range3.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, descriptors_count, base_register);
+    root_parameters[m_root_param_index_of_materials].InitAsDescriptorTable(descriptor_range_count,
+        &descriptor_range3, D3D12_SHADER_VISIBILITY_PIXEL);
 
     UINT sampler_shader_register = 0;
     CD3DX12_STATIC_SAMPLER_DESC texture_sampler_description(sampler_shader_register);
@@ -129,6 +135,9 @@ void Depths_alpha_cut_out_root_signature::set_constants(
     constexpr UINT size_in_words_of_value = 1;
     command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
         size_in_words_of_value, m_render_settings, offset);
+
+    scene->set_material_shader_constant(command_list, m_root_param_index_of_textures,
+        m_root_param_index_of_materials);
 
     view->set_view(command_list, m_root_param_index_of_matrices);
 }

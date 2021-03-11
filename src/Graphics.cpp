@@ -72,20 +72,25 @@ namespace
             swap_chain_buffer_count;
     }
 
-    UINT texture_index_for_diffuse_textures(UINT swap_chain_buffer_count)
+    UINT descriptor_start_index_for_materials(UINT swap_chain_buffer_count)
     {
         return descriptor_start_index_for_shadow_maps(swap_chain_buffer_count) +
             swap_chain_buffer_count * Shadow_map::max_shadow_maps_count;
     }
 
-    UINT value_offset_for_material_settings()
+    UINT texture_index_for_diffuse_textures(UINT swap_chain_buffer_count)
+    {
+        return descriptor_start_index_for_materials(swap_chain_buffer_count) + 1;
+    }
+    
+    UINT value_offset_for_material_id()
     {
         return 1;
     }
 
     UINT value_offset_for_render_settings()
     {
-        return value_offset_for_material_settings() + 1;
+        return value_offset_for_material_id() + 1;
     }
 }
 
@@ -133,14 +138,12 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
         m_scene = std::make_unique<Scene>(m_device, swap_chain_buffer_count,
             data_path + config.scene_file,
             texture_index_for_diffuse_textures(swap_chain_buffer_count),
-            m_texture_descriptor_heap, m_root_signature.m_root_param_index_of_textures,
-            m_root_signature.m_root_param_index_of_values,
-            m_root_signature.m_root_param_index_of_normal_maps,
-            value_offset_for_material_settings(),
-            descriptor_index_for_static_instance_data(),
+            m_texture_descriptor_heap, m_root_signature.m_root_param_index_of_values,
+            value_offset_for_material_id(), descriptor_index_for_static_instance_data(),
             descriptor_start_index_for_dynamic_instance_data(),
             descriptor_start_index_for_lights_data(swap_chain_buffer_count),
-            descriptor_start_index_for_shadow_maps(swap_chain_buffer_count));
+            descriptor_start_index_for_shadow_maps(swap_chain_buffer_count),
+            descriptor_start_index_for_materials(swap_chain_buffer_count));
 
         m_view.eye_position() = m_scene->initial_view_position();
         m_view.focus_point() = m_scene->initial_view_focus_point();
@@ -394,25 +397,34 @@ Main_root_signature::Main_root_signature(ComPtr<ID3D12Device> device, UINT* rend
     UINT base_register = 0;
     CD3DX12_DESCRIPTOR_RANGE1 descriptor_range1, descriptor_range2, descriptor_range3,
         descriptor_range4, descriptor_range5;
+    UINT register_space_for_textures = 1;
     init_descriptor_table(root_parameters[m_root_param_index_of_textures],
-        descriptor_range1, base_register);
-    UINT register_space_for_shadow_map = 1;
+        descriptor_range1, base_register, register_space_for_textures, Scene::max_textures);
+    UINT register_space_for_shadow_map = 2;
     init_descriptor_table(root_parameters[m_root_param_index_of_shadow_map],
         descriptor_range2, ++base_register, register_space_for_shadow_map,
         Shadow_map::max_shadow_maps_count);
-    init_descriptor_table(root_parameters[m_root_param_index_of_normal_maps],
-        descriptor_range3, ++base_register);
     init_descriptor_table(root_parameters[m_root_param_index_of_instance_data],
-        descriptor_range4, ++base_register);
+        descriptor_range3, ++base_register);
 
     root_parameters[m_root_param_index_of_instance_data].ShaderVisibility =
         D3D12_SHADER_VISIBILITY_VERTEX;
 
+    constexpr int total_srv_count = Scene::max_textures + Shadow_map::max_shadow_maps_count;
+    constexpr int max_simultaneous_srvs = 128;
+    static_assert(total_srv_count <= max_simultaneous_srvs,
+       "For a resource binding tier 1 device, the number of srvs in a root signature is limited.");
+
     constexpr UINT descriptors_count = 1;
     base_register = 3;
-    descriptor_range5.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, descriptors_count, base_register);
+    descriptor_range4.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, descriptors_count, base_register);
     constexpr UINT descriptor_range_count = 1;
     root_parameters[m_root_param_index_of_lights_data].InitAsDescriptorTable(descriptor_range_count,
+        &descriptor_range4, D3D12_SHADER_VISIBILITY_PIXEL);
+
+    base_register = 4;
+    descriptor_range5.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, descriptors_count, base_register);
+    root_parameters[m_root_param_index_of_materials].InitAsDescriptorTable(descriptor_range_count,
         &descriptor_range5, D3D12_SHADER_VISIBILITY_PIXEL);
 
     UINT sampler_shader_register = 0;
@@ -449,6 +461,9 @@ void Main_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> comman
 
     scene->set_lights_data_shader_constant(command_list, back_buf_index,
         m_root_param_index_of_lights_data, m_root_param_index_of_shadow_map);
+
+    scene->set_material_shader_constant(command_list, m_root_param_index_of_textures,
+        m_root_param_index_of_materials);
 
     view->set_view(command_list, m_root_param_index_of_matrices);
 }

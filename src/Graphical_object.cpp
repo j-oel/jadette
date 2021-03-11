@@ -27,33 +27,30 @@ Mesh* new_primitive(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandLis
 }
 
 Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, Primitive_type primitive_type, 
-    ComPtr<ID3D12GraphicsCommandList>& command_list, int root_param_index_of_textures, 
+    ComPtr<ID3D12GraphicsCommandList>& command_list,
     std::shared_ptr<Texture> diffuse_map, int id) :
     m_mesh(new_primitive(device, command_list, primitive_type)),
     m_diffuse_map(diffuse_map),
-    m_root_param_index_of_textures(root_param_index_of_textures),
     m_id(id),
     m_instances(1),
-    m_material_settings(0)
+    m_material_id(0)
 {
 }
 
 Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh,
-    ComPtr<ID3D12GraphicsCommandList>& command_list, int root_param_index_of_textures,
+    ComPtr<ID3D12GraphicsCommandList>& command_list, 
     std::shared_ptr<Texture> diffuse_map, 
-    int root_param_index_of_values, int root_param_index_of_normal_maps,
-    int material_settings_offset,
+    int root_param_index_of_values,
+    int material_id_offset,
     std::shared_ptr<Texture> normal_map,
-    int id, UINT material_settings/* = 0*/, int instances/* = 1*/) :
+    int id, int material_id, int instances/* = 1*/) :
     m_mesh(mesh),
     m_diffuse_map(diffuse_map), m_normal_map(normal_map),
-    m_root_param_index_of_textures(root_param_index_of_textures),
     m_root_param_index_of_values(root_param_index_of_values),
-    m_root_param_index_of_normal_maps(root_param_index_of_normal_maps),
-    m_material_settings_offset(material_settings_offset),
+    m_material_id_offset(material_id_offset),
     m_id(id),
     m_instances(instances),
-    m_material_settings(material_settings)
+    m_material_id(material_id)
 {
 }
 
@@ -67,17 +64,9 @@ void Graphical_object::draw_textured(ComPtr<ID3D12GraphicsCommandList> command_l
     const Input_layout& input_layout)
 {
     constexpr UINT size_in_words_of_value = 1;
+
     command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
-        size_in_words_of_value, &m_material_settings, m_material_settings_offset);
-
-    m_diffuse_map->set_texture_for_shader(command_list, m_root_param_index_of_textures);
-    if (m_material_settings & Material_settings::normal_map_exists)
-        m_normal_map->set_texture_for_shader(command_list, m_root_param_index_of_normal_maps);
-    else
-        // The descriptor table of the normal map needs to be set, so just set it to the
-        // diffuse map. The shader will check the normal_map_exists flag.
-        m_diffuse_map->set_texture_for_shader(command_list, m_root_param_index_of_normal_maps);
-
+        size_in_words_of_value, &m_material_id, m_material_id_offset);
 
     draw(command_list, input_layout);
 }

@@ -45,14 +45,23 @@ struct Light
     float specular_reach;
 };
 
+struct Shader_material
+{
+    UINT diff_tex;
+    UINT normal_map;
+    UINT material_settings;
+    UINT padding;
+};
+
+template <typename T>
 class Constant_buffer
 {
 public:
     Constant_buffer(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
-        UINT count, Light data,
+        UINT count, T data,
         ComPtr<ID3D12DescriptorHeap> descriptor_heap, UINT descriptor_index);
     void upload_new_data_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list,
-        const std::vector<Light>& light_data);
+        const std::vector<T>& data);
     D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle() { return m_constant_buffer_gpu_descriptor_handle; }
 private:
     ComPtr<ID3D12Resource> m_constant_buffer;
@@ -70,12 +79,12 @@ class Scene
 public:
     Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count, const std::string& scene_file,
         int texture_start_index, ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
-        int root_param_index_of_textures, int root_param_index_of_values,
-        int root_param_index_of_normal_maps, int normal_map_flag_offset,
+        int root_param_index_of_values, int material_id_offset,
         int descriptor_index_of_static_instance_data,
         int descriptor_start_index_of_dynamic_instance_data,
         int descriptor_start_index_of_lights_data,
-        int descriptor_start_index_of_shadow_maps);
+        int descriptor_start_index_of_shadow_maps,
+        int descriptor_start_index_of_materials);
     ~Scene();
     void update();
 
@@ -102,11 +111,15 @@ public:
     void set_lights_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
         UINT back_buf_index, int root_param_index_of_lights_data,
         int root_param_index_of_shadow_map);
+    void set_material_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+        int root_param_index_of_textures, int root_param_index_of_materials);
     void manipulate_object(DirectX::XMVECTOR delta_pos, DirectX::XMVECTOR delta_rotation);
     void select_object(int object_id);
     bool object_selected() { return m_object_selected; }
     DirectX::XMVECTOR initial_view_position() const;
     DirectX::XMVECTOR initial_view_focus_point() const;
+
+    static constexpr UINT max_textures = 112;
 private:
     void upload_resources_to_gpu(ComPtr<ID3D12Device> device,
         ComPtr<ID3D12GraphicsCommandList>& command_list);
@@ -116,10 +129,9 @@ private:
         Texture_mapping texture_mapping, const Input_layout& input_layout,
         bool dynamic) const;
     void read_file(const std::string& file_name, ComPtr<ID3D12Device> device, 
-        ComPtr<ID3D12GraphicsCommandList>& command_list, int texture_start_index,
-        ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_textures,
-        int root_param_index_of_values, int root_param_index_of_normal_maps,
-        int normal_map_flag_offset);
+        ComPtr<ID3D12GraphicsCommandList>& command_list, int& texture_index,
+        ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
+        int root_param_index_of_values, int material_id_offset);
 
     std::vector<std::shared_ptr<Graphical_object> > m_graphical_objects;
     std::vector<std::shared_ptr<Graphical_object> > m_static_objects;
@@ -130,6 +142,7 @@ private:
     std::vector<Dynamic_object> m_rotating_objects;
 
     std::vector<std::shared_ptr<Texture>> m_textures;
+    CD3DX12_GPU_DESCRIPTOR_HANDLE m_texture_gpu_descriptor_handle;
 
     DirectX::XMFLOAT3 m_initial_view_position;
     DirectX::XMFLOAT3 m_initial_view_focus_point;
@@ -138,8 +151,10 @@ private:
     std::vector<Per_instance_transform> m_static_model_transforms;
     std::vector<std::unique_ptr<Instance_data>> m_dynamic_instance_data;
     std::unique_ptr<Instance_data> m_static_instance_data;
-    std::vector<std::unique_ptr<Constant_buffer>> m_lights_data;
+    std::vector<std::unique_ptr<Constant_buffer<Light>>> m_lights_data;
+    std::unique_ptr<Constant_buffer<Shader_material>> m_materials_data;
     std::vector<Light> m_lights;
+    std::vector<Shader_material> m_materials;
     std::vector<Shadow_map> m_shadow_maps;
     UINT m_shadow_casting_lights_count;
 

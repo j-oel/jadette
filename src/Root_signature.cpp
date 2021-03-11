@@ -88,7 +88,7 @@ Simple_root_signature::Simple_root_signature(ComPtr<ID3D12Device> device)
     constexpr int matrices_count = 1;
     init_matrices(root_parameters[m_root_param_index_of_matrices], matrices_count, shader_register);
 
-    UINT base_register = 3;
+    UINT base_register = 2;
     CD3DX12_DESCRIPTOR_RANGE1 descriptor_range;
     init_descriptor_table(root_parameters[m_root_param_index_of_instance_data],
         descriptor_range, base_register);

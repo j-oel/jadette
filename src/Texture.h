@@ -22,10 +22,12 @@ public:
     void set_texture_for_shader(ComPtr<ID3D12GraphicsCommandList> command_list,
         int root_param_index_of_textures);
     void release_temp_resources();
+    UINT index() const { return m_texture_index; }
 private:
     ComPtr<ID3D12Resource> m_texture;
     ComPtr<ID3D12Resource> m_temp_upload_resource;
     CD3DX12_GPU_DESCRIPTOR_HANDLE m_texture_gpu_descriptor_handle;
+    UINT m_texture_index;
 };
 
 struct Texture_read_error

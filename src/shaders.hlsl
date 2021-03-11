@@ -8,7 +8,7 @@
 struct values_struct
 {
     uint object_id;
-    uint material_settings;
+    uint material_id;
     uint render_settings;
 };
 ConstantBuffer<values_struct> values : register(b0);
@@ -55,18 +55,32 @@ struct lights_array
 };
 ConstantBuffer<lights_array> lights : register(b3);
 
+struct Material
+{
+    uint diff_tex;
+    uint normal_map;
+    uint material_settings;
+    uint padding;
+};
 
-Texture2D<float4> tex : register(t0);
+static const int max_materials = 256;
+struct Materials
+{
+    Material m[max_materials];
+};
+ConstantBuffer<Materials> materials : register(b4);
+
+static const int max_textures = 112;
+Texture2D<float4> tex[max_textures]: register(t0, space1);
 static const int max_shadow_maps = 16;
-Texture2D<float> shadow_map[max_shadow_maps] : register(t1, space1);
-Texture2D<float4> normal_map : register(t2);
+Texture2D<float> shadow_map[max_shadow_maps] : register(t1, space2);
 
 struct instance_trans_rot_struct
 {
     uint4 value;
 };
 
-StructuredBuffer<instance_trans_rot_struct> instance : register(t3);
+StructuredBuffer<instance_trans_rot_struct> instance : register(t2);
 
 
 sampler texture_sampler : register(s0);
@@ -246,19 +260,22 @@ float3 tangent_space_normal_mapping(pixel_shader_input input)
 {
     float3 normal;
     
-    if (values.material_settings & mirror_texture_addressing)
-        normal = normal_map.Sample(texture_mirror_sampler, input.texcoord).xyz;
+    Material m = materials.m[values.material_id];
+    uint texture_index = m.normal_map;
+
+    if (m.material_settings & mirror_texture_addressing)
+        normal = tex[texture_index].Sample(texture_mirror_sampler, input.texcoord).xyz;
     else
-        normal = normal_map.Sample(texture_sampler, input.texcoord).xyz;
+        normal = tex[texture_index].Sample(texture_sampler, input.texcoord).xyz;
 
     // Each channel is encoded as a value [0,1] in the normal map, where 0 signifies -1,
     // 0.5 means 0 and 1 means 1. This gets it back to [-1, 1].
     normal = 2 * normal - 1.0f;
 
-    if (values.material_settings & invert_y_in_normal_map)
+    if (m.material_settings & invert_y_in_normal_map)
         normal.y = -normal.y;
 
-    if (values.material_settings & two_channel_normal_map)
+    if (m.material_settings & two_channel_normal_map)
         normal.z = sqrt(1.0f - normal.x * normal.x - normal.y * normal.y);
 
 
@@ -279,12 +296,15 @@ float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFac
 {
     float4 color = float4(0.4, 0.4, 0.4, 1.0f);
 
+    Material m = materials.m[values.material_id];
+
     if (values.render_settings & texture_mapping_enabled)
     {
-        if (values.material_settings & mirror_texture_addressing)
-            color = tex.Sample(texture_mirror_sampler, input.texcoord);
+        uint texture_index = m.diff_tex;
+        if (m.material_settings & mirror_texture_addressing)
+            color = tex[texture_index].Sample(texture_mirror_sampler, input.texcoord);
         else
-            color = tex.Sample(texture_sampler, input.texcoord);
+            color = tex[texture_index].Sample(texture_sampler, input.texcoord);
     }
 
     const float alpha_cut_out_cut_off_value = 0.01;
@@ -292,7 +312,7 @@ float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFac
         discard;
 
     const float emissive_strength = 0.5f;
-    if (values.material_settings & emissive)
+    if (m.material_settings & emissive)
         return color * emissive_strength;
 
     float3 normal;
@@ -301,7 +321,7 @@ float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFac
     input.normal *= is_front_face ? 1.0f : -1.0f;
 
     if (values.render_settings & normal_mapping_enabled &&
-        values.material_settings & normal_map_exists)
+        m.material_settings & normal_map_exists)
         normal = tangent_space_normal_mapping(input);
     else
         normal = normalize(input.normal);
@@ -369,10 +389,12 @@ struct depths_alpha_cut_out_vertex_shader_output
 void pixel_shader_depths_alpha_cut_out(depths_alpha_cut_out_vertex_shader_output input)
 {
     float4 color;
-    if (values.material_settings & mirror_texture_addressing)
-        color = tex.Sample(texture_mirror_sampler, input.texcoord);
+    Material m = materials.m[values.material_id];
+    uint texture_index = m.diff_tex;
+    if (m.material_settings & mirror_texture_addressing)
+        color = tex[texture_index].Sample(texture_mirror_sampler, input.texcoord);
     else
-        color = tex.Sample(texture_sampler, input.texcoord);
+        color = tex[texture_index].Sample(texture_sampler, input.texcoord);
     if (color.a < 0.8)
         discard;
 
