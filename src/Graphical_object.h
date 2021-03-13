@@ -29,19 +29,16 @@ public:
 
     Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh,
         ComPtr<ID3D12GraphicsCommandList>& command_list, std::shared_ptr<Texture> diffuse_map,
-        int root_param_index_of_values, int material_id_offset,
-        std::shared_ptr<Texture> normal_map, int id,
+        int root_param_index_of_values, std::shared_ptr<Texture> normal_map, int id,
         int material_id, int instances = 1);
 
     void draw(ComPtr<ID3D12GraphicsCommandList> command_list, const Input_layout& input_layout);
-    void draw_textured(ComPtr<ID3D12GraphicsCommandList> command_list,
-        const Input_layout& input_layout);
     void release_temp_resources();
     int triangles_count();
     size_t vertices_count();
-    int instances() { return m_instances; }
-    int id() { return m_id; }
-    int material_id() { return m_material_id; }
+    int instances() const { return m_instances; }
+    int id() const { return m_id; }
+    int material_id() const { return m_material_id; }
     DirectX::XMVECTOR center() const;
     void transform_center(DirectX::XMMATRIX model_view);
 private:
@@ -51,7 +48,6 @@ private:
     std::shared_ptr<Texture> m_diffuse_map;
     std::shared_ptr<Texture> m_normal_map;
     int m_root_param_index_of_values;
-    int m_material_id_offset;
     int m_id;
     int m_instances;
     int m_material_settings;

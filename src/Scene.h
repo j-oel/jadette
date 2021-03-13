@@ -70,6 +70,14 @@ private:
     UINT m_constant_buffer_size;
 };
 
+constexpr UINT value_offset_for_object_id() { return 0; }
+
+constexpr UINT value_offset_for_material_id()
+{
+    return value_offset_for_object_id() + 1;
+}
+
+constexpr UINT texture_index_of_depth_buffer() { return 0; }
 
 class View;
 class Depth_pass;
@@ -78,13 +86,7 @@ class Scene
 {
 public:
     Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count, const std::string& scene_file,
-        int texture_start_index, ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
-        int root_param_index_of_values, int material_id_offset,
-        int descriptor_index_of_static_instance_data,
-        int descriptor_start_index_of_dynamic_instance_data,
-        int descriptor_start_index_of_lights_data,
-        int descriptor_start_index_of_shadow_maps,
-        int descriptor_start_index_of_materials);
+        ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_values);
     ~Scene();
     void update();
 
@@ -131,7 +133,7 @@ private:
     void read_file(const std::string& file_name, ComPtr<ID3D12Device> device, 
         ComPtr<ID3D12GraphicsCommandList>& command_list, int& texture_index,
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
-        int root_param_index_of_values, int material_id_offset);
+        int root_param_index_of_values);
 
     std::vector<std::shared_ptr<Graphical_object> > m_graphical_objects;
     std::vector<std::shared_ptr<Graphical_object> > m_static_objects;

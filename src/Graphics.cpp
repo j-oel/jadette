@@ -46,48 +46,6 @@ namespace
     constexpr UINT normal_mapping_enabled  = 1 << 2;
     constexpr UINT shadow_mapping_enabled  = 1 << 3;
 
-    UINT texture_index_for_depth_buffer()
-    {
-        return 0;
-    }
-
-    UINT descriptor_index_for_static_instance_data()
-    {
-        return texture_index_for_depth_buffer() + 1;
-    }
-
-    UINT descriptor_start_index_for_dynamic_instance_data()
-    {
-        return descriptor_index_for_static_instance_data() + 1;
-    }
-
-    UINT descriptor_start_index_for_lights_data(UINT swap_chain_buffer_count)
-    {
-        return descriptor_start_index_for_dynamic_instance_data() + swap_chain_buffer_count;
-    }
-
-    UINT descriptor_start_index_for_shadow_maps(UINT swap_chain_buffer_count)
-    {
-        return descriptor_start_index_for_lights_data(swap_chain_buffer_count) +
-            swap_chain_buffer_count;
-    }
-
-    UINT descriptor_start_index_for_materials(UINT swap_chain_buffer_count)
-    {
-        return descriptor_start_index_for_shadow_maps(swap_chain_buffer_count) +
-            swap_chain_buffer_count * Shadow_map::max_shadow_maps_count;
-    }
-
-    UINT texture_index_for_diffuse_textures(UINT swap_chain_buffer_count)
-    {
-        return descriptor_start_index_for_materials(swap_chain_buffer_count) + 1;
-    }
-    
-    UINT value_offset_for_material_id()
-    {
-        return 1;
-    }
-
     UINT value_offset_for_render_settings()
     {
         return value_offset_for_material_id() + 1;
@@ -102,14 +60,14 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     m_textures_count(create_texture_descriptor_heap()),
     m_depth_stencil(1, Depth_stencil(m_device, config.width, config.height,
         Bit_depth::bpp16, D3D12_RESOURCE_STATE_DEPTH_WRITE,
-        m_texture_descriptor_heap, texture_index_for_depth_buffer())),
+        m_texture_descriptor_heap, texture_index_of_depth_buffer())),
     m_depth_pass(m_device, m_depth_stencil[0].dsv_format(), config.backface_culling,
         &m_render_settings),
     m_root_signature(m_device, &m_render_settings),
     m_view(config.width, config.height, XMVectorSet(0.0, 0.0f, 1.0f, 1.0f),
         XMVectorZero(), 0.1f, 4000.0f, config.fov),
     m_input(input),
-    m_user_interface(m_dx12_display, m_texture_descriptor_heap, texture_index_for_depth_buffer(),
+    m_user_interface(m_dx12_display, m_texture_descriptor_heap, texture_index_of_depth_buffer(),
         input, window, config),
     m_width(config.width),
     m_height(config.height),
@@ -122,7 +80,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     {
         m_depth_stencil.push_back(Depth_stencil(m_device, config.width, config.height,
             Bit_depth::bpp16, D3D12_RESOURCE_STATE_DEPTH_WRITE,
-            m_texture_descriptor_heap, texture_index_for_depth_buffer()));
+            m_texture_descriptor_heap, texture_index_of_depth_buffer()));
     }
 
     for (UINT i = 0; i < m_dx12_display->swap_chain_buffer_count(); ++i)
@@ -136,14 +94,8 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     {
         auto swap_chain_buffer_count = m_dx12_display->swap_chain_buffer_count();
         m_scene = std::make_unique<Scene>(m_device, swap_chain_buffer_count,
-            data_path + config.scene_file,
-            texture_index_for_diffuse_textures(swap_chain_buffer_count),
-            m_texture_descriptor_heap, m_root_signature.m_root_param_index_of_values,
-            value_offset_for_material_id(), descriptor_index_for_static_instance_data(),
-            descriptor_start_index_for_dynamic_instance_data(),
-            descriptor_start_index_for_lights_data(swap_chain_buffer_count),
-            descriptor_start_index_for_shadow_maps(swap_chain_buffer_count),
-            descriptor_start_index_for_materials(swap_chain_buffer_count));
+            data_path + config.scene_file, m_texture_descriptor_heap,
+            m_root_signature.m_root_param_index_of_values);
 
         m_view.eye_position() = m_scene->initial_view_position();
         m_view.focus_point() = m_scene->initial_view_focus_point();

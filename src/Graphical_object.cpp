@@ -41,13 +41,11 @@ Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<
     ComPtr<ID3D12GraphicsCommandList>& command_list, 
     std::shared_ptr<Texture> diffuse_map, 
     int root_param_index_of_values,
-    int material_id_offset,
     std::shared_ptr<Texture> normal_map,
     int id, int material_id, int instances/* = 1*/) :
     m_mesh(mesh),
     m_diffuse_map(diffuse_map), m_normal_map(normal_map),
     m_root_param_index_of_values(root_param_index_of_values),
-    m_material_id_offset(material_id_offset),
     m_id(id),
     m_instances(instances),
     m_material_id(material_id)
@@ -58,17 +56,6 @@ void Graphical_object::draw(ComPtr<ID3D12GraphicsCommandList> command_list,
     const Input_layout& input_layout)
 {
     m_mesh->draw(command_list, m_instances, input_layout);
-}
-
-void Graphical_object::draw_textured(ComPtr<ID3D12GraphicsCommandList> command_list,
-    const Input_layout& input_layout)
-{
-    constexpr UINT size_in_words_of_value = 1;
-
-    command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
-        size_in_words_of_value, &m_material_id, m_material_id_offset);
-
-    draw(command_list, input_layout);
 }
 
 void Graphical_object::release_temp_resources()

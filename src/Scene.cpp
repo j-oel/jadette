@@ -25,6 +25,42 @@ using namespace DirectX;
 using namespace DirectX::PackedVector;
 
 
+namespace
+{
+    constexpr UINT descriptor_index_of_static_instance_data()
+    {
+        return texture_index_of_depth_buffer() + 1;
+    }
+
+    constexpr UINT descriptor_start_index_of_dynamic_instance_data()
+    {
+        return descriptor_index_of_static_instance_data() + 1;
+    }
+
+    constexpr UINT descriptor_start_index_of_lights_data(UINT swap_chain_buffer_count)
+    {
+        return descriptor_start_index_of_dynamic_instance_data() + swap_chain_buffer_count;
+    }
+
+    constexpr UINT descriptor_start_index_of_shadow_maps(UINT swap_chain_buffer_count)
+    {
+        return descriptor_start_index_of_lights_data(swap_chain_buffer_count) +
+            swap_chain_buffer_count;
+    }
+
+    constexpr UINT descriptor_start_index_of_materials(UINT swap_chain_buffer_count)
+    {
+        return descriptor_start_index_of_shadow_maps(swap_chain_buffer_count) +
+            swap_chain_buffer_count * Shadow_map::max_shadow_maps_count;
+    }
+
+    constexpr UINT texture_index_of_textures(UINT swap_chain_buffer_count)
+    {
+        return descriptor_start_index_of_materials(swap_chain_buffer_count) + 1;
+    }
+}
+
+
 struct Read_error
 {
     Read_error(const std::string& input_) : input(input_) {}
@@ -87,14 +123,8 @@ XMHALF4 convert_float4_to_half4(const XMFLOAT4& vec)
 
 
 Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
-    const std::string& scene_file, int texture_start_index,
-    ComPtr<ID3D12DescriptorHeap> descriptor_heap,
-    int root_param_index_of_values, int material_id_offset,
-    int descriptor_index_of_static_instance_data,
-    int descriptor_start_index_of_dynamic_instance_data,
-    int descriptor_start_index_of_lights_data,
-    int descriptor_start_index_of_shadow_maps,
-    int descriptor_start_index_of_materials) :
+    const std::string& scene_file, ComPtr<ID3D12DescriptorHeap> descriptor_heap,
+    int root_param_index_of_values) :
     m_initial_view_position(0.0f, 0.0f, -20.0f),
     m_initial_view_focus_point(0.0f, 0.0f, 0.0f),
     m_root_param_index_of_values(root_param_index_of_values), m_shadow_casting_lights_count(0),
@@ -115,6 +145,7 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
         command_allocator.Get(), initial_pipeline_state, IID_PPV_ARGS(&command_list)));
     SET_DEBUG_NAME(command_list, L"Scene Upload Data Command List");
 
+    int texture_start_index = texture_index_of_textures(swap_chain_buffer_count);
     int texture_index = texture_start_index;
 
     std::exception_ptr exc = nullptr;
@@ -137,7 +168,7 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
         try
         {
             read_file(scene_file, device, command_list, texture_index,
-                descriptor_heap, root_param_index_of_values, material_id_offset);
+                descriptor_heap, root_param_index_of_values);
         }
         catch (...)
         {
@@ -220,7 +251,7 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
 
     m_materials_data = std::make_unique<Constant_buffer<Shader_material>>(device, command_list,
         static_cast<UINT>(m_materials.size()), Shader_material(),
-        descriptor_heap, descriptor_start_index_of_materials);
+        descriptor_heap, descriptor_start_index_of_materials(swap_chain_buffer_count));
 
     m_materials_data->upload_new_data_to_gpu(command_list, m_materials);
 
@@ -241,14 +272,14 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
     for (UINT i = 0; i < m_shadow_casting_lights_count; ++i)
     {
         m_shadow_maps.push_back(Shadow_map(device, swap_chain_buffer_count,
-            descriptor_heap, descriptor_start_index_of_shadow_maps + i,
+            descriptor_heap, descriptor_start_index_of_shadow_maps(swap_chain_buffer_count) + i,
             descriptor_index_increment));
     }
 
     for (UINT i = descriptor_index_increment * swap_chain_buffer_count;
         i < Shadow_map::max_shadow_maps_count * swap_chain_buffer_count; ++i)
     {
-        UINT descriptor_index = descriptor_start_index_of_shadow_maps + i;
+        UINT descriptor_index = descriptor_start_index_of_shadow_maps(swap_chain_buffer_count) + i;
         // On Tier 1 hardware, all descriptors must be set, even if not used,
         // hence set them to null descriptors.
         create_null_descriptor(device, descriptor_heap, descriptor_index);
@@ -258,11 +289,11 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
     {
         m_dynamic_instance_data.push_back(std::make_unique<Instance_data>(device, command_list,
             static_cast<UINT>(m_dynamic_objects.size()), Per_instance_transform(),
-            descriptor_heap, descriptor_start_index_of_dynamic_instance_data + i));
+            descriptor_heap, descriptor_start_index_of_dynamic_instance_data() + i));
 
         m_lights_data.push_back(std::make_unique<Constant_buffer<Light>>(device, command_list,
             static_cast<UINT>(m_lights.size()), Light(),
-            descriptor_heap, descriptor_start_index_of_lights_data + i));
+            descriptor_heap, descriptor_start_index_of_lights_data(swap_chain_buffer_count) + i));
     }
 
     m_static_instance_data = std::make_unique<Instance_data>(device, command_list,
@@ -270,7 +301,7 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
         // m_static_model_transforms. This is mainly (only?) because the fly_around_in_circle
         // function requires that currently. This is all quite messy and should be fixed.
         static_cast<UINT>(m_graphical_objects.size()), Per_instance_transform(), descriptor_heap,
-        descriptor_index_of_static_instance_data);
+        descriptor_index_of_static_instance_data());
 
     upload_resources_to_gpu(device, command_list);
     for (auto& g : m_graphical_objects)
@@ -361,17 +392,23 @@ void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
     {
         auto& graphical_object = objects[i];
 
-        constexpr UINT offset = 0;
+        constexpr UINT offset = value_offset_for_object_id();
         constexpr UINT size_in_words_of_value = 1;
         int object_id = static_cast<int>(dynamic ? i : graphical_object->id());
         // It's graphical_object->id for static objects here because every graphical_object 
         // has a an entry in m_static_model_transforms. 
         command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
             size_in_words_of_value, &object_id, offset);
+
         if (texture_mapping == Texture_mapping::enabled)
-            graphical_object->draw_textured(command_list, input_layout);
-        else
-            graphical_object->draw(command_list, input_layout);
+        {
+            auto material_id = graphical_object->material_id();
+            constexpr UINT size_in_words_of_value = 1;
+            command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
+                size_in_words_of_value, &material_id, value_offset_for_material_id());
+        }
+
+        graphical_object->draw(command_list, input_layout);
 
         // If instances() returns more than 1, those additional instances were already drawn
         // by the last draw call and the corresponding graphical objects should hence be skipped.
@@ -597,8 +634,7 @@ void throw_if_file_not_openable(const std::string& file_name)
 // You should ensure that the scene file is valid.
 void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device, 
     ComPtr<ID3D12GraphicsCommandList>& command_list, int& texture_index,
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_values,
-    int material_id_offset)
+    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_values)
 {
     using std::map;
     using std::shared_ptr;
@@ -661,7 +697,7 @@ void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
         convert_vector_to_half4(DirectX::XMQuaternionIdentity()) };
         m_static_model_transforms.push_back(transform);
         auto object = std::make_shared<Graphical_object>(device, mesh, command_list, diffuse_map,
-            root_param_index_of_values, material_id_offset, normal_map, object_id++, material_id,
+            root_param_index_of_values, normal_map, object_id++, material_id,
             instances);
 
         m_graphical_objects.push_back(object);
