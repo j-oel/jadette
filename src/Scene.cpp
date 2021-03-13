@@ -6,6 +6,7 @@
 
 
 #include "Scene.h"
+#include "Graphical_object.h"
 #include "Shadow_map.h"
 #include "util.h"
 #include "Primitives.h"
@@ -13,6 +14,8 @@
 #include "View.h"
 #include "Dx12_util.h"
 
+#include <vector>
+#include <memory>
 #include <fstream>
 #include <string>
 #include <map>
@@ -121,8 +124,267 @@ XMHALF4 convert_float4_to_half4(const XMFLOAT4& vec)
     return half4;
 }
 
+struct Dynamic_object
+{
+    std::shared_ptr<Graphical_object> object;
+    int transform_ref;
+};
 
-Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
+struct Flying_object
+{
+    std::shared_ptr<Graphical_object> object;
+    DirectX::XMFLOAT3 point_on_radius;
+    DirectX::XMFLOAT3 rotation_axis;
+    float speed;
+    int transform_ref;
+};
+
+struct Shader_material
+{
+    UINT diff_tex;
+    UINT normal_map;
+    UINT material_settings;
+    UINT padding;
+};
+
+template <typename T>
+class Constant_buffer
+{
+public:
+    Constant_buffer(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
+        UINT count, T data,
+        ComPtr<ID3D12DescriptorHeap> descriptor_heap, UINT descriptor_index);
+    void upload_new_data_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list,
+        const std::vector<T>& data);
+    D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle() { return m_constant_buffer_gpu_descriptor_handle; }
+private:
+    ComPtr<ID3D12Resource> m_constant_buffer;
+    ComPtr<ID3D12Resource> m_upload_resource;
+    D3D12_GPU_DESCRIPTOR_HANDLE m_constant_buffer_gpu_descriptor_handle;
+    UINT m_constant_buffer_size;
+};
+
+class Scene_impl
+{
+public:
+    Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count, const std::string& scene_file,
+        ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_values);
+    ~Scene_impl();
+    void update();
+
+    void draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+        Texture_mapping texture_mapping, const Input_layout& input_layout) const;
+    void draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+        Texture_mapping texture_mapping, const Input_layout& input_layout) const;
+    void sort_transparent_objects_back_to_front(const View& view);
+    void draw_transparent_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+        Texture_mapping texture_mapping, const Input_layout& input_layout) const;
+    void draw_alpha_cut_out_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+        Texture_mapping texture_mapping, const Input_layout& input_layout) const;
+    void upload_data_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list, UINT back_buf_index);
+    void record_shadow_map_generation_commands_in_command_list(UINT back_buf_index,
+        Depth_pass& depth_pass, ComPtr<ID3D12GraphicsCommandList> command_list, Scene& scene);
+    int triangles_count() const { return m_triangles_count; }
+    size_t vertices_count() const { return m_vertices_count; }
+    size_t objects_count() const { return m_graphical_objects.size(); }
+    size_t lights_count() const { return m_lights.size(); }
+    void set_static_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+        int root_param_index_of_instance_data);
+    void set_dynamic_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+        UINT back_buf_index, int root_param_index_of_instance_data);
+    void set_lights_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+        UINT back_buf_index, int root_param_index_of_lights_data,
+        int root_param_index_of_shadow_map);
+    void set_material_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+        int root_param_index_of_textures, int root_param_index_of_materials);
+    void manipulate_object(DirectX::XMFLOAT3& delta_pos, DirectX::XMFLOAT4& delta_rotation);
+    void select_object(int object_id);
+    bool object_selected() { return m_object_selected; }
+    void initial_view_position(DirectX::XMFLOAT3& position) const;
+    void initial_view_focus_point(DirectX::XMFLOAT3& focus_point) const;
+
+    static constexpr UINT max_textures = 112;
+private:
+    void upload_resources_to_gpu(ComPtr<ID3D12Device> device,
+        ComPtr<ID3D12GraphicsCommandList>& command_list);
+    void upload_static_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list);
+    void draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+        const std::vector<std::shared_ptr<Graphical_object> >& objects,
+        Texture_mapping texture_mapping, const Input_layout& input_layout,
+        bool dynamic) const;
+    void read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
+        ComPtr<ID3D12GraphicsCommandList>& command_list, int& texture_index,
+        ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
+        int root_param_index_of_values);
+
+    std::vector<std::shared_ptr<Graphical_object> > m_graphical_objects;
+    std::vector<std::shared_ptr<Graphical_object> > m_static_objects;
+    std::vector<std::shared_ptr<Graphical_object> > m_dynamic_objects;
+    std::vector<std::shared_ptr<Graphical_object> > m_transparent_objects;
+    std::vector<std::shared_ptr<Graphical_object> > m_alpha_cut_out_objects;
+    std::vector<Flying_object> m_flying_objects;
+    std::vector<Dynamic_object> m_rotating_objects;
+
+    std::vector<std::shared_ptr<Texture>> m_textures;
+    CD3DX12_GPU_DESCRIPTOR_HANDLE m_texture_gpu_descriptor_handle;
+
+    DirectX::XMFLOAT3 m_initial_view_position;
+    DirectX::XMFLOAT3 m_initial_view_focus_point;
+
+    std::vector<Per_instance_transform> m_dynamic_model_transforms;
+    std::vector<Per_instance_transform> m_static_model_transforms;
+    std::vector<std::unique_ptr<Instance_data>> m_dynamic_instance_data;
+    std::unique_ptr<Instance_data> m_static_instance_data;
+    std::vector<std::unique_ptr<Constant_buffer<Light>>> m_lights_data;
+    std::unique_ptr<Constant_buffer<Shader_material>> m_materials_data;
+    std::vector<Light> m_lights;
+    std::vector<Shader_material> m_materials;
+    std::vector<Shadow_map> m_shadow_maps;
+    UINT m_shadow_casting_lights_count;
+
+    int m_root_param_index_of_values;
+
+    int m_triangles_count;
+    size_t m_vertices_count;
+
+    int m_selected_object_id;
+    bool m_object_selected;
+};
+
+
+Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count, const std::string& scene_file,
+    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_values) :
+    impl(new Scene_impl(device, swap_chain_buffer_count, scene_file, texture_descriptor_heap,
+        root_param_index_of_values))
+{
+}
+
+Scene::~Scene()
+{
+    delete impl;
+}
+
+void Scene::update()
+{
+    impl->update();
+}
+
+void Scene::draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    Texture_mapping texture_mapping, const Input_layout& input_layout) const
+{
+    impl->draw_static_objects(command_list, texture_mapping, input_layout);
+}
+
+void Scene::draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    Texture_mapping texture_mapping, const Input_layout& input_layout) const
+{
+    impl->draw_dynamic_objects(command_list, texture_mapping, input_layout);
+}
+
+void Scene::sort_transparent_objects_back_to_front(const View& view)
+{
+    impl->sort_transparent_objects_back_to_front(view);
+}
+
+void Scene::draw_transparent_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    Texture_mapping texture_mapping, const Input_layout& input_layout) const
+{
+    impl->draw_transparent_objects(command_list, texture_mapping, input_layout);
+}
+
+void Scene::draw_alpha_cut_out_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    Texture_mapping texture_mapping, const Input_layout& input_layout) const
+{
+    impl->draw_alpha_cut_out_objects(command_list, texture_mapping, input_layout);
+}
+
+void Scene::upload_data_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list, UINT back_buf_index)
+{
+    impl->upload_data_to_gpu(command_list, back_buf_index);
+}
+
+void Scene::record_shadow_map_generation_commands_in_command_list(UINT back_buf_index,
+    Depth_pass& depth_pass, ComPtr<ID3D12GraphicsCommandList> command_list)
+{
+    impl->record_shadow_map_generation_commands_in_command_list(back_buf_index, depth_pass,
+        command_list, *this);
+}
+
+int Scene::triangles_count() const
+{
+    return impl->triangles_count();
+}
+
+size_t Scene::vertices_count() const
+{
+    return impl->vertices_count();
+}
+
+size_t Scene::objects_count() const
+{
+    return impl->objects_count();
+}
+
+size_t Scene::lights_count() const
+{
+    return impl->lights_count();
+}
+
+void Scene::set_static_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    int root_param_index_of_instance_data)
+{
+    impl->set_static_instance_data_shader_constant(command_list, root_param_index_of_instance_data);
+}
+
+void Scene::set_dynamic_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    UINT back_buf_index, int root_param_index_of_instance_data)
+{
+    impl->set_dynamic_instance_data_shader_constant(command_list, back_buf_index,
+        root_param_index_of_instance_data);
+}
+
+void Scene::set_lights_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    UINT back_buf_index, int root_param_index_of_lights_data,
+    int root_param_index_of_shadow_map)
+{
+    impl->set_lights_data_shader_constant(command_list, back_buf_index,
+        root_param_index_of_lights_data, root_param_index_of_shadow_map);
+}
+
+void Scene::set_material_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    int root_param_index_of_textures, int root_param_index_of_materials)
+{
+    impl->set_material_shader_constant(command_list, root_param_index_of_textures,
+        root_param_index_of_materials);
+}
+
+void Scene::manipulate_object(DirectX::XMFLOAT3& delta_pos, DirectX::XMFLOAT4& delta_rotation)
+{
+    impl->manipulate_object(delta_pos, delta_rotation);
+}
+
+void Scene::select_object(int object_id)
+{
+    impl->select_object(object_id);
+}
+
+bool Scene::object_selected()
+{
+    return impl->object_selected();
+}
+
+void Scene::initial_view_position(DirectX::XMFLOAT3& position) const
+{
+    return impl->initial_view_position(position);
+}
+
+void Scene::initial_view_focus_point(DirectX::XMFLOAT3& focus_point) const
+{
+    return impl->initial_view_focus_point(focus_point);
+}
+
+
+Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
     const std::string& scene_file, ComPtr<ID3D12DescriptorHeap> descriptor_heap,
     int root_param_index_of_values) :
     m_initial_view_position(0.0f, 0.0f, -20.0f),
@@ -316,7 +578,7 @@ Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
         descriptor_heap->GetGPUDescriptorHandleForHeapStart(), position);
 }
 
-Scene::~Scene()
+Scene_impl::~Scene_impl()
 {
     CoUninitialize();
 }
@@ -353,7 +615,7 @@ void set_instance_data(Per_instance_transform& transform, XMHALF4 translation,
     convert_vector_to_half4(transform.rotation, rotation);
 }
 
-void Scene::update()
+void Scene_impl::update()
 {
     const float angle = XMConvertToRadians(static_cast<float>(elapsed_time_in_seconds() * 100.0));
     XMVECTOR rotation_axis = XMVectorSet(0.25f, 0.25f, 1.0f, 0.0f);
@@ -382,7 +644,7 @@ void Scene::update()
     }
 }
 
-void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list, 
+void Scene_impl::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
     const std::vector<std::shared_ptr<Graphical_object> >& objects,
     Texture_mapping texture_mapping, const Input_layout& input_layout, bool dynamic) const
 {
@@ -416,13 +678,13 @@ void Scene::draw_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
     }
 }
 
-void Scene::draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+void Scene_impl::draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
     Texture_mapping texture_mapping, const Input_layout& input_layout) const
 {
     draw_objects(command_list, m_static_objects, texture_mapping, input_layout, false);
 }
 
-void Scene::draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+void Scene_impl::draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
     Texture_mapping texture_mapping, const Input_layout& input_layout) const
 {
     draw_objects(command_list, m_dynamic_objects, texture_mapping, input_layout, true);
@@ -447,7 +709,7 @@ XMMATRIX calculate_model_view(Per_instance_transform model, const View& view)
     return model_view;
 }
 
-void Scene::sort_transparent_objects_back_to_front(const View& view)
+void Scene_impl::sort_transparent_objects_back_to_front(const View& view)
 {
     // We only sort the transparent objects, not the alpha cut out objects. For better visual
     // results they should also be sorted, but we get decent results without sorting. And for 
@@ -469,19 +731,19 @@ void Scene::sort_transparent_objects_back_to_front(const View& view)
         Graphical_object_z_of_center_greater());
 }
 
-void Scene::draw_transparent_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+void Scene_impl::draw_transparent_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
     Texture_mapping texture_mapping, const Input_layout& input_layout) const
 {
     draw_objects(command_list, m_transparent_objects, texture_mapping, input_layout, false);
 }
 
-void Scene::draw_alpha_cut_out_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+void Scene_impl::draw_alpha_cut_out_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
     Texture_mapping texture_mapping, const Input_layout& input_layout) const
 {
     draw_objects(command_list, m_alpha_cut_out_objects, texture_mapping, input_layout, false);
 }
 
-void Scene::upload_data_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list,
+void Scene_impl::upload_data_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list,
     UINT back_buf_index)
 {
     for (UINT i = 0; i < m_shadow_maps.size(); ++i)
@@ -497,14 +759,14 @@ void Scene::upload_data_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list,
             m_dynamic_model_transforms);
 }
 
-void Scene::record_shadow_map_generation_commands_in_command_list(UINT back_buf_index,
-    Depth_pass& depth_pass, ComPtr<ID3D12GraphicsCommandList> command_list)
+void Scene_impl::record_shadow_map_generation_commands_in_command_list(UINT back_buf_index,
+    Depth_pass& depth_pass, ComPtr<ID3D12GraphicsCommandList> command_list, Scene& scene)
 {
     for (auto& s : m_shadow_maps)
-        s.generate(back_buf_index, *this, depth_pass, command_list);
+        s.generate(back_buf_index, scene, depth_pass, command_list);
 }
 
-void Scene::upload_static_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
+void Scene_impl::upload_static_instance_data(ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
     static bool first = true;
     if (first)
@@ -514,7 +776,7 @@ void Scene::upload_static_instance_data(ComPtr<ID3D12GraphicsCommandList>& comma
     }
 }
 
-void Scene::set_static_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+void Scene_impl::set_static_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
     int root_param_index_of_instance_data)
 {
     if (!m_static_objects.empty())
@@ -522,7 +784,7 @@ void Scene::set_static_instance_data_shader_constant(ComPtr<ID3D12GraphicsComman
             m_static_instance_data->srv_gpu_handle());
 }
 
-void Scene::set_dynamic_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+void Scene_impl::set_dynamic_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
     UINT back_buf_index, int root_param_index_of_instance_data)
 {
     if (!m_dynamic_objects.empty())
@@ -530,7 +792,7 @@ void Scene::set_dynamic_instance_data_shader_constant(ComPtr<ID3D12GraphicsComma
             m_dynamic_instance_data[back_buf_index]->srv_gpu_handle());
 }
 
-void Scene::set_lights_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+void Scene_impl::set_lights_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
     UINT back_buf_index, int root_param_index_of_lights_data, int root_param_index_of_shadow_map)
 {
     if (!m_lights.empty())
@@ -542,7 +804,7 @@ void Scene::set_lights_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& c
             root_param_index_of_shadow_map);
 }
 
-void Scene::set_material_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+void Scene_impl::set_material_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
     int root_param_index_of_textures, int root_param_index_of_materials)
 {
     command_list->SetGraphicsRootDescriptorTable(root_param_index_of_materials,
@@ -552,25 +814,25 @@ void Scene::set_material_shader_constant(ComPtr<ID3D12GraphicsCommandList>& comm
         m_texture_gpu_descriptor_handle);
 }
 
-void Scene::manipulate_object(DirectX::XMVECTOR delta_pos, DirectX::XMVECTOR delta_rotation)
+void Scene_impl::manipulate_object(DirectX::XMFLOAT3& delta_pos, DirectX::XMFLOAT4& delta_rotation)
 {
     if (m_object_selected)
     {
         auto& selected_object_translation =
                 m_static_model_transforms[m_dynamic_objects[m_selected_object_id]->id()].translation;
         XMVECTOR translation = convert_half4_to_vector(selected_object_translation);
-        translation += delta_pos;
+        translation += XMLoadFloat3(&delta_pos);
         convert_vector_to_half4(selected_object_translation, translation);
         m_dynamic_model_transforms[m_selected_object_id].translation = selected_object_translation;
 
         auto& selected_object_rotation = m_dynamic_model_transforms[m_selected_object_id].rotation;
         XMVECTOR rotation = convert_half4_to_vector(selected_object_rotation);
         convert_vector_to_half4(selected_object_rotation,
-            XMQuaternionMultiply(rotation, delta_rotation));
+            XMQuaternionMultiply(rotation, XMLoadFloat4(&delta_rotation)));
     }
 }
 
-void Scene::select_object(int object_id)
+void Scene_impl::select_object(int object_id)
 {
     if (object_id < 0)
         m_object_selected = false;
@@ -581,19 +843,17 @@ void Scene::select_object(int object_id)
     }
 }
 
-DirectX::XMVECTOR Scene::initial_view_position() const
+void Scene_impl::initial_view_position(DirectX::XMFLOAT3& position) const
 {
-    return XMVectorSet(m_initial_view_position.x, m_initial_view_position.y,
-                       m_initial_view_position.z, 1.0f);
+    position = m_initial_view_position;
 }
 
-DirectX::XMVECTOR Scene::initial_view_focus_point() const
+void Scene_impl::initial_view_focus_point(DirectX::XMFLOAT3& focus_point) const
 {
-    return XMVectorSet(m_initial_view_focus_point.x, m_initial_view_focus_point.y,
-                       m_initial_view_focus_point.z, 1.0f);
+    focus_point = m_initial_view_focus_point;
 }
 
-void Scene::upload_resources_to_gpu(ComPtr<ID3D12Device> device,
+void Scene_impl::upload_resources_to_gpu(ComPtr<ID3D12Device> device,
     ComPtr<ID3D12GraphicsCommandList>& command_list)
 {
     D3D12_COMMAND_QUEUE_DESC desc {};
@@ -632,7 +892,7 @@ void throw_if_file_not_openable(const std::string& file_name)
 
 // Only performs basic error checking for the moment. Not very robust.
 // You should ensure that the scene file is valid.
-void Scene::read_file(const std::string& file_name, ComPtr<ID3D12Device> device, 
+void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
     ComPtr<ID3D12GraphicsCommandList>& command_list, int& texture_index,
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_values)
 {

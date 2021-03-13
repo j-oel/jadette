@@ -20,7 +20,18 @@ using Microsoft::WRL::ComPtr;
 
 
 class Scene;
-struct Light;
+
+struct Light
+{
+    DirectX::XMFLOAT4X4 transform_to_shadow_map_space;
+    DirectX::XMFLOAT4 position;
+    DirectX::XMFLOAT4 focus_point;
+    DirectX::XMFLOAT4 color;
+    float diffuse_intensity;
+    float diffuse_reach;
+    float specular_intensity;
+    float specular_reach;
+};
 
 class Shadow_map
 {

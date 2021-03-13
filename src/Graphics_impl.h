@@ -10,6 +10,7 @@
 #include "dx12min.h"
 #include "Scene.h"
 #include "Depth_stencil.h"
+#include "Depth_pass.h"
 #include "View_controller.h"
 #include "View.h"
 #include "Root_signature.h"

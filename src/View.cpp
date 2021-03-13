@@ -40,6 +40,16 @@ void View::update()
     m_view_projection_matrix = XMMatrixMultiply(m_view_matrix, m_projection_matrix);
 }
 
+void View::set_eye_position(DirectX::XMFLOAT3 position)
+{
+    m_eye_position = XMLoadFloat3(&position);
+}
+
+void View::set_focus_point(DirectX::XMFLOAT3 focus_point)
+{
+    m_focus_point = XMLoadFloat3(&focus_point);
+}
+
 void View::set_view(ComPtr<ID3D12GraphicsCommandList> command_list,
     int root_param_index_of_matrices) const
 {

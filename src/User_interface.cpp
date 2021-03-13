@@ -275,7 +275,11 @@ void User_interface::object_update(const User_action& user_action, Input& input,
 
     const XMVECTOR delta_pos = forward_direction * zoom + translation_vector;
 
-    scene.manipulate_object(delta_pos, rotation_quaternion);
+    XMFLOAT3 delta_position;
+    XMStoreFloat3(&delta_position, delta_pos);
+    XMFLOAT4 rotation;
+    XMStoreFloat4(&rotation, rotation_quaternion);
+    scene.manipulate_object(delta_position, rotation);
 
     mouse_initial_position = input.mouse_position();
 }

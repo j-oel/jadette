@@ -21,6 +21,8 @@ public:
         DirectX::XMVECTOR up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
     void update();
     const DirectX::XMVECTOR& eye_position() const { return m_eye_position; }
+    void set_eye_position(DirectX::XMFLOAT3 position);
+    void set_focus_point(DirectX::XMFLOAT3 focus_point);
     DirectX::XMVECTOR& eye_position() { return m_eye_position; }
     DirectX::XMVECTOR& focus_point() { return m_focus_point; }
     DirectX::XMVECTOR& up() { return m_up; }

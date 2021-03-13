@@ -11,6 +11,8 @@
 #include "Input.h"
 #include "Dx12_util.h"
 #include "Commands.h"
+#include "Mesh.h"
+#include "Shadow_map.h"
 
 #include <directxmath.h>
 
@@ -97,11 +99,15 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
             data_path + config.scene_file, m_texture_descriptor_heap,
             m_root_signature.m_root_param_index_of_values);
 
-        m_view.eye_position() = m_scene->initial_view_position();
-        m_view.focus_point() = m_scene->initial_view_focus_point();
+        DirectX::XMFLOAT3 eye_pos;
+        m_scene->initial_view_position(eye_pos);
+        m_view.set_eye_position(eye_pos);
+        DirectX::XMFLOAT3 focus_point;
+        m_scene->initial_view_focus_point(focus_point);
+        m_view.set_focus_point(focus_point);
         m_scene_loaded = true;
     };
-
+    
     auto compile_shaders = [=]()
     {
         create_pipeline_states(config);

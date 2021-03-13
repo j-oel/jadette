@@ -8,8 +8,12 @@
 #include "Commands.h"
 #include "Scene.h"
 #include "Depth_stencil.h"
+#include "Depth_pass.h"
 #include "Root_signature.h"
 #include "util.h"
+
+#include <cassert>
+
 
 Commands::Commands(ComPtr<ID3D12GraphicsCommandList> command_list, UINT back_buf_index,
     Depth_stencil* depth_stencil, Texture_mapping texture_mapping, Input_layout input_layout,
