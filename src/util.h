@@ -9,7 +9,6 @@
 
 #include <winerror.h>
 #include <exception>
-#include <string>
 
 
 #if defined(_DEBUG)

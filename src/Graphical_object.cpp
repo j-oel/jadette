@@ -5,6 +5,7 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
+#include "pch.h"
 #include "Graphical_object.h"
 #include "Mesh.h"
 #include "Primitives.h"

@@ -5,6 +5,7 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
+#include "pch.h"
 #include "Commands.h"
 #include "Scene.h"
 #include "Depth_stencil.h"

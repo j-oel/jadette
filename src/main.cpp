@@ -5,14 +5,10 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
-
+#include "pch.h"
 #include "Engine.h"
-
 #include "util.h"
 
-#include <winuser.h>
-#include <fstream>
-#include <vector>
 
 LRESULT CALLBACK window_procedure(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_param);
 

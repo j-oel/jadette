@@ -7,13 +7,9 @@
 
 #pragma once
 
-#include "dx12min.h"
 #include "Depth_stencil.h"
 #include "Depth_pass.h"
 #include "View.h"
-
-#include <directxmath.h>
-#include <memory>
 
 
 using Microsoft::WRL::ComPtr;

@@ -5,12 +5,14 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
+#include "pch.h"
 #include "Depth_pass.h"
 #include "Depth_stencil.h"
 #include "util.h"
 #include "View.h"
 #include "Scene.h"
 #include "Commands.h"
+
 
 Depth_pass::Depth_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format, bool backface_culling,
     UINT* render_settings) : m_root_signature(device),

@@ -5,9 +5,11 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
+#include "pch.h"
 #include "Dx12_display.h"
 #include "util.h"
 #include "Dx12_util.h"
+
 
 Dx12_display::Dx12_display(HWND window, UINT width, UINT height, bool vsync) :
     m_device(nullptr),

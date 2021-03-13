@@ -5,6 +5,7 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
+#include "pch.h"
 #include "Dx12_util.h"
 
 ComPtr<ID3D12GraphicsCommandList> create_command_list(ComPtr<ID3D12Device> device,

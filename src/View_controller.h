@@ -7,8 +7,6 @@
 
 #pragma once
 
-#include "windefmin.h"
-#include <DirectXMath.h>
 
 class Input;
 class View;

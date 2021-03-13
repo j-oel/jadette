@@ -9,10 +9,6 @@
 
 #include "Mesh.h"
 
-#include <vector>
-#include <map>
-#include <memory>
-
 
 struct Material
 {

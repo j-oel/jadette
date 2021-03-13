@@ -5,8 +5,10 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
+#include "pch.h"
 #include "Text.h"
 #include "util.h"
+
 
 Text::Text(float font_size/* = 14*/, const WCHAR* font_family/* = L"Arial"*/,
     const WCHAR* locale/* = L"en_us"*/) :

@@ -5,10 +5,9 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
+#include "pch.h"
 #include "Wavefront_obj_file.h"
 #include "util.h"
-
-#include <fstream>
 
 
 using DirectX::PackedVector::XMHALF4;

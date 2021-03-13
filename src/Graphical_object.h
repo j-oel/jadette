@@ -7,12 +7,9 @@
 
 #pragma once
 
-#include "dx12min.h"
+
 #include "Mesh.h"
 #include "Texture.h"
-
-#include <string>
-#include <memory>
 
 
 using Microsoft::WRL::ComPtr;

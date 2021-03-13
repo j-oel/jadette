@@ -5,11 +5,11 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
+#include "pch.h"
 #include "Input.h"
 #include "util.h"
 #include "windowsx.h"
 
-#include <iostream>
 
 using namespace std;
 

@@ -7,10 +7,6 @@
 
 #pragma once
 
-#include "dx12min.h"
-
-#include <memory>
-
 
 class Scene;
 class View;

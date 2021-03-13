@@ -5,15 +5,11 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
+#include "pch.h"
 #include "View_controller.h"
 #include "util.h"
 #include "input.h"
 #include "View.h"
-
-#undef min
-#undef max
-#include <algorithm>
-#include <cmath>
 
 
 using namespace DirectX;

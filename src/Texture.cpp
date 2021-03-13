@@ -5,6 +5,7 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
+#include "pch.h"
 #include "Texture.h"
 #include "util.h"
 #include "Dx12_util.h"

@@ -5,6 +5,7 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
+#include "pch.h"
 #include "Scene.h"
 #include "Graphical_object.h"
 #include "Shadow_map.h"
@@ -14,15 +15,7 @@
 #include "View.h"
 #include "Dx12_util.h"
 
-#include <vector>
-#include <memory>
-#include <fstream>
-#include <string>
-#include <map>
-#include <thread>
 #include <locale.h>
-#include <algorithm>
-
 
 using namespace DirectX;
 using namespace DirectX::PackedVector;

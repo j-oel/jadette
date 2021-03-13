@@ -8,9 +8,6 @@
 #pragma once
 //#define NO_TEXT
 
-#include "dx12min.h"
-
-#include <dxgi1_6.h>
 
 using Microsoft::WRL::ComPtr;
 

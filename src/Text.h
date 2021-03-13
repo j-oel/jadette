@@ -9,15 +9,10 @@
 
 #include "Dx12_display.h"
 
-#include <wrl/client.h> // For ComPtr
-#include <ole2.h>
-#define COM_NO_WINDOWS_H
 #include <d2d1_3.h>
 #include <d3d11on12.h>
 #include <dwrite.h>
-#include <string>
-#include <vector>
-#include <memory>
+
 
 using Microsoft::WRL::ComPtr;
 

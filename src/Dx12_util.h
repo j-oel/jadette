@@ -7,10 +7,8 @@
 
 #pragma once
 
-#include "dx12min.h"
 #include "util.h"
 
-#include <vector>
 
 using Microsoft::WRL::ComPtr;
 

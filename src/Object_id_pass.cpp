@@ -5,6 +5,7 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
+#include "pch.h"
 #include "Object_id_pass.h"
 #include "Depth_stencil.h"
 #include "util.h"

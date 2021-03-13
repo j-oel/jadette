@@ -7,9 +7,6 @@
 
 #pragma once
 
-#include "dx12min.h"
-
-#include <string>
 
 using Microsoft::WRL::ComPtr;
 

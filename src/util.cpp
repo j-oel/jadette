@@ -5,14 +5,11 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
-#include "windefmin.h"
+#include "pch.h"
 #include "util.h"
 
 #include <stringapiset.h>
 #include <profileapi.h>
-#include <winuser.h>
-#include <sstream>
-#include <fstream>
 
 
 LARGE_INTEGER get_frequency()

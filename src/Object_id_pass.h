@@ -7,10 +7,8 @@
 
 #pragma once
 
-#include "dx12min.h"
 #include "Root_signature.h"
 
-#include <vector>
 
 using Microsoft::WRL::ComPtr;
 

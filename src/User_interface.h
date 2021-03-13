@@ -7,6 +7,7 @@
 
 #pragma once
 
+
 #include "Depth_stencil.h"
 #include "Object_id_pass.h"
 #include "Dx12_display.h"
@@ -17,7 +18,6 @@
 #include "Text.h"
 #endif
 
-#include <memory>
 
 class User_action;
 class Input;

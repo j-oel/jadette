@@ -7,8 +7,6 @@
 
 #pragma once
 
-#include "windefmin.h"
-#include <string>
 
 class Graphics_impl;
 class Input;

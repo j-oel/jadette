@@ -8,8 +8,6 @@
 #pragma once
 
 
-#include "dx12min.h"
-#include <vector>
 
 using Microsoft::WRL::ComPtr;
 

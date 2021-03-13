@@ -5,6 +5,7 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
+#include "pch.h"
 #include "User_interface.h"
 #include "util.h"
 #include "dx12_util.h"
@@ -13,14 +14,8 @@
 #include "Input.h"
 #include "Scene.h"
 
-
-#include <cmath>
-#undef min
-#undef max
-#include <algorithm>
-#include <sstream>
 #include <iomanip>
-#include <directxmath.h>
+
 
 
 User_interface::User_interface(std::shared_ptr<Dx12_display> dx12_display,

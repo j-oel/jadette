@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include "dx12min.h"
 #include "Scene.h"
 #include "Depth_stencil.h"
 #include "Depth_pass.h"
@@ -16,11 +15,6 @@
 #include "Root_signature.h"
 #include "Dx12_display.h"
 #include "User_interface.h"
-
-#include <memory>
-#include <vector>
-#include <atomic>
-#include <thread>
 
 
 using Microsoft::WRL::ComPtr;

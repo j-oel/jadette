@@ -5,13 +5,13 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
+#include "pch.h"
 #include "Mesh.h"
 #include "util.h"
 #include "Wavefront_obj_file.h"
 #include "Root_signature.h"
 #include "Dx12_util.h"
 
-#include <vector>
 
 int Mesh::s_draw_calls = 0;
 
