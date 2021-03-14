@@ -197,6 +197,7 @@ public:
     bool object_selected() { return m_object_selected; }
     void initial_view_position(DirectX::XMFLOAT3& position) const;
     void initial_view_focus_point(DirectX::XMFLOAT3& focus_point) const;
+    DirectX::XMFLOAT4 ambient_light() const { return m_ambient_light; }
 
     static constexpr UINT max_textures = 112;
 private:
@@ -223,6 +224,8 @@ private:
 
     std::vector<std::shared_ptr<Texture>> m_textures;
     CD3DX12_GPU_DESCRIPTOR_HANDLE m_texture_gpu_descriptor_handle;
+
+    DirectX::XMFLOAT4 m_ambient_light;
 
     DirectX::XMFLOAT3 m_initial_view_position;
     DirectX::XMFLOAT3 m_initial_view_focus_point;
@@ -385,12 +388,18 @@ void Scene::initial_view_focus_point(DirectX::XMFLOAT3& focus_point) const
     return impl->initial_view_focus_point(focus_point);
 }
 
+DirectX::XMFLOAT4 Scene::ambient_light() const
+{
+    return impl->ambient_light();
+}
+
 
 Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
     const std::string& scene_file, ComPtr<ID3D12DescriptorHeap> descriptor_heap,
     int root_param_index_of_values) :
     m_initial_view_position(0.0f, 0.0f, -20.0f),
     m_initial_view_focus_point(0.0f, 0.0f, 0.0f),
+    m_ambient_light(0.2f, 0.2f, 0.2f, 1.0f),
     m_root_param_index_of_values(root_param_index_of_values), m_shadow_casting_lights_count(0),
     m_triangles_count(0), m_vertices_count(0), m_selected_object_id(-1), m_object_selected(false)
 {
@@ -1293,6 +1302,16 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
 
             if (cast_shadow)
                 ++m_shadow_casting_lights_count;
+        }
+        else if (input == "ambient")
+        {
+            float r;
+            file >> r;
+            float g;
+            file >> g;
+            float b;
+            file >> b;
+            m_ambient_light = { r, g, b, 1.0f };
         }
         else if (input == "view")
         {

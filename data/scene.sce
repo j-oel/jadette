@@ -88,6 +88,10 @@ light 20 0 -30 20 7 10 0.5 50 0.8 60 1.0 1.0 1.0 0
 light -15 5 -10 -15 0 -10 1 20 1.5 25 1.0 0.0 0.0 0
 light -5 7 0 -5 0 0 0.5 18 0.7 20 0.0 0.0 1.0 0
 
+# To set the ambient light:
+# ambient <r> <g> <b>
+ambient 0.15 0.15 0.15
+
 
 # To animate an object flying around in a circle:
 # fly <previously_defined_dynamic_object> <r_x> <r_y> <r_z> <rot_x> <rot_y> <rot_z> <speed>

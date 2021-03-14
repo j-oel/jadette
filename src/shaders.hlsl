@@ -33,6 +33,7 @@ ConstantBuffer<matrices_struct> matrices : register(b1);
 struct vectors_struct
 {
     float4 eye_position;
+    float4 ambient_light;
 };
 ConstantBuffer<vectors_struct> vectors : register(b2);
 
@@ -372,7 +373,7 @@ float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFac
         }
     }
 
-    const float4 ambient_light = float4(0.1f, 0.1f, 0.1f, 1.0f);
+    const float4 ambient_light = vectors.ambient_light;
     const float4 ambient = color * ambient_light;
     const float4 result = ambient + accumulated_light;
 

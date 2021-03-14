@@ -74,6 +74,7 @@ public:
     bool object_selected();
     void initial_view_position(DirectX::XMFLOAT3& position) const;
     void initial_view_focus_point(DirectX::XMFLOAT3& focus_point) const;
+    DirectX::XMFLOAT4 ambient_light() const;
 
     static constexpr UINT max_textures = 112;
 private:

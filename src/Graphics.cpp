@@ -434,6 +434,11 @@ void Main_root_signature::set_constants(ID3D12GraphicsCommandList& command_list,
     command_list.SetGraphicsRoot32BitConstants(m_root_param_index_of_vectors,
         size_in_words_of_XMVECTOR, &eye, offset);
 
+    offset += size_in_words_of_XMVECTOR;
+    auto ambient = scene->ambient_light();
+    command_list.SetGraphicsRoot32BitConstants(m_root_param_index_of_vectors,
+        size_in_words_of_XMVECTOR, &ambient, offset);
+
     scene->set_lights_data_shader_constant(command_list, back_buf_index,
         m_root_param_index_of_lights_data, m_root_param_index_of_shadow_map);
 
