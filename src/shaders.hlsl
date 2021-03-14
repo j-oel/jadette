@@ -340,36 +340,40 @@ float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFac
         const float normal_dot_light = dot(normal, light);
         if (normal_dot_light > 0.0f)
         {
-            const float diffuse_intensity = lights.l[i].diffuse_intensity;
             const float diffuse_reach = lights.l[i].diffuse_reach;
-            const float specular_intensity = lights.l[i].specular_intensity;
             const float specular_reach = lights.l[i].specular_reach;
-
-            const float shininess = 0.4f;
-            const float inverted_light_size = 30;
-            const float specular_exponent = inverted_light_size;
-
-            float4 specular = lights.l[i].color * specular_intensity *
-                shininess * saturate(pow(saturate(
-                dot(2 * dot(normal, -light) * normal + light,
-                normalize(input.position.xyz - eye))), specular_exponent));
-
-            float shadow = 1.0f;
-            if (values.render_settings & shadow_mapping_enabled && cast_shadow)
-                shadow = shadow_value(input, i);
-
-            float4 diffuse = diffuse_intensity * color * lights.l[i].color * normal_dot_light;
-
             const float light_distance = length(light_unorm);
+            const float diffuse_reach_minus_distance = diffuse_reach - light_distance;
+            const float specular_reach_minus_distance = specular_reach - light_distance;
+            if (diffuse_reach_minus_distance > 0 || specular_reach_minus_distance > 0)
+            {
+                const float diffuse_intensity = lights.l[i].diffuse_intensity;
+                const float specular_intensity = lights.l[i].specular_intensity;
 
-            const float diffuse_attenuation = max(diffuse_reach - light_distance, 0) /
-                diffuse_reach;
+                const float shininess = 0.4f;
+                const float inverted_light_size = 30;
+                const float specular_exponent = inverted_light_size;
 
-            const float specular_attenuation = max(specular_reach - light_distance, 0) /
-                specular_reach;
+                float4 specular = lights.l[i].color * specular_intensity *
+                    shininess * saturate(pow(saturate(
+                    dot(2 * dot(normal, -light) * normal + light,
+                    normalize(input.position.xyz - eye))), specular_exponent));
 
-            accumulated_light += shadow * (diffuse * diffuse_attenuation + 
-                                           specular * specular_attenuation);
+                float shadow = 1.0f;
+                if (values.render_settings & shadow_mapping_enabled && cast_shadow)
+                    shadow = shadow_value(input, i);
+
+                float4 diffuse = diffuse_intensity * color * lights.l[i].color * normal_dot_light;
+
+                const float diffuse_attenuation = max(diffuse_reach_minus_distance, 0) /
+                    diffuse_reach;
+
+                const float specular_attenuation = max(specular_reach_minus_distance, 0) /
+                    specular_reach;
+
+                accumulated_light += shadow * (diffuse * diffuse_attenuation +
+                                               specular * specular_attenuation);
+            }
         }
     }
 
