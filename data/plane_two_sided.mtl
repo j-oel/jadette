@@ -1,0 +1,5 @@
+newmtl plane_mtl
+map_Kd pattern2.dds
+map_Bump plane_normal_map.jpg
+mirror_texture_addressing 1
+two_sided 1

@@ -23,6 +23,7 @@ object spaceship dynamic spaceship_model spaceship_diff 0 0 10 1
 texture normal_map plane_normal_map.jpg
 texture pattern pattern.jpg
 model plane_model plane.obj
+model plane_model_two_sided plane_two_sided.obj
 model cube_from_file cube.obj
 
 
@@ -55,7 +56,7 @@ model platform_model platform.obj
 # the <texture_name> argument is ignored:
 
 object plane1 static plane_model not_used -20 -10 0 30
-object plane2 static plane_model not_used 10 -8 0 30
+object plane2 static plane_model_two_sided not_used 10 -8 0 30
 object platform static platform_model not_used 20 -7 4 1
 
 model cube_transparent cube_transparent.obj

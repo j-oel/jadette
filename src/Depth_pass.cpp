@@ -33,10 +33,16 @@ void Depth_pass::create_pipeline_states(ComPtr<ID3D12Device> device, DXGI_FORMAT
         Backface_culling::enabled : Backface_culling::disabled);
     SET_DEBUG_NAME(m_pipeline_state, L"Depths Pipeline State Object");
 
+    create_pipeline_state(device, m_pipeline_state_two_sided, m_root_signature.get(),
+        "depths_vertex_shader_srv_instance_data", empty_pixel_shader,
+        dsv_format, render_targets_count, Input_layout::position,
+        Backface_culling::disabled);
+    SET_DEBUG_NAME(m_pipeline_state_two_sided, L"Depths Pipeline State Object Two Sided");
+
     create_pipeline_state(device, m_pipeline_state_alpha_cut_out, m_alpha_cut_out_root_signature.get(),
         "depths_alpha_cut_out_vertex_shader_srv_instance_data", "pixel_shader_depths_alpha_cut_out",
         dsv_format, render_targets_count, Input_layout::position_normal, Backface_culling::disabled);
-    SET_DEBUG_NAME(m_pipeline_state, L"Depths Alpha Cut Out Pipeline State Object");
+    SET_DEBUG_NAME(m_pipeline_state_alpha_cut_out, L"Depths Alpha Cut Out Pipeline State Object");
 }
 
 void set_render_target(ID3D12GraphicsCommandList& command_list,
@@ -60,7 +66,7 @@ void Depth_pass::record_commands(UINT back_buf_index, Scene& scene, const View& 
     Commands c(command_list, back_buf_index, &depth_stencil, Texture_mapping::disabled,
         Input_layout::position, &view, &scene, this, &m_root_signature,
         m_root_signature.m_root_param_index_of_instance_data);
-    c.simple_render_pass(m_pipeline_state, m_pipeline_state);
+    c.simple_render_pass(m_pipeline_state, m_pipeline_state, m_pipeline_state_two_sided);
 
     Commands f(command_list, back_buf_index, &depth_stencil, Texture_mapping::enabled,
         Input_layout::position_normal, &view, &scene, this, &m_alpha_cut_out_root_signature,

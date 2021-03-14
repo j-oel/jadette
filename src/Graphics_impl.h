@@ -68,6 +68,8 @@ private:
     std::vector<Depth_stencil> m_depth_stencil;
     ComPtr<ID3D12PipelineState> m_pipeline_state;
     ComPtr<ID3D12PipelineState> m_pipeline_state_early_z;
+    ComPtr<ID3D12PipelineState> m_pipeline_state_two_sided;
+    ComPtr<ID3D12PipelineState> m_pipeline_state_two_sided_early_z;
     ComPtr<ID3D12PipelineState> m_pipeline_state_transparency;
     ComPtr<ID3D12PipelineState> m_pipeline_state_alpha_cut_out_early_z;
     ComPtr<ID3D12PipelineState> m_pipeline_state_alpha_cut_out;

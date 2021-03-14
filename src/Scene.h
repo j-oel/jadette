@@ -51,6 +51,8 @@ public:
         Texture_mapping texture_mapping, const Input_layout& input_layout) const;
     void draw_alpha_cut_out_objects(ID3D12GraphicsCommandList& command_list,
         Texture_mapping texture_mapping, const Input_layout& input_layout) const;
+    void draw_two_sided_objects(ID3D12GraphicsCommandList& command_list,
+        Texture_mapping texture_mapping, const Input_layout& input_layout) const;
     void upload_data_to_gpu(ID3D12GraphicsCommandList& command_list, UINT back_buf_index);
     void record_shadow_map_generation_commands_in_command_list(UINT back_buf_index,
         Depth_pass& depth_pass, ID3D12GraphicsCommandList& command_list);

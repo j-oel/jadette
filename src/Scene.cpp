@@ -174,6 +174,8 @@ public:
         Texture_mapping texture_mapping, const Input_layout& input_layout) const;
     void draw_alpha_cut_out_objects(ID3D12GraphicsCommandList& command_list,
         Texture_mapping texture_mapping, const Input_layout& input_layout) const;
+    void draw_two_sided_objects(ID3D12GraphicsCommandList& command_list,
+        Texture_mapping texture_mapping, const Input_layout& input_layout) const;
     void upload_data_to_gpu(ID3D12GraphicsCommandList& command_list, UINT back_buf_index);
     void record_shadow_map_generation_commands_in_command_list(UINT back_buf_index,
         Depth_pass& depth_pass, ID3D12GraphicsCommandList& command_list, Scene& scene);
@@ -215,6 +217,7 @@ private:
     std::vector<std::shared_ptr<Graphical_object> > m_dynamic_objects;
     std::vector<std::shared_ptr<Graphical_object> > m_transparent_objects;
     std::vector<std::shared_ptr<Graphical_object> > m_alpha_cut_out_objects;
+    std::vector<std::shared_ptr<Graphical_object> > m_two_sided_objects;
     std::vector<Flying_object> m_flying_objects;
     std::vector<Dynamic_object> m_rotating_objects;
 
@@ -289,6 +292,12 @@ void Scene::draw_alpha_cut_out_objects(ID3D12GraphicsCommandList& command_list,
     Texture_mapping texture_mapping, const Input_layout& input_layout) const
 {
     impl->draw_alpha_cut_out_objects(command_list, texture_mapping, input_layout);
+}
+
+void Scene::draw_two_sided_objects(ID3D12GraphicsCommandList& command_list,
+    Texture_mapping texture_mapping, const Input_layout& input_layout) const
+{
+    impl->draw_two_sided_objects(command_list, texture_mapping, input_layout);
 }
 
 void Scene::upload_data_to_gpu(ID3D12GraphicsCommandList& command_list, UINT back_buf_index)
@@ -737,6 +746,12 @@ void Scene_impl::draw_alpha_cut_out_objects(ID3D12GraphicsCommandList& command_l
     draw_objects(command_list, m_alpha_cut_out_objects, texture_mapping, input_layout, false);
 }
 
+void Scene_impl::draw_two_sided_objects(ID3D12GraphicsCommandList& command_list,
+    Texture_mapping texture_mapping, const Input_layout& input_layout) const
+{
+    draw_objects(command_list, m_two_sided_objects, texture_mapping, input_layout, false);
+}
+
 void Scene_impl::upload_data_to_gpu(ID3D12GraphicsCommandList& command_list,
     UINT back_buf_index)
 {
@@ -960,6 +975,8 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
             m_transparent_objects.push_back(object);
         else if (material_settings & alpha_cut_out)
             m_alpha_cut_out_objects.push_back(object);
+        else if (material_settings & two_sided)
+            m_two_sided_objects.push_back(object);
         else if (dynamic)
         {
             m_dynamic_objects.push_back(object);

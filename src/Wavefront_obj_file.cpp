@@ -361,6 +361,13 @@ void read_mtl_file(const string file_name, map<string, Material>& materials)
             if (cut_out)
                 material.settings |= alpha_cut_out;
         }
+        else if (input == "two_sided") // My extension
+        {
+            bool two;
+            file >> two;
+            if (two)
+                material.settings |= two_sided;
+        }
     }
     
     if (!name.empty())

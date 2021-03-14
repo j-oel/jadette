@@ -47,6 +47,7 @@ private:
     void create_pipeline_states(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format,
         bool backface_culling);
     ComPtr<ID3D12PipelineState> m_pipeline_state;
+    ComPtr<ID3D12PipelineState> m_pipeline_state_two_sided;
     ComPtr<ID3D12PipelineState> m_pipeline_state_alpha_cut_out;
     Simple_root_signature m_root_signature;
     Depths_alpha_cut_out_root_signature m_alpha_cut_out_root_signature;

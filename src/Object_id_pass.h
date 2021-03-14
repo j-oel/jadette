@@ -42,6 +42,7 @@ private:
     D3D12_CPU_DESCRIPTOR_HANDLE m_render_target_view;
     ComPtr<ID3D12PipelineState> m_pipeline_state_dynamic_objects;
     ComPtr<ID3D12PipelineState> m_pipeline_state_static_objects;
+    ComPtr<ID3D12PipelineState> m_pipeline_state_two_sided_objects;
     Simple_root_signature m_root_signature;
     DXGI_FORMAT m_dsv_format;
     DXGI_FORMAT m_rtv_format;

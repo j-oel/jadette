@@ -117,12 +117,23 @@ void Commands::draw_alpha_cut_out_objects(ComPtr<ID3D12PipelineState> pipeline_s
     m_scene->draw_alpha_cut_out_objects(m_command_list, Texture_mapping::enabled, m_input_layout);
 }
 
+void Commands::draw_two_sided_objects(ComPtr<ID3D12PipelineState> pipeline_state)
+{
+    assert(m_scene);
+    m_command_list.SetPipelineState(pipeline_state.Get());
+    m_scene->set_static_instance_data_shader_constant(m_command_list,
+        m_root_param_index_of_instance_data);
+    m_scene->draw_two_sided_objects(m_command_list, Texture_mapping::enabled, m_input_layout);
+}
+
 void Commands::simple_render_pass(ComPtr<ID3D12PipelineState> dynamic_objects_pipeline_state,
-    ComPtr<ID3D12PipelineState> static_objects_pipeline_state)
+    ComPtr<ID3D12PipelineState> static_objects_pipeline_state,
+    ComPtr<ID3D12PipelineState> two_sided_objects_pipeline_state)
 {
     set_root_signature();
     set_shader_constants();
     clear_depth_stencil();
     draw_dynamic_objects(dynamic_objects_pipeline_state);
     draw_static_objects(static_objects_pipeline_state);
+    draw_two_sided_objects(two_sided_objects_pipeline_state);
 }

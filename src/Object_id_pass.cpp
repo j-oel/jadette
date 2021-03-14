@@ -53,6 +53,13 @@ void Object_id_pass::create_pipeline_states(ComPtr<ID3D12Device> device, bool ba
         Depth_write::enabled, m_rtv_format);
     SET_DEBUG_NAME(m_pipeline_state_static_objects,
         L"Object Id Pipeline State Object Static Objects");
+
+    create_pipeline_state(device, m_pipeline_state_two_sided_objects, m_root_signature.get(),
+        "object_ids_vertex_shader_srv_instance_data_static_objects", "pixel_shader_object_ids",
+        m_dsv_format, render_targets_count, Input_layout::position, Backface_culling::disabled,
+        Alpha_blending::disabled, Depth_write::enabled, m_rtv_format);
+    SET_DEBUG_NAME(m_pipeline_state_two_sided_objects,
+        L"Object Id Pipeline State Object Two Sided Objects");
 }
 
 void Object_id_pass::reload_shaders(ComPtr<ID3D12Device> device, bool backface_culling)
@@ -89,7 +96,8 @@ void Object_id_pass::record_commands(UINT back_buf_index, Scene& scene, const Vi
     Commands c(command_list, back_buf_index, &depth_stencil, Texture_mapping::disabled,
         Input_layout::position, &view, &scene, nullptr, &m_root_signature,
         m_root_signature.m_root_param_index_of_instance_data);
-    c.simple_render_pass(m_pipeline_state_dynamic_objects, m_pipeline_state_static_objects);
+    c.simple_render_pass(m_pipeline_state_dynamic_objects, m_pipeline_state_static_objects,
+        m_pipeline_state_two_sided_objects);
 
     barrier_transition(command_list, D3D12_RESOURCE_STATE_COPY_SOURCE);
 

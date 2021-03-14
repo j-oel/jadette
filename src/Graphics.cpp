@@ -244,27 +244,43 @@ void Graphics_impl::create_pipeline_states(const Config& config)
         "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
         render_targets_count, Input_layout::position_normal_tangents, backface_culling,
         Alpha_blending::disabled, Depth_write::disabled);
-    SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering Early Z");
+    SET_DEBUG_NAME(m_pipeline_state_early_z, L"Pipeline State Object Main Rendering Early Z");
 
     backface_culling = Backface_culling::disabled;
+
+    create_pipeline_state(m_device, m_pipeline_state_two_sided, m_root_signature.get(),
+        "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
+        render_targets_count, Input_layout::position_normal_tangents, backface_culling,
+        Alpha_blending::disabled, Depth_write::enabled);
+    SET_DEBUG_NAME(m_pipeline_state_two_sided, L"Pipeline State Object Main Rendering Two Sided");
+
+    create_pipeline_state(m_device, m_pipeline_state_two_sided_early_z, m_root_signature.get(),
+        "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
+        render_targets_count, Input_layout::position_normal_tangents, backface_culling,
+        Alpha_blending::disabled, Depth_write::disabled);
+    SET_DEBUG_NAME(m_pipeline_state_two_sided_early_z,
+        L"Pipeline State Object Main Rendering Two Sided Early Z");
 
     create_pipeline_state(m_device, m_pipeline_state_transparency, m_root_signature.get(),
         "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
         render_targets_count, Input_layout::position_normal_tangents, backface_culling,
         Alpha_blending::enabled, Depth_write::alpha_blending);
-    SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering Transparency");
+    SET_DEBUG_NAME(m_pipeline_state_transparency,
+        L"Pipeline State Object Main Rendering Transparency");
 
     create_pipeline_state(m_device, m_pipeline_state_alpha_cut_out, m_root_signature.get(),
         "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
         render_targets_count, Input_layout::position_normal_tangents, backface_culling,
         Alpha_blending::enabled, Depth_write::enabled);
-    SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering Alpha Cut Out");
+    SET_DEBUG_NAME(m_pipeline_state_alpha_cut_out,
+        L"Pipeline State Object Main Rendering Alpha Cut Out");
 
     create_pipeline_state(m_device, m_pipeline_state_alpha_cut_out_early_z, m_root_signature.get(),
         "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
         render_targets_count, Input_layout::position_normal_tangents, backface_culling,
         Alpha_blending::enabled, Depth_write::alpha_blending);
-    SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering Alpha Cut Out Early Z");
+    SET_DEBUG_NAME(m_pipeline_state_alpha_cut_out_early_z,
+        L"Pipeline State Object Main Rendering Alpha Cut Out Early Z");
 }
 
 ComPtr<ID3D12GraphicsCommandList> Graphics_impl::create_main_command_list()
@@ -307,6 +323,7 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     {
         c.draw_dynamic_objects(m_pipeline_state_early_z);
         c.draw_static_objects(m_pipeline_state_early_z);
+        c.draw_two_sided_objects(m_pipeline_state_two_sided_early_z);
         c.draw_alpha_cut_out_objects(m_pipeline_state_alpha_cut_out_early_z);
         c.draw_transparent_objects(m_pipeline_state_transparency);
     }
@@ -314,6 +331,7 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     {
         c.draw_dynamic_objects(m_pipeline_state);
         c.draw_static_objects(m_pipeline_state);
+        c.draw_two_sided_objects(m_pipeline_state_two_sided);
         c.draw_alpha_cut_out_objects(m_pipeline_state_alpha_cut_out);
         c.draw_transparent_objects(m_pipeline_state_transparency);
     }
