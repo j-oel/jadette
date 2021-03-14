@@ -42,20 +42,22 @@ Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<
     std::shared_ptr<Texture> diffuse_map, 
     int root_param_index_of_values,
     std::shared_ptr<Texture> normal_map,
-    int id, int material_id, int instances/* = 1*/) :
+    int id, int material_id, int instances/* = 1*/,
+    int triangle_index/* = 0*/) :
     m_mesh(mesh),
     m_diffuse_map(diffuse_map), m_normal_map(normal_map),
     m_root_param_index_of_values(root_param_index_of_values),
     m_id(id),
     m_instances(instances),
-    m_material_id(material_id)
+    m_material_id(material_id),
+    m_triangle_index(triangle_index)
 {
 }
 
 void Graphical_object::draw(ID3D12GraphicsCommandList& command_list,
     const Input_layout& input_layout)
 {
-    m_mesh->draw(command_list, m_instances, input_layout);
+    m_mesh->draw(command_list, m_instances, input_layout, m_triangle_index);
 }
 
 void Graphical_object::release_temp_resources()
@@ -81,5 +83,6 @@ DirectX::XMVECTOR Graphical_object::center() const
 
 void Graphical_object::transform_center(DirectX::XMMATRIX model_view)
 {
-    XMStoreFloat3(&m_transformed_center, DirectX::XMVector3Transform(m_mesh->center(), model_view));
+    XMStoreFloat3(&m_transformed_center,
+        DirectX::XMVector3Transform(m_mesh->center(m_triangle_index), model_view));
 }

@@ -23,14 +23,15 @@ Mesh::Mesh(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
 
     read_obj_file(filename, vertices, indices);
 
-    create_and_fill_vertex_buffers(vertices, device, command_list);
+    create_and_fill_vertex_buffers(vertices, indices, device, command_list, false);
     create_and_fill_index_buffer(indices, device, command_list);
 }
 
 Mesh::Mesh(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
-    const Vertices& vertices, const std::vector<int>& indices)
+    const Vertices& vertices, const std::vector<int>& indices, bool transparent/* = false*/)
+    : m_transparent(transparent)
 {
-    create_and_fill_vertex_buffers(vertices, device, command_list);
+    create_and_fill_vertex_buffers(vertices, indices, device, command_list, transparent);
     create_and_fill_index_buffer(indices, device, command_list);
 }
 
@@ -46,7 +47,7 @@ void Mesh::release_temp_resources()
 
 
 void Mesh::draw(ID3D12GraphicsCommandList& command_list, int draw_instances_count,
-    const Input_layout& input_layout)
+    const Input_layout& input_layout, int triangle_index)
 {
     switch (input_layout)
     {
@@ -74,23 +75,25 @@ void Mesh::draw(ID3D12GraphicsCommandList& command_list, int draw_instances_coun
     }
 
     command_list.IASetIndexBuffer(&m_index_buffer_view);
-    command_list.DrawIndexedInstanced(m_index_count, draw_instances_count, 0, 0, 0);
+    const int index_count = m_transparent ? vertex_count_per_face : m_index_count;
+    command_list.DrawIndexedInstanced(index_count, draw_instances_count,
+        triangle_index * vertex_count_per_face, 0, 0);
     ++s_draw_calls;
 }
 
 int Mesh::triangles_count()
 {
-    return m_index_count / 3;
+    return m_transparent? 1 : m_index_count / 3;
 }
 
 size_t Mesh::vertices_count()
 {
-    return m_vertices_count;
+    return m_transparent? 3 : m_vertices_count;
 }
 
-DirectX::XMVECTOR Mesh::center() const
+DirectX::XMVECTOR Mesh::center(int triangle_index) const
 {
-    return DirectX::XMLoadFloat3(&m_center);
+    return DirectX::XMLoadFloat3(&m_centers[triangle_index]);
 }
 
 namespace
@@ -121,12 +124,42 @@ DirectX::XMVECTOR calculate_center(const Vertices& vertices)
     return center;
 }
 
+DirectX::XMVECTOR calculate_center_of_triangle(const Vertices& vertices,
+    const std::vector<int>& indices, int index)
+{
+    using namespace DirectX;
+
+    XMVECTOR accumulation = XMVectorZero();
+    for (int i = index * vertex_count_per_face;
+        i < index * vertex_count_per_face + vertex_count_per_face; ++i)
+    {
+        auto p = vertices.positions[indices[i]];
+        accumulation += convert_half4_to_vector(p.position);
+    }
+
+    auto center = accumulation / vertex_count_per_face;
+    return center;
+}
+
 void Mesh::create_and_fill_vertex_buffers(const Vertices& vertices,
-    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list)
+    const std::vector<int>& indices, ComPtr<ID3D12Device> device,
+    ID3D12GraphicsCommandList& command_list, bool transparent)
 {
     m_vertices_count = vertices.positions.size();
+    if (transparent)
+        for (UINT i = 0; i < indices.size() / vertex_count_per_face; ++i)
+        {
+            DirectX::XMFLOAT3 center;
+            DirectX::XMStoreFloat3(&center, calculate_center_of_triangle(vertices, indices, i));
+            m_centers.push_back(center);
+        }
+    else
+    {
+        DirectX::XMFLOAT3 center;
+        DirectX::XMStoreFloat3(&center, calculate_center(vertices));
+        m_centers.push_back(center);
+    }
 
-    DirectX::XMStoreFloat3(&m_center, calculate_center(vertices));
 
     create_and_fill_vertex_buffer(device, command_list, m_vertex_positions_buffer,
         m_temp_upload_resource_vb_pos, vertices.positions, m_vertex_positions_buffer_view);

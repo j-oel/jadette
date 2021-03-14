@@ -53,24 +53,24 @@ public:
     Mesh(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list, 
         const std::string& filename);
     Mesh(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
-        const Vertices& vertices, const std::vector<int>& indices);
+        const Vertices& vertices, const std::vector<int>& indices, bool transparent = false);
 
     void release_temp_resources();
 
     void draw(ID3D12GraphicsCommandList& command_list, int draw_instances_count,
-        const Input_layout& input_layout);
+        const Input_layout& input_layout, int triangle_index);
 
     int triangles_count();
     size_t vertices_count();
-    DirectX::XMVECTOR center() const;
+    DirectX::XMVECTOR center(int triangle_index) const;
 
     static int draw_calls() { return s_draw_calls; }
     static void reset_draw_calls() { s_draw_calls = 0; }
 
 private:
 
-    void create_and_fill_vertex_buffers(const Vertices& vertices,
-        ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list);
+    void create_and_fill_vertex_buffers(const Vertices& vertices, const std::vector<int>& indices,
+        ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list, bool transparent);
     void create_and_fill_index_buffer(const std::vector<int>& indices, ComPtr<ID3D12Device> device, 
         ID3D12GraphicsCommandList& command_list);
 
@@ -91,7 +91,7 @@ private:
     D3D12_INDEX_BUFFER_VIEW m_index_buffer_view;
     UINT m_index_count;
     size_t m_vertices_count;
-    DirectX::XMFLOAT3 m_center;
+    std::vector<DirectX::XMFLOAT3> m_centers;
 
     static int s_draw_calls;
 
@@ -100,6 +100,7 @@ private:
     ComPtr<ID3D12Resource> m_temp_upload_resource_vb_tangents;
     ComPtr<ID3D12Resource> m_temp_upload_resource_vb_bitangents;
     ComPtr<ID3D12Resource> m_temp_upload_resource_ib;
+    bool m_transparent;
 };
 
 constexpr int vertex_count_per_face = 3;

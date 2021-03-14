@@ -25,7 +25,8 @@ public:
 
     Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh,
         std::shared_ptr<Texture> diffuse_map, int root_param_index_of_values,
-        std::shared_ptr<Texture> normal_map, int id, int material_id, int instances = 1);
+        std::shared_ptr<Texture> normal_map, int id, int material_id, int instances = 1,
+        int triangle_index = 0);
 
     void draw(ID3D12GraphicsCommandList& command_list, const Input_layout& input_layout);
     void release_temp_resources();
@@ -47,4 +48,5 @@ private:
     int m_instances;
     int m_material_settings;
     int m_material_id;
+    int m_triangle_index;
 };

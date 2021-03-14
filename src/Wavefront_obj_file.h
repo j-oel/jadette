@@ -22,6 +22,7 @@ struct Model
 {
     std::shared_ptr<Mesh> mesh;
     std::string material;
+    int triangle_start_index;
 };
 
 struct Model_collection

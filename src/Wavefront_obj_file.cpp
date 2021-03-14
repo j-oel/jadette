@@ -232,20 +232,12 @@ void create_one_model_per_triangle(std::shared_ptr<Model_collection> collection,
     ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
     const Vertices& vertices, const vector<int>& indices, const string& material)
 {
-    constexpr size_t vertex_count_per_triangle = 3;
-    vector<int> new_indices = { 0, 1, 2 };
-    for (size_t i = 0; i < indices.size(); i += vertex_count_per_triangle)
+    auto mesh = std::make_shared<Mesh>(device, command_list, vertices, indices, true);
+    constexpr int vertex_count_per_triangle = 3;
+    const int model_count = static_cast<int>(indices.size()) / vertex_count_per_triangle;
+    for (int i = 0; i < model_count; ++i)
     {
-        Vertices new_vertices;
-        for (size_t j = i; j < i + vertex_count_per_triangle; ++j)
-        {
-            new_vertices.positions.push_back(vertices.positions[indices[j]]);
-            new_vertices.normals.push_back(vertices.normals[indices[j]]);
-            new_vertices.tangents.push_back(vertices.tangents[indices[j]]);
-            new_vertices.bitangents.push_back(vertices.bitangents[indices[j]]);
-        }
-        collection->models.push_back({
-            std::make_shared<Mesh>(device, command_list, new_vertices, new_indices), material });
+        collection->models.push_back({ mesh, material, i });
     }
 }
 
@@ -271,6 +263,7 @@ std::shared_ptr<Model_collection> read_obj_file(const string& filename,
         more_objects = read_obj_file(file, vertices, indices, input_vertices, input_normals,
             input_texture_coords, input_tangents, input_bitangents, material, &collection->materials);
 
+        constexpr int triangle_start_index = 0;
         auto material_iter = collection->materials.find(material);
         if (material_iter != collection->materials.end() && // We don't require the obj-file to
             material_iter->second.settings & transparency)  // reference an mtl file.
@@ -280,7 +273,7 @@ std::shared_ptr<Model_collection> read_obj_file(const string& filename,
                 vertices, indices, material);
         else
             collection->models.push_back({ std::make_shared<Mesh>(device,
-                command_list, vertices, indices), material });
+                command_list, vertices, indices), material, triangle_start_index });
     }
 
     return collection;

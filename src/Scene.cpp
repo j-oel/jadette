@@ -945,14 +945,14 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
     auto create_object = [&](const string& name, shared_ptr<Mesh> mesh,
         shared_ptr<Texture> diffuse_map, bool dynamic, XMFLOAT4 position, UINT material_id,
         int instances = 1, shared_ptr<Texture> normal_map = nullptr, UINT material_settings = 0,
-        bool rotating = false)
+        int triangle_start_index = 0, bool rotating = false)
     {
         Per_instance_transform transform = { convert_float4_to_half4(position),
         convert_vector_to_half4(DirectX::XMQuaternionIdentity()) };
         m_static_model_transforms.push_back(transform);
         auto object = std::make_shared<Graphical_object>(device, mesh, diffuse_map,
             root_param_index_of_values, normal_map, object_id++, material_id,
-            instances);
+            instances, triangle_start_index);
 
         m_graphical_objects.push_back(object);
 
@@ -1083,8 +1083,10 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
                         current_material_id = add_material(diffuse_map_tex->index(),
                             normal_index, material_settings);
 
+                    constexpr int instances = 1;
                     create_object(name, m.mesh, diffuse_map_tex, dynamic, position,
-                        current_material_id, 1, normal_map_tex, material_settings);
+                        current_material_id, instances, normal_map_tex, material_settings,
+                        m.triangle_start_index);
                 }
             }
         }
@@ -1197,6 +1199,8 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
             int curr_material_id = add_material(diffuse_map_tex->index(),
                 normal_index, material_settings);
 
+            constexpr int triangle_start_index = 0;
+
             for (int x = 0; x < count.x; ++x)
                 for (int y = 0; y < count.y; ++y)
                     for (int z = 0; z < count.z; ++z, --instances)
@@ -1205,8 +1209,9 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
                             pos.z + offset.z * z, scale);
                         create_object(dynamic? "arrayobject" + std::to_string(object_id) :"", 
                             mesh, diffuse_map_tex, dynamic, position, curr_material_id, instances,
-                            normal_map_tex, material_settings, (input == "rotating_array" ||
-                                input == "normal_mapped_rotating_array")? true: false);
+                            normal_map_tex, material_settings, triangle_start_index,
+                            (input == "rotating_array" || input == "normal_mapped_rotating_array")?
+                            true: false);
                     }
         }
         else if (input == "fly")
