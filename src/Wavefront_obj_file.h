@@ -36,7 +36,7 @@ struct Model_collection
 void read_obj_file(const std::string& filename, Vertices& vertices, std::vector<int>& indices);
 
 std::shared_ptr<Model_collection> read_obj_file(const std::string& filename,
-    ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list);
+    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list);
 
 
 

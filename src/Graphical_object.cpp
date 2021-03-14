@@ -14,7 +14,7 @@
 using namespace DirectX;
 
 
-Mesh* new_primitive(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
+Mesh* new_primitive(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
     Primitive_type primitive_type)
 {
     switch (primitive_type)
@@ -27,9 +27,9 @@ Mesh* new_primitive(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandLis
     }
 }
 
-Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, Primitive_type primitive_type, 
-    ComPtr<ID3D12GraphicsCommandList>& command_list,
-    std::shared_ptr<Texture> diffuse_map, int id) :
+Graphical_object::Graphical_object(ComPtr<ID3D12Device> device,
+    ID3D12GraphicsCommandList& command_list,
+    Primitive_type primitive_type, std::shared_ptr<Texture> diffuse_map, int id) :
     m_mesh(new_primitive(device, command_list, primitive_type)),
     m_diffuse_map(diffuse_map),
     m_id(id),
@@ -38,8 +38,7 @@ Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, Primitive_type p
 {
 }
 
-Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh,
-    ComPtr<ID3D12GraphicsCommandList>& command_list, 
+Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh, 
     std::shared_ptr<Texture> diffuse_map, 
     int root_param_index_of_values,
     std::shared_ptr<Texture> normal_map,
@@ -53,7 +52,7 @@ Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<
 {
 }
 
-void Graphical_object::draw(ComPtr<ID3D12GraphicsCommandList> command_list,
+void Graphical_object::draw(ID3D12GraphicsCommandList& command_list,
     const Input_layout& input_layout)
 {
     m_mesh->draw(command_list, m_instances, input_layout);

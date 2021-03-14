@@ -64,7 +64,7 @@ void Shadow_map::update(Light& light)
 }
 
 void Shadow_map::generate(UINT back_buf_index,
-    Scene& scene, Depth_pass& depth_pass, ComPtr<ID3D12GraphicsCommandList> command_list)
+    Scene& scene, Depth_pass& depth_pass, ID3D12GraphicsCommandList& command_list)
 {
     auto& d = m_depth_stencil[back_buf_index];
     d.barrier_transition(command_list, D3D12_RESOURCE_STATE_DEPTH_WRITE);
@@ -72,10 +72,10 @@ void Shadow_map::generate(UINT back_buf_index,
     d.barrier_transition(command_list, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }
 
-void Shadow_map::set_shadow_map_for_shader(ComPtr<ID3D12GraphicsCommandList> command_list, 
+void Shadow_map::set_shadow_map_for_shader(ID3D12GraphicsCommandList& command_list, 
     UINT back_buf_index, int root_param_index_of_shadow_map)
 {
-    command_list->SetGraphicsRootDescriptorTable(root_param_index_of_shadow_map,
+    command_list.SetGraphicsRootDescriptorTable(root_param_index_of_shadow_map,
         m_depth_stencil[back_buf_index].gpu_handle());
 }
 

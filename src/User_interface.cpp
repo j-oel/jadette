@@ -291,7 +291,7 @@ void User_interface::object_id_pass(UINT back_buf_index, Scene& scene, View& vie
     m_command_list->SetDescriptorHeaps(_countof(heaps), heaps);
 
     m_object_id_pass.record_commands(back_buf_index, scene, view, m_depth_stencil_for_object_id,
-        m_command_list);
+        *m_command_list.Get());
 
     throw_if_failed(m_command_list->Close());
     m_dx12_display->execute_command_list(m_command_list);

@@ -22,7 +22,7 @@ class Depths_alpha_cut_out_root_signature : public Root_signature
 {
 public:
     Depths_alpha_cut_out_root_signature(ComPtr<ID3D12Device> device, UINT* render_settings);
-    void set_constants(ComPtr<ID3D12GraphicsCommandList> command_list,
+    void set_constants(ID3D12GraphicsCommandList& command_list,
         UINT back_buf_index, Scene* scene, const View* view);
 
     const int m_root_param_index_of_values = 0;
@@ -40,7 +40,7 @@ public:
     Depth_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format, bool backface_culling,
         UINT* render_settings);
     void record_commands(UINT back_buf_index, Scene& scene, const View& view,
-        Depth_stencil& depth_stencil, ComPtr<ID3D12GraphicsCommandList> command_list);
+        Depth_stencil& depth_stencil, ID3D12GraphicsCommandList& command_list);
     void reload_shaders(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format,
         bool backface_culling);
 private:

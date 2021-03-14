@@ -25,16 +25,16 @@ public:
     Object_id_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format, UINT width, UINT height,
         bool backface_culling);
     void record_commands(UINT back_buf_index, Scene& scene, const View& view,
-        Read_back_depth_stencil& depth_stencil, ComPtr<ID3D12GraphicsCommandList> command_list);
+        Read_back_depth_stencil& depth_stencil, ID3D12GraphicsCommandList& command_list);
     void signal_done(ComPtr<ID3D12CommandQueue> command_queue);
     void read_data_from_gpu(std::vector<int>& data);
     void reload_shaders(ComPtr<ID3D12Device> device, bool backface_culling);
 private:
     void create_pipeline_states(ComPtr<ID3D12Device> device, bool backface_culling);
     void create_render_target(ComPtr<ID3D12Device> device);
-    void set_and_clear_render_target(ComPtr<ID3D12GraphicsCommandList> command_list,
+    void set_and_clear_render_target(ID3D12GraphicsCommandList& command_list,
         const Depth_stencil& depth_stencil);
-    void barrier_transition(ComPtr<ID3D12GraphicsCommandList> command_list,
+    void barrier_transition(ID3D12GraphicsCommandList& command_list,
         D3D12_RESOURCE_STATES to_state);
     ComPtr<ID3D12Resource> m_render_target;
     ComPtr<ID3D12Resource> m_render_target_read_back_buffer;

@@ -282,7 +282,7 @@ void Graphics_impl::set_and_clear_render_target()
 
 void Graphics_impl::record_frame_rendering_commands_in_command_list()
 {
-    Commands c(m_command_list, m_dx12_display->back_buf_index(),
+    Commands c(*m_command_list.Get(), m_dx12_display->back_buf_index(),
         &m_depth_stencil[m_dx12_display->back_buf_index()],
         Texture_mapping::enabled, Input_layout::position_normal_tangents, &m_view, m_scene.get(),
         &m_depth_pass, &m_root_signature, m_root_signature.m_root_param_index_of_instance_data);
@@ -403,17 +403,17 @@ Main_root_signature::Main_root_signature(ComPtr<ID3D12Device> device, UINT* rend
     SET_DEBUG_NAME(m_root_signature, L"Main Root Signature");
 }
 
-void Main_root_signature::set_constants(ComPtr<ID3D12GraphicsCommandList> command_list, 
+void Main_root_signature::set_constants(ID3D12GraphicsCommandList& command_list, 
     UINT back_buf_index, Scene* scene, const View* view)
 {
     constexpr UINT size_in_words_of_value = 1;
-    command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
+    command_list.SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
         size_in_words_of_value, m_render_settings, value_offset_for_render_settings());
 
     int offset = 0;
     auto eye = view->eye_position();
     eye.m128_f32[3] = static_cast<float>(scene->lights_count()); // Hijack the unused w component.
-    command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_vectors,
+    command_list.SetGraphicsRoot32BitConstants(m_root_param_index_of_vectors,
         size_in_words_of_XMVECTOR, &eye, offset);
 
     scene->set_lights_data_shader_constant(command_list, back_buf_index,

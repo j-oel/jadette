@@ -113,7 +113,7 @@ Vertices convert_to_packed_vertices(const std::vector<Float_vertex>& input_verti
     return vertices;
 }
 
-Cube::Cube(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list) : 
+Cube::Cube(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list) : 
     Mesh(device, command_list, convert_to_packed_vertices(cube_vertices, cube_indices),
         cube_indices)
 { 
@@ -129,7 +129,7 @@ std::vector<Float_vertex> plane_vertices =
 
 std::vector<int> plane_indices = { 0, 1, 2, 2, 3, 0 };
 
-Plane::Plane(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list) :
+Plane::Plane(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list) :
     Mesh(device, command_list, convert_to_packed_vertices(plane_vertices, plane_indices),
         plane_indices)
 {

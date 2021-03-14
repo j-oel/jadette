@@ -28,7 +28,7 @@ namespace
     }
 }
 
-Texture::Texture(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
+Texture::Texture(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, const std::string& texture_filename,
     UINT texture_index) : m_texture_index(texture_index)
 {
@@ -66,13 +66,13 @@ Texture::Texture(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>&
             IID_PPV_ARGS(m_temp_upload_resource.GetAddressOf())));
 
     const int intermediate_offset = 0;
-    UpdateSubresources(command_list.Get(), m_texture.Get(), m_temp_upload_resource.Get(),
+    UpdateSubresources(&command_list, m_texture.Get(), m_temp_upload_resource.Get(),
         intermediate_offset, index_of_first_subresource, subresource_count, &subresource[0]);
 
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(),
         D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     const int count = 1;
-    command_list->ResourceBarrier(count, &barrier);
+    command_list.ResourceBarrier(count, &barrier);
 
     UINT position = descriptor_position_in_descriptor_heap(device, texture_index);
     CD3DX12_CPU_DESCRIPTOR_HANDLE cpu_descriptor_handle(
@@ -85,10 +85,10 @@ Texture::Texture(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>&
         texture_descriptor_heap->GetGPUDescriptorHandleForHeapStart(), position);
 }
 
-void Texture::set_texture_for_shader(ComPtr<ID3D12GraphicsCommandList> command_list, 
+void Texture::set_texture_for_shader(ID3D12GraphicsCommandList& command_list, 
     int root_param_index_of_textures)
 {
-    command_list->SetGraphicsRootDescriptorTable(root_param_index_of_textures,
+    command_list.SetGraphicsRootDescriptorTable(root_param_index_of_textures,
         m_texture_gpu_descriptor_handle);
 }
 

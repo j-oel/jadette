@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // This file is part of Jadette.
-// Copyright (C) 2020 Joel Jansson
+// Copyright (C) 2020-2021 Joel Jansson
 // Distributed under GNU General Public License v3.0
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
@@ -19,7 +19,7 @@ public:
     Depth_stencil(ComPtr<ID3D12Device> device, UINT width, UINT height, Bit_depth bit_depth,
         D3D12_RESOURCE_STATES initial_state,
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index);
-    void barrier_transition(ComPtr<ID3D12GraphicsCommandList> command_list,
+    void barrier_transition(ID3D12GraphicsCommandList& command_list,
         D3D12_RESOURCE_STATES to_state);
     void set_debug_names(const wchar_t* dsv_heap_name, const wchar_t* buffer_name);
     D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle() const;
@@ -48,7 +48,7 @@ public:
     Read_back_depth_stencil(ComPtr<ID3D12Device> device, UINT width, UINT height,
         Bit_depth bit_depth, D3D12_RESOURCE_STATES initial_state,
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index);
-    void copy_data_to_readback_memory(ComPtr<ID3D12GraphicsCommandList> command_list);
+    void copy_data_to_readback_memory(ID3D12GraphicsCommandList& command_list);
     void read_data_from_gpu(std::vector<float>& depths);
 private:
     ComPtr<ID3D12Resource> m_render_target_read_back_buffer;

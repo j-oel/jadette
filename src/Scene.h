@@ -42,30 +42,30 @@ public:
     ~Scene();
     void update();
 
-    void draw_static_objects(ComPtr<ID3D12GraphicsCommandList>& command_list, 
+    void draw_static_objects(ID3D12GraphicsCommandList& command_list, 
         Texture_mapping texture_mapping, const Input_layout& input_layout) const;
-    void draw_dynamic_objects(ComPtr<ID3D12GraphicsCommandList>& command_list, 
+    void draw_dynamic_objects(ID3D12GraphicsCommandList& command_list, 
         Texture_mapping texture_mapping, const Input_layout& input_layout) const;
     void sort_transparent_objects_back_to_front(const View& view);
-    void draw_transparent_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    void draw_transparent_objects(ID3D12GraphicsCommandList& command_list,
         Texture_mapping texture_mapping, const Input_layout& input_layout) const;
-    void draw_alpha_cut_out_objects(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    void draw_alpha_cut_out_objects(ID3D12GraphicsCommandList& command_list,
         Texture_mapping texture_mapping, const Input_layout& input_layout) const;
-    void upload_data_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list, UINT back_buf_index);
+    void upload_data_to_gpu(ID3D12GraphicsCommandList& command_list, UINT back_buf_index);
     void record_shadow_map_generation_commands_in_command_list(UINT back_buf_index,
-        Depth_pass& depth_pass, ComPtr<ID3D12GraphicsCommandList> command_list);
+        Depth_pass& depth_pass, ID3D12GraphicsCommandList& command_list);
     int triangles_count() const;
     size_t vertices_count() const;
     size_t objects_count() const;
     size_t lights_count() const;
-    void set_static_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    void set_static_instance_data_shader_constant(ID3D12GraphicsCommandList& command_list,
         int root_param_index_of_instance_data);
-    void set_dynamic_instance_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    void set_dynamic_instance_data_shader_constant(ID3D12GraphicsCommandList& command_list,
         UINT back_buf_index, int root_param_index_of_instance_data);
-    void set_lights_data_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    void set_lights_data_shader_constant(ID3D12GraphicsCommandList& command_list,
         UINT back_buf_index, int root_param_index_of_lights_data,
         int root_param_index_of_shadow_map);
-    void set_material_shader_constant(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    void set_material_shader_constant(ID3D12GraphicsCommandList& command_list,
         int root_param_index_of_textures, int root_param_index_of_materials);
     void manipulate_object(DirectX::XMFLOAT3& delta_pos, DirectX::XMFLOAT4& delta_rotation);
     void select_object(int object_id);

@@ -47,7 +47,7 @@ template <typename T> void read_back_data_from_gpu(std::vector<T>& data, UINT wi
         value_that_means_everything_might_have_changed);
 }
 
-template <typename T> void copy_to_read_back_memory(ComPtr<ID3D12GraphicsCommandList> command_list,
+template <typename T> void copy_to_read_back_memory(ID3D12GraphicsCommandList& command_list,
     ComPtr<ID3D12Resource> render_target, ComPtr<ID3D12Resource> render_target_read_back_buffer,
     UINT width, UINT height, DXGI_FORMAT format)
 {
@@ -68,7 +68,7 @@ template <typename T> void copy_to_read_back_memory(ComPtr<ID3D12GraphicsCommand
     constexpr UINT dest_y = 0;
     constexpr UINT dest_z = 0;
     constexpr D3D12_BOX* value_that_means_copy_everything = nullptr;
-    command_list->CopyTextureRegion(&destination, dest_x, dest_y, dest_z, &source,
+    command_list.CopyTextureRegion(&destination, dest_x, dest_y, dest_z, &source,
         value_that_means_copy_everything);
 }
 
@@ -83,7 +83,7 @@ template <typename T>
 void upload_buffer_to_gpu(const T& source_data, UINT size,
     ComPtr<ID3D12Resource>& destination_buffer,
     ComPtr<ID3D12Resource>& temp_upload_resource,
-    ComPtr<ID3D12GraphicsCommandList>& command_list,
+    ID3D12GraphicsCommandList& command_list,
     D3D12_RESOURCE_STATES after_state)
 {
     char* temp_upload_resource_data;
@@ -98,10 +98,10 @@ void upload_buffer_to_gpu(const T& source_data, UINT size,
     temp_upload_resource->Unmap(subresource_index,
         value_that_means_everything_might_have_changed);
 
-    command_list->CopyResource(destination_buffer.Get(), temp_upload_resource.Get());
+    command_list.CopyResource(destination_buffer.Get(), temp_upload_resource.Get());
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(destination_buffer.Get(),
         D3D12_RESOURCE_STATE_COPY_DEST, after_state);
-    command_list->ResourceBarrier(1, &barrier);
+    command_list.ResourceBarrier(1, &barrier);
 }
 
 inline void create_resource(ComPtr<ID3D12Device> device, UINT size,
@@ -132,7 +132,7 @@ inline void create_gpu_buffer(ComPtr<ID3D12Device> device, UINT size,
 
 template <typename T, typename View_type>
 void create_and_fill_buffer(ComPtr<ID3D12Device> device,
-    ComPtr<ID3D12GraphicsCommandList>& command_list,
+    ID3D12GraphicsCommandList& command_list,
     ComPtr<ID3D12Resource>& destination_buffer,
     ComPtr<ID3D12Resource>& temp_upload_resource,
     const T& source_data, UINT size, View_type& view,
@@ -149,7 +149,7 @@ void create_and_fill_buffer(ComPtr<ID3D12Device> device,
 }
 
 template <typename T>
-void upload_new_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
+void upload_new_data(ID3D12GraphicsCommandList& command_list,
     const std::vector<T>& instance_data, ComPtr<ID3D12Resource>& instance_vertex_buffer,
     ComPtr<ID3D12Resource>& upload_resource, UINT& vertex_buffer_size,
     D3D12_RESOURCE_STATES before_state = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER)
@@ -157,7 +157,7 @@ void upload_new_data(ComPtr<ID3D12GraphicsCommandList>& command_list,
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(instance_vertex_buffer.Get(),
         before_state, D3D12_RESOURCE_STATE_COPY_DEST);
     UINT barriers_count = 1;
-    command_list->ResourceBarrier(barriers_count, &barrier);
+    command_list.ResourceBarrier(barriers_count, &barrier);
     upload_buffer_to_gpu(instance_data, vertex_buffer_size, instance_vertex_buffer,
         upload_resource, command_list, before_state);
 }

@@ -50,14 +50,14 @@ enum class Input_layout;
 class Mesh
 {
 public:
-    Mesh(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list, 
+    Mesh(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list, 
         const std::string& filename);
-    Mesh(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
+    Mesh(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
         const Vertices& vertices, const std::vector<int>& indices);
 
     void release_temp_resources();
 
-    void draw(ComPtr<ID3D12GraphicsCommandList> command_list, int draw_instances_count,
+    void draw(ID3D12GraphicsCommandList& command_list, int draw_instances_count,
         const Input_layout& input_layout);
 
     int triangles_count();
@@ -70,9 +70,9 @@ public:
 private:
 
     void create_and_fill_vertex_buffers(const Vertices& vertices,
-        ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list);
+        ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list);
     void create_and_fill_index_buffer(const std::vector<int>& indices, ComPtr<ID3D12Device> device, 
-        ComPtr<ID3D12GraphicsCommandList>& command_list);
+        ID3D12GraphicsCommandList& command_list);
 
 
     ComPtr<ID3D12Resource> m_vertex_positions_buffer;
@@ -155,10 +155,10 @@ struct Per_instance_transform
 class Instance_data
 {
 public:
-    Instance_data(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
+    Instance_data(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
         UINT instance_count, Per_instance_transform data,
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index);
-    void upload_new_data_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list,
+    void upload_new_data_to_gpu(ID3D12GraphicsCommandList& command_list,
         const std::vector<Per_instance_transform>& instance_data);
     D3D12_GPU_DESCRIPTOR_HANDLE srv_gpu_handle() { return m_structured_buffer_gpu_descriptor_handle; }
 private:

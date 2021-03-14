@@ -60,25 +60,25 @@ void Object_id_pass::reload_shaders(ComPtr<ID3D12Device> device, bool backface_c
     create_pipeline_states(device, backface_culling);
 }
 
-void Object_id_pass::set_and_clear_render_target(ComPtr<ID3D12GraphicsCommandList> command_list,
+void Object_id_pass::set_and_clear_render_target(ID3D12GraphicsCommandList& command_list,
     const Depth_stencil& depth_stencil)
 {
     BOOL contiguous_descriptors = FALSE;
     auto dsv = depth_stencil.cpu_handle();
 
     D3D12_CPU_DESCRIPTOR_HANDLE rtvs[] = { m_render_target_view };
-    command_list->OMSetRenderTargets(_countof(rtvs), rtvs, contiguous_descriptors, &dsv);
+    command_list.OMSetRenderTargets(_countof(rtvs), rtvs, contiguous_descriptors, &dsv);
 
     constexpr float clear_color[] = { -1.0f, 0.0f, 0.0f, 1.0f };
     constexpr UINT zero_rects = 0;
     constexpr D3D12_RECT* value_that_means_the_whole_view = nullptr;
-    command_list->ClearRenderTargetView(m_render_target_view, clear_color, zero_rects,
+    command_list.ClearRenderTargetView(m_render_target_view, clear_color, zero_rects,
         value_that_means_the_whole_view);
 }
 
 void Object_id_pass::record_commands(UINT back_buf_index, Scene& scene, const View& view,
     Read_back_depth_stencil& depth_stencil,
-    ComPtr<ID3D12GraphicsCommandList> command_list)
+    ID3D12GraphicsCommandList& command_list)
 {
     assert(m_dsv_format == depth_stencil.dsv_format());
 
@@ -105,13 +105,13 @@ void Object_id_pass::signal_done(ComPtr<ID3D12CommandQueue> command_queue)
     command_queue->Signal(m_read_fence.Get(), Data_written::done);
 }
 
-void Object_id_pass::barrier_transition(ComPtr<ID3D12GraphicsCommandList> command_list,
+void Object_id_pass::barrier_transition(ID3D12GraphicsCommandList& command_list,
     D3D12_RESOURCE_STATES to_state)
 {
     UINT barriers_count = 1;
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_render_target.Get(),
         m_current_state, to_state);
-    command_list->ResourceBarrier(barriers_count, &barrier);
+    command_list.ResourceBarrier(barriers_count, &barrier);
     m_current_state = to_state;
 }
 

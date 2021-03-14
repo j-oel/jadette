@@ -39,7 +39,7 @@ void Depth_pass::create_pipeline_states(ComPtr<ID3D12Device> device, DXGI_FORMAT
     SET_DEBUG_NAME(m_pipeline_state, L"Depths Alpha Cut Out Pipeline State Object");
 }
 
-void set_render_target(ComPtr<ID3D12GraphicsCommandList> command_list,
+void set_render_target(ID3D12GraphicsCommandList& command_list,
     const Depth_stencil& depth_stencil)
 {
     // Only output depth, no regular render target.
@@ -47,12 +47,12 @@ void set_render_target(ComPtr<ID3D12GraphicsCommandList> command_list,
     BOOL contiguous_descriptors = FALSE; // This is not important when we only have one descriptor.
     D3D12_CPU_DESCRIPTOR_HANDLE* render_target_view = nullptr;
     auto dsv = depth_stencil.cpu_handle();
-    command_list->OMSetRenderTargets(render_targets_count, render_target_view,
+    command_list.OMSetRenderTargets(render_targets_count, render_target_view,
         contiguous_descriptors, &dsv);
 }
 
 void Depth_pass::record_commands(UINT back_buf_index, Scene& scene, const View& view,
-    Depth_stencil& depth_stencil, ComPtr<ID3D12GraphicsCommandList> command_list)
+    Depth_stencil& depth_stencil, ID3D12GraphicsCommandList& command_list)
 {
     assert(m_dsv_format == depth_stencil.dsv_format());
 
@@ -130,12 +130,12 @@ Depths_alpha_cut_out_root_signature::Depths_alpha_cut_out_root_signature(
 }
 
 void Depths_alpha_cut_out_root_signature::set_constants(
-    ComPtr<ID3D12GraphicsCommandList> command_list, UINT back_buf_index,
+    ID3D12GraphicsCommandList& command_list, UINT back_buf_index,
     Scene* scene, const View* view)
 {
     int offset = 3;
     constexpr UINT size_in_words_of_value = 1;
-    command_list->SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
+    command_list.SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
         size_in_words_of_value, m_render_settings, offset);
 
     scene->set_material_shader_constant(command_list, m_root_param_index_of_textures,

@@ -20,16 +20,14 @@ enum class Input_layout;
 class Graphical_object
 {
 public:
-    Graphical_object(ComPtr<ID3D12Device> device, Primitive_type primitive_type,
-        ComPtr<ID3D12GraphicsCommandList>& command_list,
-        std::shared_ptr<Texture> diffuse_map, int id);
+    Graphical_object(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
+        Primitive_type primitive_type, std::shared_ptr<Texture> diffuse_map, int id);
 
     Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh,
-        ComPtr<ID3D12GraphicsCommandList>& command_list, std::shared_ptr<Texture> diffuse_map,
-        int root_param_index_of_values, std::shared_ptr<Texture> normal_map, int id,
-        int material_id, int instances = 1);
+        std::shared_ptr<Texture> diffuse_map, int root_param_index_of_values,
+        std::shared_ptr<Texture> normal_map, int id, int material_id, int instances = 1);
 
-    void draw(ComPtr<ID3D12GraphicsCommandList> command_list, const Input_layout& input_layout);
+    void draw(ID3D12GraphicsCommandList& command_list, const Input_layout& input_layout);
     void release_temp_resources();
     int triangles_count();
     size_t vertices_count();

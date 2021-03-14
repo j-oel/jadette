@@ -24,7 +24,7 @@ class Main_root_signature : public Root_signature
 {
 public:
     Main_root_signature(ComPtr<ID3D12Device> device, UINT* render_settings);
-    virtual void set_constants(ComPtr<ID3D12GraphicsCommandList> command_list, 
+    virtual void set_constants(ID3D12GraphicsCommandList& command_list, 
         UINT back_buf_index, Scene* scene, const View* view);
 
     const int m_root_param_index_of_values = 0;

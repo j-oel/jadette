@@ -229,7 +229,7 @@ void read_obj_file(const string& filename, Vertices& vertices, vector<int>& indi
 }
 
 void create_one_model_per_triangle(std::shared_ptr<Model_collection> collection,
-    ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
+    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
     const Vertices& vertices, const vector<int>& indices, const string& material)
 {
     constexpr size_t vertex_count_per_triangle = 3;
@@ -250,7 +250,7 @@ void create_one_model_per_triangle(std::shared_ptr<Model_collection> collection,
 }
 
 std::shared_ptr<Model_collection> read_obj_file(const string& filename, 
-    ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list)
+    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list)
 {
     using namespace Material_settings;
     std::ifstream file(filename);

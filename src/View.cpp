@@ -51,14 +51,14 @@ void View::set_focus_point(DirectX::XMFLOAT3 focus_point)
     m_focus_point = XMLoadFloat3(&focus_point);
 }
 
-void View::set_view(ComPtr<ID3D12GraphicsCommandList> command_list,
+void View::set_view(ID3D12GraphicsCommandList& command_list,
     int root_param_index_of_matrices) const
 {
     constexpr int view_projection_offset = 0;
-    command_list->SetGraphicsRoot32BitConstants(root_param_index_of_matrices,
+    command_list.SetGraphicsRoot32BitConstants(root_param_index_of_matrices,
         size_in_words_of_XMMATRIX, &m_view_projection_matrix, view_projection_offset);
     constexpr int viewport_count = 1;
-    command_list->RSSetViewports(viewport_count, &m_viewport);
+    command_list.RSSetViewports(viewport_count, &m_viewport);
     constexpr int rect_count = 1;
-    command_list->RSSetScissorRects(rect_count, &m_scissor_rect);
+    command_list.RSSetScissorRects(rect_count, &m_scissor_rect);
 }

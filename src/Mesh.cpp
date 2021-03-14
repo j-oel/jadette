@@ -15,7 +15,7 @@
 
 int Mesh::s_draw_calls = 0;
 
-Mesh::Mesh(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list, 
+Mesh::Mesh(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list, 
     const std::string& filename)
 {
     Vertices vertices;
@@ -27,7 +27,7 @@ Mesh::Mesh(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& comma
     create_and_fill_index_buffer(indices, device, command_list);
 }
 
-Mesh::Mesh(ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list,
+Mesh::Mesh(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
     const Vertices& vertices, const std::vector<int>& indices)
 {
     create_and_fill_vertex_buffers(vertices, device, command_list);
@@ -45,7 +45,7 @@ void Mesh::release_temp_resources()
 }
 
 
-void Mesh::draw(ComPtr<ID3D12GraphicsCommandList> command_list, int draw_instances_count,
+void Mesh::draw(ID3D12GraphicsCommandList& command_list, int draw_instances_count,
     const Input_layout& input_layout)
 {
     switch (input_layout)
@@ -55,26 +55,26 @@ void Mesh::draw(ComPtr<ID3D12GraphicsCommandList> command_list, int draw_instanc
             D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_positions_buffer_view,
             m_vertex_normals_buffer_view, m_vertex_tangents_buffer_view,
                 m_vertex_bitangents_buffer_view };
-            command_list->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
+            command_list.IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
             break;
         }
         case Input_layout::position_normal:
         {
             D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_positions_buffer_view,
             m_vertex_normals_buffer_view, };
-            command_list->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
+            command_list.IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
             break;
         }
         case Input_layout::position:
         {
             D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_positions_buffer_view };
-            command_list->IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
+            command_list.IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
             break;
         }
     }
 
-    command_list->IASetIndexBuffer(&m_index_buffer_view);
-    command_list->DrawIndexedInstanced(m_index_count, draw_instances_count, 0, 0, 0);
+    command_list.IASetIndexBuffer(&m_index_buffer_view);
+    command_list.DrawIndexedInstanced(m_index_count, draw_instances_count, 0, 0, 0);
     ++s_draw_calls;
 }
 
@@ -97,7 +97,7 @@ namespace
 {
     template <typename T>
     void create_and_fill_vertex_buffer(ComPtr<ID3D12Device> device,
-        ComPtr<ID3D12GraphicsCommandList>& command_list,
+        ID3D12GraphicsCommandList& command_list,
         ComPtr<ID3D12Resource>& destination_buffer,
         ComPtr<ID3D12Resource>& temp_upload_resource,
         const std::vector<T>& source_data, D3D12_VERTEX_BUFFER_VIEW& view)
@@ -122,7 +122,7 @@ DirectX::XMVECTOR calculate_center(const Vertices& vertices)
 }
 
 void Mesh::create_and_fill_vertex_buffers(const Vertices& vertices,
-    ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list)
+    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list)
 {
     m_vertices_count = vertices.positions.size();
 
@@ -146,7 +146,7 @@ void Mesh::create_and_fill_vertex_buffers(const Vertices& vertices,
 }
 
 void Mesh::create_and_fill_index_buffer(const std::vector<int>& indices,
-    ComPtr<ID3D12Device> device, ComPtr<ID3D12GraphicsCommandList>& command_list)
+    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list)
 {
     m_index_count = static_cast<UINT>(indices.size());
 
@@ -229,7 +229,7 @@ void calculate_and_add_tangent_and_bitangent(DirectX::XMVECTOR v[vertex_count_pe
 
 template <typename T>
 void construct_instance_data(ComPtr<ID3D12Device> device,
-    ComPtr<ID3D12GraphicsCommandList>& command_list, UINT instance_count,
+    ID3D12GraphicsCommandList& command_list, UINT instance_count,
     ComPtr<ID3D12Resource>& instance_vertex_buffer, ComPtr<ID3D12Resource>& upload_resource,
     D3D12_VERTEX_BUFFER_VIEW& instance_vertex_buffer_view, UINT& vertex_buffer_size,
     D3D12_RESOURCE_STATES after_state = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER)
@@ -246,7 +246,7 @@ void construct_instance_data(ComPtr<ID3D12Device> device,
 }
 
 Instance_data::Instance_data(ComPtr<ID3D12Device> device,
-    ComPtr<ID3D12GraphicsCommandList>& command_list,
+    ID3D12GraphicsCommandList& command_list,
     UINT instance_count, Per_instance_transform data,
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index)
 {
@@ -274,7 +274,7 @@ Instance_data::Instance_data(ComPtr<ID3D12Device> device,
         texture_descriptor_heap->GetGPUDescriptorHandleForHeapStart(), position);
 }
 
-void Instance_data::upload_new_data_to_gpu(ComPtr<ID3D12GraphicsCommandList>& command_list,
+void Instance_data::upload_new_data_to_gpu(ID3D12GraphicsCommandList& command_list,
     const std::vector<Per_instance_transform>& instance_data)
 {
     upload_new_data(command_list, instance_data, m_instance_vertex_buffer, m_upload_resource,

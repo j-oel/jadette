@@ -8,7 +8,6 @@
 #pragma once
 
 
-using Microsoft::WRL::ComPtr;
 
 class View
 {
@@ -23,7 +22,7 @@ public:
     DirectX::XMVECTOR& eye_position() { return m_eye_position; }
     DirectX::XMVECTOR& focus_point() { return m_focus_point; }
     DirectX::XMVECTOR& up() { return m_up; }
-    void set_view(ComPtr<ID3D12GraphicsCommandList> command_list, 
+    void set_view(ID3D12GraphicsCommandList& command_list, 
         int root_param_index_of_matrices) const;
     const DirectX::XMMATRIX& view_projection_matrix() const { return m_view_projection_matrix; }
     const DirectX::XMMATRIX& view_matrix() const { return m_view_matrix; }

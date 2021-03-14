@@ -96,12 +96,12 @@ void Depth_stencil::create_shader_resource_view(ComPtr<ID3D12Device> device, DXG
         texture_descriptor_heap->GetGPUDescriptorHandleForHeapStart(), position);
 }
 
-void Depth_stencil::barrier_transition(ComPtr<ID3D12GraphicsCommandList> command_list, 
+void Depth_stencil::barrier_transition(ID3D12GraphicsCommandList& command_list, 
     D3D12_RESOURCE_STATES to_state)
 {
     UINT barriers_count = 1;
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_depth_buffer.Get(), m_current_state, to_state);
-    command_list->ResourceBarrier(barriers_count, &barrier);
+    command_list.ResourceBarrier(barriers_count, &barrier);
     m_current_state = to_state;
 }
 
@@ -133,8 +133,7 @@ Read_back_depth_stencil::Read_back_depth_stencil(ComPtr<ID3D12Device> device, UI
         IID_PPV_ARGS(&m_render_target_read_back_buffer)));
 }
 
-void Read_back_depth_stencil::copy_data_to_readback_memory(
-    ComPtr<ID3D12GraphicsCommandList> command_list)
+void Read_back_depth_stencil::copy_data_to_readback_memory(ID3D12GraphicsCommandList& command_list)
 {
     barrier_transition(command_list, D3D12_RESOURCE_STATE_DEPTH_READ |
         D3D12_RESOURCE_STATE_COPY_SOURCE);

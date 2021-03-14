@@ -22,7 +22,7 @@ using Microsoft::WRL::ComPtr;
 class Commands
 {
 public:
-    Commands(ComPtr<ID3D12GraphicsCommandList> command_list, UINT back_buf_index,
+    Commands(ID3D12GraphicsCommandList& command_list, UINT back_buf_index,
         Depth_stencil* depth_stencil, Texture_mapping texture_mapping, Input_layout input_layout,
         const View* view, Scene* scene, Depth_pass* depth_pass, Root_signature* root_signature,
         int root_param_index_of_instance_data);
@@ -43,7 +43,7 @@ public:
     void simple_render_pass(ComPtr<ID3D12PipelineState> dynamic_objects_pipeline_state,
         ComPtr<ID3D12PipelineState> static_objects_pipeline_state);
 private:
-    ComPtr<ID3D12GraphicsCommandList> m_command_list;
+    ID3D12GraphicsCommandList& m_command_list;
     Texture_mapping m_texture_mapping;
     Input_layout m_input_layout;
     Scene* m_scene;
