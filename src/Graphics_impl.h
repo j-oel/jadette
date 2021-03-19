@@ -56,6 +56,9 @@ private:
     void record_frame_rendering_commands_in_command_list();
     void set_and_clear_render_target();
     int create_texture_descriptor_heap();
+    void create_pipeline_state(ComPtr<ID3D12PipelineState>& pipeline_state,
+        const wchar_t* debug_name, Backface_culling backface_culling,
+        Alpha_blending alpha_blending, Depth_write depth_write);
     void create_pipeline_states(const Config& config);
     ComPtr<ID3D12GraphicsCommandList> create_main_command_list();
 

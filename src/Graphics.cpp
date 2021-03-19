@@ -226,61 +226,48 @@ int Graphics_impl::create_texture_descriptor_heap()
     return textures_count;
 }
 
-void Graphics_impl::create_pipeline_states(const Config& config)
+void Graphics_impl::create_pipeline_state(ComPtr<ID3D12PipelineState>& pipeline_state,
+    const wchar_t* debug_name, Backface_culling backface_culling, Alpha_blending alpha_blending,
+    Depth_write depth_write)
 {
     UINT render_targets_count = 1;
 
     auto dsv_format = m_depth_stencil[0].dsv_format();
 
+    ::create_pipeline_state(m_device, pipeline_state, m_root_signature.get(),
+        "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
+        render_targets_count, Input_layout::position_normal_tangents, backface_culling,
+        alpha_blending, depth_write);
+    SET_DEBUG_NAME(pipeline_state, debug_name);
+}
+
+void Graphics_impl::create_pipeline_states(const Config& config)
+{
     auto backface_culling = config.backface_culling ? Backface_culling::enabled :
         Backface_culling::disabled;
-    create_pipeline_state(m_device, m_pipeline_state, m_root_signature.get(),
-        "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
-        render_targets_count, Input_layout::position_normal_tangents, backface_culling,
-        Alpha_blending::disabled, Depth_write::enabled);
-    SET_DEBUG_NAME(m_pipeline_state, L"Pipeline State Object Main Rendering");
 
-    create_pipeline_state(m_device, m_pipeline_state_early_z, m_root_signature.get(),
-        "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
-        render_targets_count, Input_layout::position_normal_tangents, backface_culling,
-        Alpha_blending::disabled, Depth_write::disabled);
-    SET_DEBUG_NAME(m_pipeline_state_early_z, L"Pipeline State Object Main Rendering Early Z");
+    create_pipeline_state(m_pipeline_state, L"Pipeline State Main",
+        backface_culling, Alpha_blending::disabled, Depth_write::enabled);
 
-    backface_culling = Backface_culling::disabled;
+    create_pipeline_state(m_pipeline_state_early_z, L"Pipeline State Main Early Z",
+        backface_culling, Alpha_blending::disabled, Depth_write::disabled);
 
-    create_pipeline_state(m_device, m_pipeline_state_two_sided, m_root_signature.get(),
-        "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
-        render_targets_count, Input_layout::position_normal_tangents, backface_culling,
-        Alpha_blending::disabled, Depth_write::enabled);
-    SET_DEBUG_NAME(m_pipeline_state_two_sided, L"Pipeline State Object Main Rendering Two Sided");
+    create_pipeline_state(m_pipeline_state_two_sided, L"Pipeline State Main Two Sided",
+        Backface_culling::disabled, Alpha_blending::disabled, Depth_write::enabled);
 
-    create_pipeline_state(m_device, m_pipeline_state_two_sided_early_z, m_root_signature.get(),
-        "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
-        render_targets_count, Input_layout::position_normal_tangents, backface_culling,
-        Alpha_blending::disabled, Depth_write::disabled);
-    SET_DEBUG_NAME(m_pipeline_state_two_sided_early_z,
-        L"Pipeline State Object Main Rendering Two Sided Early Z");
+    create_pipeline_state(m_pipeline_state_two_sided_early_z,
+        L"Pipeline State Main Two Sided Early Z",
+        Backface_culling::disabled, Alpha_blending::disabled, Depth_write::disabled);
 
-    create_pipeline_state(m_device, m_pipeline_state_transparency, m_root_signature.get(),
-        "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
-        render_targets_count, Input_layout::position_normal_tangents, backface_culling,
-        Alpha_blending::enabled, Depth_write::alpha_blending);
-    SET_DEBUG_NAME(m_pipeline_state_transparency,
-        L"Pipeline State Object Main Rendering Transparency");
+    create_pipeline_state(m_pipeline_state_transparency, L"Pipeline State Main Transparency",
+        Backface_culling::disabled, Alpha_blending::enabled, Depth_write::alpha_blending);
 
-    create_pipeline_state(m_device, m_pipeline_state_alpha_cut_out, m_root_signature.get(),
-        "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
-        render_targets_count, Input_layout::position_normal_tangents, backface_culling,
-        Alpha_blending::enabled, Depth_write::enabled);
-    SET_DEBUG_NAME(m_pipeline_state_alpha_cut_out,
-        L"Pipeline State Object Main Rendering Alpha Cut Out");
+    create_pipeline_state(m_pipeline_state_alpha_cut_out, L"Pipeline State Main Alpha Cut Out",
+        Backface_culling::disabled, Alpha_blending::enabled, Depth_write::enabled);
 
-    create_pipeline_state(m_device, m_pipeline_state_alpha_cut_out_early_z, m_root_signature.get(),
-        "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
-        render_targets_count, Input_layout::position_normal_tangents, backface_culling,
-        Alpha_blending::enabled, Depth_write::alpha_blending);
-    SET_DEBUG_NAME(m_pipeline_state_alpha_cut_out_early_z,
-        L"Pipeline State Object Main Rendering Alpha Cut Out Early Z");
+    create_pipeline_state(m_pipeline_state_alpha_cut_out_early_z,
+        L"Pipeline State Main Alpha Cut Out Early Z",
+        Backface_culling::disabled, Alpha_blending::enabled, Depth_write::alpha_blending);
 }
 
 ComPtr<ID3D12GraphicsCommandList> Graphics_impl::create_main_command_list()
