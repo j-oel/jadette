@@ -18,6 +18,8 @@ static const uint invert_y_in_normal_map = 1 << 2;
 static const uint two_channel_normal_map = 1 << 3;
 static const uint mirror_texture_addressing = 1 << 4;
 static const uint emissive = 1 << 7;
+static const uint aorm_map_exists = 1 << 9;
+static const uint use_ao_in_aorm_map = 1 << 10;
 
 
 static const uint texture_mapping_enabled = 1;
@@ -60,8 +62,8 @@ struct Material
 {
     uint diff_tex;
     uint normal_map;
+    uint ao_roughness_metalness_map;
     uint material_settings;
-    uint padding;
 };
 
 static const int max_materials = 256;
@@ -296,6 +298,7 @@ float3 tangent_space_normal_mapping(pixel_shader_input input)
 float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFace) : SV_TARGET
 {
     float4 color = float4(0.4, 0.4, 0.4, 1.0f);
+    float4 ao_roughness_metalness = float4(1.0f, 0.5f, 0.5f, 1.0f);
 
     Material m = materials.m[values.material_id];
 
@@ -306,6 +309,16 @@ float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFac
             color = tex[texture_index].Sample(texture_mirror_sampler, input.texcoord);
         else
             color = tex[texture_index].Sample(texture_sampler, input.texcoord);
+    }
+
+    if (m.material_settings & aorm_map_exists)
+    {
+        uint texture_index = m.ao_roughness_metalness_map;
+        if (m.material_settings & mirror_texture_addressing)
+            ao_roughness_metalness =
+                tex[texture_index].Sample(texture_mirror_sampler, input.texcoord);
+        else
+            ao_roughness_metalness = tex[texture_index].Sample(texture_sampler, input.texcoord);
     }
 
     const float alpha_cut_out_cut_off_value = 0.01;
@@ -350,12 +363,14 @@ float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFac
                 const float diffuse_intensity = lights.l[i].diffuse_intensity;
                 const float specular_intensity = lights.l[i].specular_intensity;
 
-                const float shininess = 0.4f;
+                const float metalness = ao_roughness_metalness.b;
+                const float specularity = metalness;
+                const float roughness = ao_roughness_metalness.g;
                 const float inverted_light_size = 30;
-                const float specular_exponent = inverted_light_size;
+                const float specular_exponent = (1.0f - roughness) * inverted_light_size;
 
                 float4 specular = lights.l[i].color * specular_intensity *
-                    shininess * saturate(pow(saturate(
+                    specularity * saturate(pow(saturate(
                     dot(2 * dot(normal, -light) * normal + light,
                     normalize(input.position.xyz - eye))), specular_exponent));
 
@@ -377,7 +392,12 @@ float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFac
         }
     }
 
-    const float4 ambient_light = vectors.ambient_light;
+    float4 ambient_light = vectors.ambient_light;
+    
+    const float ao = ao_roughness_metalness.r;
+    if (m.material_settings & use_ao_in_aorm_map)
+        ambient_light *= ao;
+
     const float4 ambient = color * ambient_light;
     const float4 result = ambient + accumulated_light;
 

@@ -125,6 +125,8 @@ namespace Material_settings
     constexpr UINT alpha_cut_out = 1 << 6;
     constexpr UINT emissive = 1 << 7;
     constexpr UINT two_sided = 1 << 8;
+    constexpr UINT aorm_map_exists = 1 << 9;
+    constexpr UINT use_ao_in_aorm_map = 1 << 10;
 }
 
 inline DirectX::XMVECTOR convert_half4_to_vector(DirectX::PackedVector::XMHALF4 half4)

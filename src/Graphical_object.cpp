@@ -29,9 +29,8 @@ Mesh* new_primitive(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& comm
 
 Graphical_object::Graphical_object(ComPtr<ID3D12Device> device,
     ID3D12GraphicsCommandList& command_list,
-    Primitive_type primitive_type, std::shared_ptr<Texture> diffuse_map, int id) :
+    Primitive_type primitive_type, int id) :
     m_mesh(new_primitive(device, command_list, primitive_type)),
-    m_diffuse_map(diffuse_map),
     m_id(id),
     m_instances(1),
     m_material_id(0)
@@ -39,13 +38,12 @@ Graphical_object::Graphical_object(ComPtr<ID3D12Device> device,
 }
 
 Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh, 
-    std::shared_ptr<Texture> diffuse_map, 
+    const std::vector<std::shared_ptr<Texture>>& textures, 
     int root_param_index_of_values,
-    std::shared_ptr<Texture> normal_map,
     int id, int material_id, int instances/* = 1*/,
     int triangle_index/* = 0*/) :
     m_mesh(mesh),
-    m_diffuse_map(diffuse_map), m_normal_map(normal_map),
+    m_textures(textures),
     m_root_param_index_of_values(root_param_index_of_values),
     m_id(id),
     m_instances(instances),
@@ -62,7 +60,8 @@ void Graphical_object::draw(ID3D12GraphicsCommandList& command_list,
 
 void Graphical_object::release_temp_resources()
 {
-    m_diffuse_map->release_temp_resources();
+    for (auto& t : m_textures)
+        t->release_temp_resources();
     m_mesh->release_temp_resources();
 }
 

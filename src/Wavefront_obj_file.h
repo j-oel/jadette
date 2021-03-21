@@ -14,6 +14,7 @@ struct Material
 {
     std::string diffuse_map;
     std::string normal_map;
+    std::string ao_roughness_metalness_map;
     UINT settings;
     int id;
 };

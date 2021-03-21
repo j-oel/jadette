@@ -136,8 +136,8 @@ struct Shader_material
 {
     UINT diff_tex;
     UINT normal_map;
+    UINT ao_roughness_metalness_map;
     UINT material_settings;
-    UINT padding;
 };
 
 template <typename T>
@@ -915,6 +915,7 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
     ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_values)
 {
     using std::map;
+    using std::vector;
     using std::shared_ptr;
     using std::string;
     using std::ifstream;
@@ -954,11 +955,11 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
         return texture;
     };
 
-    auto add_material = [&](UINT diff_tex_index, UINT normal_map_index, UINT material_settings)
-        -> int
+    auto add_material = [&](UINT diff_tex_index, UINT normal_map_index, UINT aorm_map_index, 
+        UINT material_settings) -> int
     {
         Shader_material shader_material = { diff_tex_index - texture_start_index,
-            normal_map_index, material_settings };
+            normal_map_index, aorm_map_index, material_settings };
         m_materials.push_back(shader_material);
 
         int current_material_id = material_id;
@@ -967,15 +968,15 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
     };
 
     auto create_object = [&](const string& name, shared_ptr<Mesh> mesh,
-        shared_ptr<Texture> diffuse_map, bool dynamic, XMFLOAT4 position, UINT material_id,
-        int instances = 1, shared_ptr<Texture> normal_map = nullptr, UINT material_settings = 0,
+        const std::vector<shared_ptr<Texture>>& used_textures, bool dynamic, XMFLOAT4 position,
+        UINT material_id, int instances = 1, UINT material_settings = 0,
         int triangle_start_index = 0, bool rotating = false)
     {
         Per_instance_transform transform = { convert_float4_to_half4(position),
         convert_vector_to_half4(DirectX::XMQuaternionIdentity()) };
         m_static_model_transforms.push_back(transform);
-        auto object = std::make_shared<Graphical_object>(device, mesh, diffuse_map,
-            root_param_index_of_values, normal_map, object_id++, material_id,
+        auto object = std::make_shared<Graphical_object>(device, mesh, used_textures,
+            root_param_index_of_values, object_id++, material_id,
             instances, triangle_start_index);
 
         m_graphical_objects.push_back(object);
@@ -1033,6 +1034,7 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
 
             if (meshes.find(model) != meshes.end())
             {
+                vector<shared_ptr<Texture>> used_textures;
                 auto mesh = meshes[model];
                 UINT normal_index = 0;
 
@@ -1041,16 +1043,19 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
                 if (!normal_map.empty())
                 {
                     normal_map_tex = get_texture(normal_map);
+                    used_textures.push_back(normal_map_tex);
                     material_settings = normal_map_exists;
                     normal_index = normal_map_tex->index() - texture_start_index;
                 }
                 auto diffuse_map_tex = get_texture(diffuse_map);
+                used_textures.push_back(diffuse_map_tex);
 
+                UINT aorm_map_index = 0;
                 int current_material = add_material(diffuse_map_tex->index(), normal_index,
-                    material_settings);
+                    aorm_map_index, material_settings);
 
-                create_object(name, mesh, diffuse_map_tex, dynamic, position, current_material, 1,
-                    normal_map_tex, material_settings);
+                create_object(name, mesh, used_textures, dynamic, position, current_material, 1,
+                    material_settings);
             }
             else
             {
@@ -1060,10 +1065,13 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
 
                 for (auto& m : model_collection->models)
                 {
+                    vector<shared_ptr<Texture>> used_textures;
                     UINT normal_index = 0;
                     UINT material_settings = 0;
                     int current_material_id = -1;
                     shared_ptr<Texture> normal_map_tex = nullptr;
+                    std::string aorm_map;
+                    UINT aorm_map_index = 0;
                     if (m.material != "")
                     {
                         auto material_iter = model_collection->materials.find(m.material);
@@ -1072,6 +1080,7 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
                         auto& material = material_iter->second;
                         diffuse_map = material.diffuse_map;
                         normal_map = material.normal_map;
+                        aorm_map = material.ao_roughness_metalness_map;
                         material_settings = material.settings;
 
                         bool shader_material_not_yet_created = (material.id == -1);
@@ -1080,38 +1089,47 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
                             if (!normal_map.empty())
                             {
                                 normal_map_tex = get_texture(normal_map);
+                                used_textures.push_back(normal_map_tex);
                                 normal_index = normal_map_tex->index() - texture_start_index;
                             }
+                            if (!aorm_map.empty())
+                            {
+                                auto aorm_map_tex = get_texture(aorm_map);
+                                used_textures.push_back(aorm_map_tex);
+                                aorm_map_index = aorm_map_tex->index() - texture_start_index;
+                            }
                             auto diffuse_map_tex = get_texture(diffuse_map);
+                            used_textures.push_back(diffuse_map_tex);
 
                             current_material_id = add_material(diffuse_map_tex->index(),
-                                normal_index, material_settings);
+                                normal_index, aorm_map_index, material_settings);
                             material.id = current_material_id;
                         }
                         else
                         {
                             current_material_id = material.id;
                         }
-
                     }
-
-                    if (!normal_map.empty())
+                    else
                     {
-                        normal_map_tex = get_texture(normal_map);
-                        // This is for the case when a normal map is not defined in the mtl-file
-                        // but is defined directly in the scene file.
-                        material_settings |= normal_map_exists;
-                        normal_index = normal_map_tex->index() - texture_start_index;
-                    }
-                    auto diffuse_map_tex = get_texture(diffuse_map);
+                        if (!normal_map.empty())
+                        {
+                            normal_map_tex = get_texture(normal_map);
+                            used_textures.push_back(normal_map_tex);
+                            material_settings |= normal_map_exists;
+                            normal_index = normal_map_tex->index() - texture_start_index;
+                        }
 
-                    if (current_material_id == -1)
+                        auto diffuse_map_tex = get_texture(diffuse_map);
+                        used_textures.push_back(diffuse_map_tex);
+
                         current_material_id = add_material(diffuse_map_tex->index(),
-                            normal_index, material_settings);
+                            normal_index, aorm_map_index, material_settings);
+                    }
 
                     constexpr int instances = 1;
-                    create_object(name, m.mesh, diffuse_map_tex, dynamic, position,
-                        current_material_id, instances, normal_map_tex, material_settings,
+                    create_object(name, m.mesh, used_textures, dynamic, position,
+                        current_material_id, instances, material_settings,
                         m.triangle_start_index);
                 }
             }
@@ -1159,6 +1177,7 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
                 {
                     add_texture(m.second.diffuse_map);
                     add_texture(m.second.normal_map);
+                    add_texture(m.second.ao_roughness_metalness_map);
                 }
             }
         }
@@ -1209,7 +1228,10 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
             else
                 throw Model_not_defined(model);
 
+            vector<shared_ptr<Texture>> used_textures;
+
             auto diffuse_map_tex = get_texture(diffuse_map);
+            used_textures.push_back(diffuse_map_tex);
 
             shared_ptr<Texture> normal_map_tex = nullptr;
 
@@ -1218,12 +1240,14 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
             if (!normal_map.empty())
             {
                 normal_map_tex = get_texture(normal_map);
+                used_textures.push_back(normal_map_tex);
                 material_settings = normal_map_exists;
                 normal_index = normal_map_tex->index() - texture_start_index;
             }
 
+            UINT aorm_map_index = 0;
             int curr_material_id = add_material(diffuse_map_tex->index(),
-                normal_index, material_settings);
+                normal_index, aorm_map_index, material_settings);
 
             constexpr int triangle_start_index = 0;
 
@@ -1234,8 +1258,8 @@ void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> de
                         XMFLOAT4 position = XMFLOAT4(pos.x + offset.x * x, pos.y + offset.y * y,
                             pos.z + offset.z * z, scale);
                         create_object(dynamic? "arrayobject" + std::to_string(object_id) :"", 
-                            mesh, diffuse_map_tex, dynamic, position, curr_material_id, instances,
-                            normal_map_tex, material_settings, triangle_start_index,
+                            mesh, used_textures, dynamic, position, curr_material_id, instances,
+                            material_settings, triangle_start_index,
                             (input == "rotating_array" || input == "normal_mapped_rotating_array")?
                             true: false);
                     }

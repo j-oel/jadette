@@ -21,11 +21,11 @@ class Graphical_object
 {
 public:
     Graphical_object(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
-        Primitive_type primitive_type, std::shared_ptr<Texture> diffuse_map, int id);
+        Primitive_type primitive_type, int id);
 
     Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh,
-        std::shared_ptr<Texture> diffuse_map, int root_param_index_of_values,
-        std::shared_ptr<Texture> normal_map, int id, int material_id, int instances = 1,
+        const std::vector<std::shared_ptr<Texture>>& textures, int root_param_index_of_values,
+        int id, int material_id, int instances = 1,
         int triangle_index = 0);
 
     void draw(ID3D12GraphicsCommandList& command_list, const Input_layout& input_layout);
@@ -41,8 +41,7 @@ private:
 
     DirectX::XMFLOAT3 m_transformed_center;
     std::shared_ptr<Mesh> m_mesh;
-    std::shared_ptr<Texture> m_diffuse_map;
-    std::shared_ptr<Texture> m_normal_map;
+    std::vector<std::shared_ptr<Texture>> m_textures;
     int m_root_param_index_of_values;
     int m_id;
     int m_instances;

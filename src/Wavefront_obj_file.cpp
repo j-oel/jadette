@@ -323,6 +323,11 @@ void read_mtl_file(const string file_name, map<string, Material>& materials)
             file >> material.normal_map;
             material.settings |= normal_map_exists;
         }
+        else if (input == "map_ORM")
+        {
+            file >> material.ao_roughness_metalness_map;
+            material.settings |= aorm_map_exists;
+        }
         else if (input == "d")
         {
             float d;
@@ -367,6 +372,13 @@ void read_mtl_file(const string file_name, map<string, Material>& materials)
             file >> two;
             if (two)
                 material.settings |= two_sided;
+        }
+        else if (input == "use_ao_in_aorm_map") // My extension
+        {
+            bool use_ao;
+            file >> use_ao;
+            if (use_ao)
+                material.settings |= use_ao_in_aorm_map;
         }
     }
     
