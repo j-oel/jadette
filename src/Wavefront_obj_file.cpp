@@ -23,7 +23,7 @@ using std::ifstream;
 void read_mtl_file(const string file_name, map<string, Material>& materials);
 
 
-bool read_obj_file(std::ifstream& file, Vertices& vertices, vector<int>& indices,
+bool read_obj_file(std::istream& file, Vertices& vertices, vector<int>& indices,
     vector<XMHALF4>& input_vertices, vector<XMHALF4>& input_normals,
     vector<XMHALF2>& input_texture_coords, vector<XMHALF4>& input_tangents, 
     vector<XMHALF4>& input_bitangents, string& material, map<string, Material>* materials)
@@ -46,7 +46,7 @@ bool read_obj_file(std::ifstream& file, Vertices& vertices, vector<int>& indices
     bool first_object = true;
     bool more_objects = false;
 
-    while (file.is_open() && !file.eof())
+    while (file)
     {
         file >> input;
 

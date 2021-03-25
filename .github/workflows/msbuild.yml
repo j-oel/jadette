@@ -1,13 +1,10 @@
-name: MSBuild
+name: CI
 
 on: [push]
 
-env:
-  # Path to the solution file relative to the root of the project.
-  SOLUTION_FILE_PATH: .
 
 jobs:
-  build:
+  test:
     runs-on: windows-latest
     strategy:
       matrix:
@@ -21,7 +18,8 @@ jobs:
       uses: microsoft/setup-msbuild@v1
 
     - name: Build ${{ matrix.build_configuration }}
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-      run: msbuild /m /p:Configuration=${{ matrix.build_configuration }} /p:Platform=${{ matrix.build_platform }} ${{env.SOLUTION_FILE_PATH}}
+      run: msbuild /m /p:Configuration=${{ matrix.build_configuration }} /p:Platform=${{ matrix.build_platform }} src\Jadette.vcxproj
+
+    - name: Test ${{ matrix.build_configuration }}
+      run: msbuild /m /p:Configuration=${{ matrix.build_configuration }} /p:Platform=${{ matrix.build_platform }} src\tests\Jadette_tests.vcxproj
