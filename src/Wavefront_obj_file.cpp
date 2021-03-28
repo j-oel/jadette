@@ -230,7 +230,7 @@ bool read_obj_file(std::istream& file, Vertices& vertices, vector<int>& indices,
         {
             file >> material;
         }
-        else if (input == "o")
+        else if (input == "o" || input == "g")
         {
             file >> input; // Read the object name
             if (!vertices.positions.empty())
