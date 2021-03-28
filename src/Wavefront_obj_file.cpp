@@ -48,8 +48,9 @@ bool read_obj_file(std::istream& file, Vertices& vertices, vector<int>& indices,
     bool first_object = true;
     bool more_objects = false;
 
-    constexpr int max_vertex_components = 6;
+    constexpr int max_vertex_components = 7;
     vector<float> vf(max_vertex_components);
+    vf[max_vertex_components - 1] = 1.0f; // Alpha value for 3 component vertex color.
 
     while (file)
     {
@@ -63,7 +64,7 @@ bool read_obj_file(std::istream& file, Vertices& vertices, vector<int>& indices,
             int i = 0;
             while (ss && i < max_vertex_components)
             {
-                ss >> vf[i];
+                ss >> vf[i]; // This works for both 3 and 4-component vertex colors.
                 ++i;
             }
 
@@ -82,7 +83,7 @@ bool read_obj_file(std::istream& file, Vertices& vertices, vector<int>& indices,
                     c.x = XMConvertFloatToHalf(vf[3]);
                     c.y = XMConvertFloatToHalf(vf[4]);
                     c.z = XMConvertFloatToHalf(vf[5]);
-                    c.w = XMConvertFloatToHalf(1);
+                    c.w = XMConvertFloatToHalf(vf[6]);
                     input_colors.push_back(c);
                 }
             }
