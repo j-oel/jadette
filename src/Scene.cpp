@@ -7,11 +7,11 @@
 
 #include "pch.h"
 #include "Scene.h"
+#include "Scene_components.h"
+#include "Scene_file.h"
 #include "Graphical_object.h"
 #include "Shadow_map.h"
 #include "util.h"
-#include "Primitives.h"
-#include "Wavefront_obj_file.h"
 #include "View.h"
 #include "Dx12_util.h"
 
@@ -56,49 +56,6 @@ namespace
     }
 }
 
-
-struct Read_error
-{
-    Read_error(const std::string& input_) : input(input_) {}
-    std::string input;
-};
-
-struct Scene_file_open_error
-{
-};
-
-struct File_open_error
-{
-    File_open_error(const std::string& file_name_) : file_name(file_name_) {}
-    std::string file_name;
-};
-
-struct Model_not_defined
-{
-    Model_not_defined(const std::string& model_) : model(model_) {}
-    std::string model;
-};
-
-struct Texture_not_defined
-{
-    Texture_not_defined(const std::string& texture_) : texture(texture_) {}
-    std::string texture;
-};
-
-struct Object_not_defined
-{
-    Object_not_defined(const std::string& object_) : object(object_) {}
-    std::string object;
-};
-
-struct Material_not_defined
-{
-    Material_not_defined(const std::string& material_, const std::string& object_) : 
-        material(material_), object(object_) {}
-    std::string material;
-    std::string object;
-};
-
 void convert_vector_to_half4(XMHALF4& half4, XMVECTOR vec)
 {
     half4.x = XMConvertFloatToHalf(vec.m128_f32[0]);
@@ -106,39 +63,6 @@ void convert_vector_to_half4(XMHALF4& half4, XMVECTOR vec)
     half4.z = XMConvertFloatToHalf(vec.m128_f32[2]);
     half4.w = XMConvertFloatToHalf(vec.m128_f32[3]);
 }
-
-XMHALF4 convert_float4_to_half4(const XMFLOAT4& vec)
-{
-    XMHALF4 half4;
-    half4.x = XMConvertFloatToHalf(vec.x);
-    half4.y = XMConvertFloatToHalf(vec.y);
-    half4.z = XMConvertFloatToHalf(vec.z);
-    half4.w = XMConvertFloatToHalf(vec.w);
-    return half4;
-}
-
-struct Dynamic_object
-{
-    std::shared_ptr<Graphical_object> object;
-    int transform_ref;
-};
-
-struct Flying_object
-{
-    std::shared_ptr<Graphical_object> object;
-    DirectX::XMFLOAT3 point_on_radius;
-    DirectX::XMFLOAT3 rotation_axis;
-    float speed;
-    int transform_ref;
-};
-
-struct Shader_material
-{
-    UINT diff_tex;
-    UINT normal_map;
-    UINT ao_roughness_metalness_map;
-    UINT material_settings;
-};
 
 template <typename T>
 class Constant_buffer
@@ -181,8 +105,8 @@ public:
         Depth_pass& depth_pass, ID3D12GraphicsCommandList& command_list, Scene& scene);
     int triangles_count() const { return m_triangles_count; }
     size_t vertices_count() const { return m_vertices_count; }
-    size_t objects_count() const { return m_graphical_objects.size(); }
-    size_t lights_count() const { return m_lights.size(); }
+    size_t objects_count() const { return m.graphical_objects.size(); }
+    size_t lights_count() const { return m.lights.size(); }
     void set_static_instance_data_shader_constant(ID3D12GraphicsCommandList& command_list,
         int root_param_index_of_instance_data);
     void set_dynamic_instance_data_shader_constant(ID3D12GraphicsCommandList& command_list,
@@ -197,7 +121,7 @@ public:
     bool object_selected() { return m_object_selected; }
     void initial_view_position(DirectX::XMFLOAT3& position) const;
     void initial_view_focus_point(DirectX::XMFLOAT3& focus_point) const;
-    DirectX::XMFLOAT4 ambient_light() const { return m_ambient_light; }
+    DirectX::XMFLOAT4 ambient_light() const { return m.ambient_light; }
 
     static constexpr UINT max_textures = 112;
 private:
@@ -208,38 +132,17 @@ private:
         const std::vector<std::shared_ptr<Graphical_object> >& objects,
         Texture_mapping texture_mapping, const Input_layout& input_layout,
         bool dynamic) const;
-    void read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
-        ID3D12GraphicsCommandList& command_list, int& texture_index,
-        ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
-        int root_param_index_of_values);
 
-    std::vector<std::shared_ptr<Graphical_object> > m_graphical_objects;
-    std::vector<std::shared_ptr<Graphical_object> > m_static_objects;
-    std::vector<std::shared_ptr<Graphical_object> > m_dynamic_objects;
-    std::vector<std::shared_ptr<Graphical_object> > m_transparent_objects;
-    std::vector<std::shared_ptr<Graphical_object> > m_alpha_cut_out_objects;
-    std::vector<std::shared_ptr<Graphical_object> > m_two_sided_objects;
-    std::vector<Flying_object> m_flying_objects;
-    std::vector<Dynamic_object> m_rotating_objects;
+    Scene_components m;
 
     std::vector<std::shared_ptr<Texture>> m_textures;
     CD3DX12_GPU_DESCRIPTOR_HANDLE m_texture_gpu_descriptor_handle;
 
-    DirectX::XMFLOAT4 m_ambient_light;
-
-    DirectX::XMFLOAT3 m_initial_view_position;
-    DirectX::XMFLOAT3 m_initial_view_focus_point;
-
-    std::vector<Per_instance_transform> m_dynamic_model_transforms;
-    std::vector<Per_instance_transform> m_static_model_transforms;
     std::vector<std::unique_ptr<Instance_data>> m_dynamic_instance_data;
     std::unique_ptr<Instance_data> m_static_instance_data;
     std::vector<std::unique_ptr<Constant_buffer<Light>>> m_lights_data;
     std::unique_ptr<Constant_buffer<Shader_material>> m_materials_data;
-    std::vector<Light> m_lights;
-    std::vector<Shader_material> m_materials;
     std::vector<Shadow_map> m_shadow_maps;
-    UINT m_shadow_casting_lights_count;
 
     int m_root_param_index_of_values;
 
@@ -397,12 +300,13 @@ DirectX::XMFLOAT4 Scene::ambient_light() const
 Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
     const std::string& scene_file, ComPtr<ID3D12DescriptorHeap> descriptor_heap,
     int root_param_index_of_values) :
-    m_initial_view_position(0.0f, 0.0f, -20.0f),
-    m_initial_view_focus_point(0.0f, 0.0f, 0.0f),
-    m_ambient_light(0.2f, 0.2f, 0.2f, 1.0f),
-    m_root_param_index_of_values(root_param_index_of_values), m_shadow_casting_lights_count(0),
+    m_root_param_index_of_values(root_param_index_of_values),
     m_triangles_count(0), m_vertices_count(0), m_selected_object_id(-1), m_object_selected(false)
 {
+    m.ambient_light = { 0.2f, 0.2f, 0.2f, 1.0f };
+    m.shadow_casting_lights_count = 0;
+    m.initial_view_position = { 0.0f, 0.0f, -20.0f };
+    m.initial_view_focus_point = { 0.0f, 0.0f, 0.0f };
 
     // Initialize COM, needed by Windows Imaging Component (WIC)
     throw_if_failed(CoInitializeEx(nullptr, COINITBASE_MULTITHREADED | COINIT_DISABLE_OLE1DDE));
@@ -441,7 +345,7 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
 
         try
         {
-            read_file(scene_file, device, command_list, texture_index,
+            read_scene_file(scene_file, m, device, command_list, texture_index,
                 descriptor_heap, root_param_index_of_values);
         }
         catch (...)
@@ -470,13 +374,13 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
 
             // Release all objects so that we can continue and show the screen without graphics
             // driver errors/violations.
-            m_graphical_objects.clear();
-            m_static_objects.clear();
-            m_dynamic_objects.clear();
-            m_transparent_objects.clear();
-            m_alpha_cut_out_objects.clear();
-            m_rotating_objects.clear();
-            m_flying_objects.clear();
+            m.graphical_objects.clear();
+            m.static_objects.clear();
+            m.dynamic_objects.clear();
+            m.transparent_objects.clear();
+            m.alpha_cut_out_objects.clear();
+            m.rotating_objects.clear();
+            m.flying_objects.clear();
             std::rethrow_exception(exc);
         }
     }
@@ -524,10 +428,10 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
         return;
 
     m_materials_data = std::make_unique<Constant_buffer<Shader_material>>(device, command_list,
-        static_cast<UINT>(m_materials.size()), Shader_material(),
+        static_cast<UINT>(m.materials.size()), Shader_material(),
         descriptor_heap, descriptor_start_index_of_materials(swap_chain_buffer_count));
 
-    m_materials_data->upload_new_data_to_gpu(command_list, m_materials);
+    m_materials_data->upload_new_data_to_gpu(command_list, m.materials);
 
     for (UINT i = texture_index; i < texture_start_index + max_textures; ++i)
     {
@@ -539,11 +443,11 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
     auto shadow_casting_light_is_less_than =
         [](const Light& l1, const Light& l2) -> bool { return l1.position.w > l2.position.w; };
 
-    sort(m_lights.begin(), m_lights.end(), shadow_casting_light_is_less_than );
+    sort(m.lights.begin(), m.lights.end(), shadow_casting_light_is_less_than );
 
-    const UINT descriptor_index_increment = static_cast<UINT>(m_shadow_casting_lights_count);
+    const UINT descriptor_index_increment = static_cast<UINT>(m.shadow_casting_lights_count);
 
-    for (UINT i = 0; i < m_shadow_casting_lights_count; ++i)
+    for (UINT i = 0; i < m.shadow_casting_lights_count; ++i)
     {
         m_shadow_maps.push_back(Shadow_map(device, swap_chain_buffer_count,
             descriptor_heap, descriptor_start_index_of_shadow_maps(swap_chain_buffer_count) + i,
@@ -562,11 +466,11 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
     for (UINT i = 0; i < swap_chain_buffer_count; ++i)
     {
         m_dynamic_instance_data.push_back(std::make_unique<Instance_data>(device, command_list,
-            static_cast<UINT>(m_dynamic_objects.size()), Per_instance_transform(),
+            static_cast<UINT>(m.dynamic_objects.size()), Per_instance_transform(),
             descriptor_heap, descriptor_start_index_of_dynamic_instance_data() + i));
 
         m_lights_data.push_back(std::make_unique<Constant_buffer<Light>>(device, command_list,
-            static_cast<UINT>(m_lights.size()), Light(),
+            static_cast<UINT>(m.lights.size()), Light(),
             descriptor_heap, descriptor_start_index_of_lights_data(swap_chain_buffer_count) + i));
     }
 
@@ -574,11 +478,11 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
         // It's graphical_objects here because every graphical_object has a an entry in
         // m_static_model_transforms. This is mainly (only?) because the fly_around_in_circle
         // function requires that currently. This is all quite messy and should be fixed.
-        static_cast<UINT>(m_graphical_objects.size()), Per_instance_transform(), descriptor_heap,
+        static_cast<UINT>(m.graphical_objects.size()), Per_instance_transform(), descriptor_heap,
         descriptor_index_of_static_instance_data());
 
     upload_resources_to_gpu(device, command_list);
-    for (auto& g : m_graphical_objects)
+    for (auto& g : m.graphical_objects)
     {
         g->release_temp_resources();
         m_triangles_count += g->triangles_count();
@@ -640,19 +544,19 @@ void Scene_impl::update()
     XMVECTOR quaternion = XMQuaternionRotationMatrix(rotation_matrix);
     XMHALF4 quaternion_half = convert_vector_to_half4(quaternion);
 
-    for (auto& object : m_rotating_objects)
+    for (auto& object : m.rotating_objects)
     {
-        m_dynamic_model_transforms[object.transform_ref].rotation = quaternion_half;
+        m.dynamic_model_transforms[object.transform_ref].rotation = quaternion_half;
     }
 
-    for (auto& ufo : m_flying_objects) // :-)
+    for (auto& ufo : m.flying_objects) // :-)
     {
-        XMMATRIX new_model_matrix = fly_around_in_circle(ufo, m_static_model_transforms);
+        XMMATRIX new_model_matrix = fly_around_in_circle(ufo, m.static_model_transforms);
         XMVECTOR quaternion = XMQuaternionRotationMatrix(new_model_matrix);
         XMVECTOR translation = new_model_matrix.r[3];
         XMHALF4 translation_half4;
         convert_vector_to_half4(translation_half4, translation);
-        set_instance_data(m_dynamic_model_transforms[ufo.transform_ref], translation_half4, quaternion);
+        set_instance_data(m.dynamic_model_transforms[ufo.transform_ref], translation_half4, quaternion);
     }
 }
 
@@ -693,13 +597,13 @@ void Scene_impl::draw_objects(ID3D12GraphicsCommandList& command_list,
 void Scene_impl::draw_static_objects(ID3D12GraphicsCommandList& command_list,
     Texture_mapping texture_mapping, const Input_layout& input_layout) const
 {
-    draw_objects(command_list, m_static_objects, texture_mapping, input_layout, false);
+    draw_objects(command_list, m.static_objects, texture_mapping, input_layout, false);
 }
 
 void Scene_impl::draw_dynamic_objects(ID3D12GraphicsCommandList& command_list,
     Texture_mapping texture_mapping, const Input_layout& input_layout) const
 {
-    draw_objects(command_list, m_dynamic_objects, texture_mapping, input_layout, true);
+    draw_objects(command_list, m.dynamic_objects, texture_mapping, input_layout, true);
 }
 
 
@@ -732,49 +636,49 @@ void Scene_impl::sort_transparent_objects_back_to_front(const View& view)
     // Splitting the objects in their composing triangles and sorting those doesn't give
     // perfect results in all cases either. The order has to be determined per pixel for that.
 
-    for (auto& g : m_transparent_objects)
+    for (auto& g : m.transparent_objects)
     {
-        auto model = m_static_model_transforms[g->id()];
+        auto model = m.static_model_transforms[g->id()];
         auto model_view = calculate_model_view(model, view);
         g->transform_center(model_view);
     }
 
-    std::sort(m_transparent_objects.begin(), m_transparent_objects.end(),
+    std::sort(m.transparent_objects.begin(), m.transparent_objects.end(),
         Graphical_object_z_of_center_greater());
 }
 
 void Scene_impl::draw_transparent_objects(ID3D12GraphicsCommandList& command_list,
     Texture_mapping texture_mapping, const Input_layout& input_layout) const
 {
-    draw_objects(command_list, m_transparent_objects, texture_mapping, input_layout, false);
+    draw_objects(command_list, m.transparent_objects, texture_mapping, input_layout, false);
 }
 
 void Scene_impl::draw_alpha_cut_out_objects(ID3D12GraphicsCommandList& command_list,
     Texture_mapping texture_mapping, const Input_layout& input_layout) const
 {
-    draw_objects(command_list, m_alpha_cut_out_objects, texture_mapping, input_layout, false);
+    draw_objects(command_list, m.alpha_cut_out_objects, texture_mapping, input_layout, false);
 }
 
 void Scene_impl::draw_two_sided_objects(ID3D12GraphicsCommandList& command_list,
     Texture_mapping texture_mapping, const Input_layout& input_layout) const
 {
-    draw_objects(command_list, m_two_sided_objects, texture_mapping, input_layout, false);
+    draw_objects(command_list, m.two_sided_objects, texture_mapping, input_layout, false);
 }
 
 void Scene_impl::upload_data_to_gpu(ID3D12GraphicsCommandList& command_list,
     UINT back_buf_index)
 {
     for (UINT i = 0; i < m_shadow_maps.size(); ++i)
-        m_shadow_maps[i].update(m_lights[i]);
+        m_shadow_maps[i].update(m.lights[i]);
 
-    if (!m_lights.empty())
-        m_lights_data[back_buf_index]->upload_new_data_to_gpu(command_list, m_lights);
+    if (!m.lights.empty())
+        m_lights_data[back_buf_index]->upload_new_data_to_gpu(command_list, m.lights);
 
-    if (!m_static_objects.empty())
+    if (!m.static_objects.empty())
         upload_static_instance_data(command_list);
-    if (!m_dynamic_objects.empty())
+    if (!m.dynamic_objects.empty())
         m_dynamic_instance_data[back_buf_index]->upload_new_data_to_gpu(command_list,
-            m_dynamic_model_transforms);
+            m.dynamic_model_transforms);
 }
 
 void Scene_impl::record_shadow_map_generation_commands_in_command_list(UINT back_buf_index,
@@ -789,7 +693,7 @@ void Scene_impl::upload_static_instance_data(ID3D12GraphicsCommandList& command_
     static bool first = true;
     if (first)
     {
-        m_static_instance_data->upload_new_data_to_gpu(command_list, m_static_model_transforms);
+        m_static_instance_data->upload_new_data_to_gpu(command_list, m.static_model_transforms);
         first = false;
     }
 }
@@ -797,7 +701,7 @@ void Scene_impl::upload_static_instance_data(ID3D12GraphicsCommandList& command_
 void Scene_impl::set_static_instance_data_shader_constant(ID3D12GraphicsCommandList& command_list,
     int root_param_index_of_instance_data)
 {
-    if (!m_static_objects.empty())
+    if (!m.static_objects.empty())
         command_list.SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
             m_static_instance_data->srv_gpu_handle());
 }
@@ -805,7 +709,7 @@ void Scene_impl::set_static_instance_data_shader_constant(ID3D12GraphicsCommandL
 void Scene_impl::set_dynamic_instance_data_shader_constant(ID3D12GraphicsCommandList& command_list,
     UINT back_buf_index, int root_param_index_of_instance_data)
 {
-    if (!m_dynamic_objects.empty())
+    if (!m.dynamic_objects.empty())
         command_list.SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
             m_dynamic_instance_data[back_buf_index]->srv_gpu_handle());
 }
@@ -813,7 +717,7 @@ void Scene_impl::set_dynamic_instance_data_shader_constant(ID3D12GraphicsCommand
 void Scene_impl::set_lights_data_shader_constant(ID3D12GraphicsCommandList& command_list,
     UINT back_buf_index, int root_param_index_of_lights_data, int root_param_index_of_shadow_map)
 {
-    if (!m_lights.empty())
+    if (!m.lights.empty())
         command_list.SetGraphicsRootDescriptorTable(root_param_index_of_lights_data,
             m_lights_data[back_buf_index]->gpu_handle());
 
@@ -837,13 +741,13 @@ void Scene_impl::manipulate_object(DirectX::XMFLOAT3& delta_pos, DirectX::XMFLOA
     if (m_object_selected)
     {
         auto& selected_object_translation =
-                m_static_model_transforms[m_dynamic_objects[m_selected_object_id]->id()].translation;
+                m.static_model_transforms[m.dynamic_objects[m_selected_object_id]->id()].translation;
         XMVECTOR translation = convert_half4_to_vector(selected_object_translation);
         translation += XMLoadFloat3(&delta_pos);
         convert_vector_to_half4(selected_object_translation, translation);
-        m_dynamic_model_transforms[m_selected_object_id].translation = selected_object_translation;
+        m.dynamic_model_transforms[m_selected_object_id].translation = selected_object_translation;
 
-        auto& selected_object_rotation = m_dynamic_model_transforms[m_selected_object_id].rotation;
+        auto& selected_object_rotation = m.dynamic_model_transforms[m_selected_object_id].rotation;
         XMVECTOR rotation = convert_half4_to_vector(selected_object_rotation);
         convert_vector_to_half4(selected_object_rotation,
             XMQuaternionMultiply(rotation, XMLoadFloat4(&delta_rotation)));
@@ -863,12 +767,12 @@ void Scene_impl::select_object(int object_id)
 
 void Scene_impl::initial_view_position(DirectX::XMFLOAT3& position) const
 {
-    position = m_initial_view_position;
+    position = m.initial_view_position;
 }
 
 void Scene_impl::initial_view_focus_point(DirectX::XMFLOAT3& focus_point) const
 {
-    focus_point = m_initial_view_focus_point;
+    focus_point = m.initial_view_focus_point;
 }
 
 void Scene_impl::upload_resources_to_gpu(ComPtr<ID3D12Device> device,
@@ -899,463 +803,6 @@ void Scene_impl::upload_resources_to_gpu(ComPtr<ID3D12Device> device,
 
     constexpr DWORD time_to_wait = 2000; // ms
     WaitForSingleObject(resources_uploaded, time_to_wait);
-}
-
-void throw_if_file_not_openable(const std::string& file_name)
-{
-    std::ifstream file(file_name);
-    if (!file)
-        throw File_open_error(file_name);
-}
-
-// Only performs basic error checking for the moment. Not very robust.
-// You should ensure that the scene file is valid.
-void Scene_impl::read_file(const std::string& file_name, ComPtr<ID3D12Device> device,
-    ID3D12GraphicsCommandList& command_list, int& texture_index,
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_values)
-{
-    using std::map;
-    using std::vector;
-    using std::shared_ptr;
-    using std::string;
-    using std::ifstream;
-    using DirectX::XMFLOAT3;
-    using namespace Material_settings;
-
-    map<string, shared_ptr<Mesh>> meshes;
-    map<string, shared_ptr<Model_collection>> model_collections;
-    map<string, shared_ptr<Texture>> textures;
-    map<string, string> texture_files;
-    map<string, Dynamic_object> objects;
-
-    ifstream file(file_name);
-    if (!file.is_open())
-        throw Scene_file_open_error();
-    int object_id = 0;
-    int transform_ref = 0;
-    int material_id = 0;
-    int texture_start_index = texture_index;
-
-    auto get_texture = [&](const string& name) -> auto
-    {
-        shared_ptr<Texture> texture;
-        bool texture_not_already_created = textures.find(name) == textures.end();
-        if (texture_not_already_created)
-        {
-            if (texture_files.find(name) == texture_files.end())
-                throw Texture_not_defined(name);
-
-            texture = std::make_shared<Texture>(device, command_list,
-                texture_descriptor_heap, texture_files[name], texture_index++);
-            textures[name] = texture;
-        }
-        else
-            texture = textures[name];
-
-        return texture;
-    };
-
-    auto add_material = [&](UINT diff_tex_index, UINT normal_map_index, UINT aorm_map_index, 
-        UINT material_settings) -> int
-    {
-        Shader_material shader_material = { diff_tex_index - texture_start_index,
-            normal_map_index, aorm_map_index, material_settings };
-        m_materials.push_back(shader_material);
-
-        int current_material_id = material_id;
-        ++material_id;
-        return current_material_id;
-    };
-
-    auto create_object = [&](const string& name, shared_ptr<Mesh> mesh,
-        const std::vector<shared_ptr<Texture>>& used_textures, bool dynamic, XMFLOAT4 position,
-        UINT material_id, int instances = 1, UINT material_settings = 0,
-        int triangle_start_index = 0, bool rotating = false)
-    {
-        Per_instance_transform transform = { convert_float4_to_half4(position),
-        convert_vector_to_half4(DirectX::XMQuaternionIdentity()) };
-        m_static_model_transforms.push_back(transform);
-        auto object = std::make_shared<Graphical_object>(device, mesh, used_textures,
-            root_param_index_of_values, object_id++, material_id,
-            instances, triangle_start_index);
-
-        m_graphical_objects.push_back(object);
-
-        if (material_settings & transparency)
-            m_transparent_objects.push_back(object);
-        else if (material_settings & alpha_cut_out)
-            m_alpha_cut_out_objects.push_back(object);
-        else if (material_settings & two_sided)
-            m_two_sided_objects.push_back(object);
-        else if (dynamic)
-        {
-            m_dynamic_objects.push_back(object);
-            m_dynamic_model_transforms.push_back(transform);
-            Dynamic_object dynamic_object { object, transform_ref };
-            if (rotating)
-                m_rotating_objects.push_back(dynamic_object);
-            if (!name.empty())
-                objects[name] = dynamic_object;
-            ++transform_ref;
-        }
-        else
-            m_static_objects.push_back(object);
-    };
-
-
-    while (file)
-    {
-        string input;
-        file >> input;
-
-        if (input == "object" || input == "normal_mapped_object")
-        {
-            string name;
-            file >> name;
-            string static_dynamic;
-            file >> static_dynamic;
-            if (static_dynamic != "static" && static_dynamic != "dynamic")
-                throw Read_error(static_dynamic);
-            string model;
-            file >> model;
-            string diffuse_map;
-            file >> diffuse_map;
-            XMFLOAT4 position;
-            file >> position.x;
-            file >> position.y;
-            file >> position.z;
-            file >> position.w; // This is used as scale.
-
-            bool dynamic = static_dynamic == "dynamic" ? true : false;
-
-            string normal_map = "";
-            if (input == "normal_mapped_object")
-                file >> normal_map;
-
-            if (meshes.find(model) != meshes.end())
-            {
-                vector<shared_ptr<Texture>> used_textures;
-                auto mesh = meshes[model];
-                UINT normal_index = 0;
-
-                shared_ptr<Texture> normal_map_tex = nullptr;
-                UINT material_settings = 0;
-                if (!normal_map.empty())
-                {
-                    normal_map_tex = get_texture(normal_map);
-                    used_textures.push_back(normal_map_tex);
-                    material_settings = normal_map_exists;
-                    normal_index = normal_map_tex->index() - texture_start_index;
-                }
-                auto diffuse_map_tex = get_texture(diffuse_map);
-                used_textures.push_back(diffuse_map_tex);
-
-                UINT aorm_map_index = 0;
-                int current_material = add_material(diffuse_map_tex->index(), normal_index,
-                    aorm_map_index, material_settings);
-
-                create_object(name, mesh, used_textures, dynamic, position, current_material, 1,
-                    material_settings);
-            }
-            else
-            {
-                if (model_collections.find(model) == model_collections.end())
-                    throw Model_not_defined(model);
-                auto& model_collection = model_collections[model];
-
-                for (auto& m : model_collection->models)
-                {
-                    vector<shared_ptr<Texture>> used_textures;
-                    UINT normal_index = 0;
-                    UINT material_settings = 0;
-                    int current_material_id = -1;
-                    shared_ptr<Texture> normal_map_tex = nullptr;
-                    std::string aorm_map;
-                    UINT aorm_map_index = 0;
-                    if (m.material != "")
-                    {
-                        auto material_iter = model_collection->materials.find(m.material);
-                        if (material_iter == model_collection->materials.end())
-                            throw Material_not_defined(m.material, model);
-                        auto& material = material_iter->second;
-                        diffuse_map = material.diffuse_map;
-                        normal_map = material.normal_map;
-                        aorm_map = material.ao_roughness_metalness_map;
-                        material_settings = material.settings;
-
-                        bool shader_material_not_yet_created = (material.id == -1);
-                        if (shader_material_not_yet_created)
-                        {
-                            if (!normal_map.empty())
-                            {
-                                normal_map_tex = get_texture(normal_map);
-                                used_textures.push_back(normal_map_tex);
-                                normal_index = normal_map_tex->index() - texture_start_index;
-                            }
-                            if (!aorm_map.empty())
-                            {
-                                auto aorm_map_tex = get_texture(aorm_map);
-                                used_textures.push_back(aorm_map_tex);
-                                aorm_map_index = aorm_map_tex->index() - texture_start_index;
-                            }
-                            auto diffuse_map_tex = get_texture(diffuse_map);
-                            used_textures.push_back(diffuse_map_tex);
-
-                            current_material_id = add_material(diffuse_map_tex->index(),
-                                normal_index, aorm_map_index, material_settings);
-                            material.id = current_material_id;
-                        }
-                        else
-                        {
-                            current_material_id = material.id;
-                        }
-                    }
-                    else
-                    {
-                        if (!normal_map.empty())
-                        {
-                            normal_map_tex = get_texture(normal_map);
-                            used_textures.push_back(normal_map_tex);
-                            material_settings |= normal_map_exists;
-                            normal_index = normal_map_tex->index() - texture_start_index;
-                        }
-
-                        auto diffuse_map_tex = get_texture(diffuse_map);
-                        used_textures.push_back(diffuse_map_tex);
-
-                        current_material_id = add_material(diffuse_map_tex->index(),
-                            normal_index, aorm_map_index, material_settings);
-                    }
-
-                    constexpr int instances = 1;
-                    create_object(name, m.mesh, used_textures, dynamic, position,
-                        current_material_id, instances, material_settings,
-                        m.triangle_start_index);
-                }
-            }
-        }
-        else if (input == "texture")
-        {
-            string name;
-            file >> name;
-            string texture_file;
-            file >> texture_file;
-            string texture_file_path = data_path + texture_file;
-            throw_if_file_not_openable(texture_file_path);
-            texture_files[name] = texture_file_path;
-        }
-        else if (input == "model")
-        {
-            string name;
-            file >> name;
-            string model;
-            file >> model;
-
-            if (model == "cube")
-                meshes[name] = std::make_shared<Cube>(device, command_list);
-            else if (model == "plane")
-                meshes[name] = std::make_shared<Plane>(device, command_list);
-            else
-            {
-                string model_file = data_path + model;
-                throw_if_file_not_openable(model_file);
-
-                auto collection = read_obj_file(model_file, device, command_list);
-                model_collections[name] = collection;
-
-                auto add_texture = [&](const string& file_name)
-                {
-                    if (!file_name.empty())
-                    {
-                        string texture_file_path = data_path + file_name;
-                        throw_if_file_not_openable(texture_file_path);
-                        texture_files[file_name] = texture_file_path;
-                    }
-                };
-
-                for (auto m : collection->materials)
-                {
-                    add_texture(m.second.diffuse_map);
-                    add_texture(m.second.normal_map);
-                    add_texture(m.second.ao_roughness_metalness_map);
-                }
-            }
-        }
-        else if (input == "array" || input == "rotating_array" || 
-        input == "normal_mapped_array" || input == "normal_mapped_rotating_array")
-        {
-            string static_dynamic;
-            file >> static_dynamic;
-            if (static_dynamic != "static" && static_dynamic != "dynamic")
-                throw Read_error(static_dynamic);
-            string model;
-            file >> model;
-            string diffuse_map;
-            file >> diffuse_map;
-            XMFLOAT3 pos;
-            file >> pos.x;
-            file >> pos.y;
-            file >> pos.z;
-            XMINT3 count;
-            file >> count.x;
-            file >> count.y;
-            file >> count.z;
-            XMFLOAT3 offset;
-            file >> offset.x;
-            file >> offset.y;
-            file >> offset.z;
-            float scale;
-            file >> scale;
-
-            string normal_map = "";
-            if (input == "normal_mapped_array" || input == "normal_mapped_rotating_array")
-                file >> normal_map;
-
-            int instances = count.x * count.y * count.z;
-            bool dynamic = static_dynamic == "dynamic" ? true : false;
-            auto new_object_count = m_graphical_objects.size() + instances;
-            m_graphical_objects.reserve(m_graphical_objects.size() + instances);
-            if (dynamic)
-                m_dynamic_objects.reserve(m_dynamic_objects.size() + instances);
-            else
-                m_static_objects.reserve(m_static_objects.size() + instances);
-
-            shared_ptr<Mesh> mesh;
-            if (meshes.find(model) != meshes.end())
-                mesh = meshes[model];
-            else if (model_collections.find(model) != model_collections.end())
-                mesh = model_collections[model]->models.front().mesh;
-            else
-                throw Model_not_defined(model);
-
-            vector<shared_ptr<Texture>> used_textures;
-
-            auto diffuse_map_tex = get_texture(diffuse_map);
-            used_textures.push_back(diffuse_map_tex);
-
-            shared_ptr<Texture> normal_map_tex = nullptr;
-
-            UINT normal_index = 0;
-            UINT material_settings = 0;
-            if (!normal_map.empty())
-            {
-                normal_map_tex = get_texture(normal_map);
-                used_textures.push_back(normal_map_tex);
-                material_settings = normal_map_exists;
-                normal_index = normal_map_tex->index() - texture_start_index;
-            }
-
-            UINT aorm_map_index = 0;
-            int curr_material_id = add_material(diffuse_map_tex->index(),
-                normal_index, aorm_map_index, material_settings);
-
-            constexpr int triangle_start_index = 0;
-
-            for (int x = 0; x < count.x; ++x)
-                for (int y = 0; y < count.y; ++y)
-                    for (int z = 0; z < count.z; ++z, --instances)
-                    {
-                        XMFLOAT4 position = XMFLOAT4(pos.x + offset.x * x, pos.y + offset.y * y,
-                            pos.z + offset.z * z, scale);
-                        create_object(dynamic? "arrayobject" + std::to_string(object_id) :"", 
-                            mesh, used_textures, dynamic, position, curr_material_id, instances,
-                            material_settings, triangle_start_index,
-                            (input == "rotating_array" || input == "normal_mapped_rotating_array")?
-                            true: false);
-                    }
-        }
-        else if (input == "fly")
-        {
-            string object;
-            file >> object;
-            if (!objects.count(object))
-                throw Object_not_defined(object);
-            XMFLOAT3 point_on_radius;
-            file >> point_on_radius.x;
-            file >> point_on_radius.y;
-            file >> point_on_radius.z;
-            XMFLOAT3 rot;
-            file >> rot.x;
-            file >> rot.y;
-            file >> rot.z;
-            float speed;
-            file >> speed;
-            m_flying_objects.push_back({ objects[object].object, point_on_radius,
-                rot, speed, objects[object].transform_ref });
-        }
-        else if (input == "rotate")
-        {
-            string object;
-            file >> object;
-            if (!objects.count(object))
-                throw Object_not_defined(object);
-            m_rotating_objects.push_back(objects[object]);
-        }
-        else if (input == "light")
-        {
-            XMFLOAT3 pos;
-            file >> pos.x;
-            file >> pos.y;
-            file >> pos.z;
-            XMFLOAT3 focus_point;
-            file >> focus_point.x;
-            file >> focus_point.y;
-            file >> focus_point.z;
-            float diffuse_intensity;
-            file >> diffuse_intensity;
-            float diffuse_reach;
-            file >> diffuse_reach;
-            float specular_intensity;
-            file >> specular_intensity;
-            float specular_reach;
-            file >> specular_reach;
-            float color_r;
-            file >> color_r;
-            float color_g;
-            file >> color_g;
-            float color_b;
-            file >> color_b;
-            float cast_shadow;
-            file >> cast_shadow;
-
-            Light light = { XMFLOAT4X4(), XMFLOAT4(pos.x, pos.y, pos.z, cast_shadow),
-                XMFLOAT4(focus_point.x, focus_point.y, focus_point.z, 1.0f),
-                XMFLOAT4(color_r, color_g, color_b, 1.0f),
-                diffuse_intensity, diffuse_reach, specular_intensity, specular_reach };
-            m_lights.push_back(light);
-
-            if (cast_shadow)
-                ++m_shadow_casting_lights_count;
-        }
-        else if (input == "ambient")
-        {
-            float r;
-            file >> r;
-            float g;
-            file >> g;
-            float b;
-            file >> b;
-            m_ambient_light = { r, g, b, 1.0f };
-        }
-        else if (input == "view")
-        {
-            file >> m_initial_view_position.x;
-            file >> m_initial_view_position.y;
-            file >> m_initial_view_position.z;
-            file >> m_initial_view_focus_point.x;
-            file >> m_initial_view_focus_point.y;
-            file >> m_initial_view_focus_point.z;
-        }
-        else if (!input.empty() && input[0] == '#')
-        {
-            std::getline(file, input);
-        }
-        else if (input == "")
-        {
-        }
-        else
-            throw Read_error(input);
-    }
 }
 
 template <typename T>

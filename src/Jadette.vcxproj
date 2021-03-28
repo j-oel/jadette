@@ -316,6 +316,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Minimal|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Scene_file.cpp" />
     <ClCompile Include="User_interface.cpp" />
     <ClCompile Include="Wavefront_obj_file.cpp" />
     <ClCompile Include="Primitives.cpp" />
@@ -346,6 +347,8 @@
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Object_id_pass.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Scene_components.h" />
+    <ClInclude Include="Scene_file.h" />
     <ClInclude Include="User_interface.h" />
     <ClInclude Include="Wavefront_obj_file.h" />
     <ClInclude Include="Primitives.h" />
