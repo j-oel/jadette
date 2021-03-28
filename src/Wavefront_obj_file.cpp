@@ -18,6 +18,7 @@ using std::vector;
 using std::map;
 using std::string;
 using std::ifstream;
+using std::istringstream;
 
 
 void read_mtl_file(const string file_name, map<string, Material>& materials);
@@ -26,7 +27,8 @@ void read_mtl_file(const string file_name, map<string, Material>& materials);
 bool read_obj_file(std::istream& file, Vertices& vertices, vector<int>& indices,
     vector<XMHALF4>& input_vertices, vector<XMHALF4>& input_normals,
     vector<XMHALF2>& input_texture_coords, vector<XMHALF4>& input_tangents, 
-    vector<XMHALF4>& input_bitangents, string& material, map<string, Material>* materials)
+    vector<XMHALF4>& input_bitangents, vector<XMHALF4>& input_colors, string& material,
+    map<string, Material>* materials)
 {
     // Tangents and bitangents are not present in standard Wavefront obj files. It is an
     // extension that I have devised myself. I have modified the open source tool assimp
@@ -46,22 +48,44 @@ bool read_obj_file(std::istream& file, Vertices& vertices, vector<int>& indices,
     bool first_object = true;
     bool more_objects = false;
 
+    constexpr int max_vertex_components = 6;
+    vector<float> vf(max_vertex_components);
+
     while (file)
     {
         file >> input;
 
         if (input == "v")
         {
-            XMHALF4 v;
-            float f;
-            file >> f;
-            v.x = XMConvertFloatToHalf(f);
-            file >> f;
-            v.y = XMConvertFloatToHalf(f);
-            file >> f;
-            v.z = XMConvertFloatToHalf(f);
-            v.w = XMConvertFloatToHalf(1);
-            input_vertices.push_back(v);
+            std::getline(file, input);
+
+            istringstream ss(input);
+            int i = 0;
+            while (ss && i < max_vertex_components)
+            {
+                ss >> vf[i];
+                ++i;
+            }
+
+            if (i >= 3)
+            {
+                XMHALF4 v;
+                v.x = XMConvertFloatToHalf(vf[0]);
+                v.y = XMConvertFloatToHalf(vf[1]);
+                v.z = XMConvertFloatToHalf(vf[2]);
+                v.w = XMConvertFloatToHalf(1);
+                input_vertices.push_back(v);
+
+                if (i == max_vertex_components)
+                {
+                    XMHALF4 c;
+                    c.x = XMConvertFloatToHalf(vf[3]);
+                    c.y = XMConvertFloatToHalf(vf[4]);
+                    c.z = XMConvertFloatToHalf(vf[5]);
+                    c.w = XMConvertFloatToHalf(1);
+                    input_colors.push_back(c);
+                }
+            }
         }
         else if (input == "vn")
         {
@@ -185,6 +209,12 @@ bool read_obj_file(std::istream& file, Vertices& vertices, vector<int>& indices,
 
                 vertices.positions.push_back({ position_plus_u });
                 vertices.normals.push_back({ normal_plus_v });
+
+                if (input_colors.size() == input_vertices.size())
+                {
+                    XMHALF4 color = input_colors[vertex_index - 1];
+                    vertices.colors.push_back({ color });
+                }
             }
 
             if (!tangents_in_file)
@@ -221,11 +251,12 @@ void read_obj_file(const string& filename, Vertices& vertices, vector<int>& indi
     vector<XMHALF2> input_texture_coords;
     vector<XMHALF4> input_tangents;
     vector<XMHALF4> input_bitangents;
+    vector<XMHALF4> input_colors;
 
     string not_used;
     ifstream file(filename);
     read_obj_file(file, vertices, indices, input_vertices, input_normals, input_texture_coords,
-        input_tangents, input_bitangents, not_used, nullptr);
+        input_tangents, input_bitangents, input_colors, not_used, nullptr);
 }
 
 void create_one_model_per_triangle(std::shared_ptr<Model_collection> collection,
@@ -252,6 +283,7 @@ std::shared_ptr<Model_collection> read_obj_file(const string& filename,
     vector<XMHALF2> input_texture_coords;
     vector<XMHALF4> input_tangents;
     vector<XMHALF4> input_bitangents;
+    vector<XMHALF4> input_colors;
 
     auto collection = std::make_shared<Model_collection>();
     bool more_objects = true;
@@ -261,7 +293,8 @@ std::shared_ptr<Model_collection> read_obj_file(const string& filename,
         vector<int> indices;
         string material;
         more_objects = read_obj_file(file, vertices, indices, input_vertices, input_normals,
-            input_texture_coords, input_tangents, input_bitangents, material, &collection->materials);
+            input_texture_coords, input_tangents, input_bitangents, input_colors, material,
+            &collection->materials);
 
         constexpr int triangle_start_index = 0;
         auto material_iter = collection->materials.find(material);

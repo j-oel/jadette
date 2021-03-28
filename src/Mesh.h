@@ -36,6 +36,11 @@ struct Vertex_bitangent
     DirectX::PackedVector::XMHALF4 bitangent;
 };
 
+struct Vertex_color
+{
+    DirectX::PackedVector::XMHALF4 color;
+};
+
 // The depth passes (which includes the shadow map generation) becomes
 // about 10-20% faster when run with vertex buffers with only positions.
 // Although, only when having more complex objects - i.e. not my standard
@@ -46,6 +51,7 @@ struct Vertices
     std::vector<Vertex_normal> normals;
     std::vector<Vertex_tangent> tangents;
     std::vector<Vertex_bitangent> bitangents;
+    std::vector<Vertex_color> colors;
 };
 
 enum class Input_layout;
@@ -90,6 +96,9 @@ private:
     ComPtr<ID3D12Resource> m_vertex_bitangents_buffer;
     D3D12_VERTEX_BUFFER_VIEW m_vertex_bitangents_buffer_view;
 
+    ComPtr<ID3D12Resource> m_vertex_colors_buffer;
+    D3D12_VERTEX_BUFFER_VIEW m_vertex_colors_buffer_view;
+
     ComPtr<ID3D12Resource> m_index_buffer;
     D3D12_INDEX_BUFFER_VIEW m_index_buffer_view;
     UINT m_index_count;
@@ -102,6 +111,7 @@ private:
     ComPtr<ID3D12Resource> m_temp_upload_resource_vb_normals;
     ComPtr<ID3D12Resource> m_temp_upload_resource_vb_tangents;
     ComPtr<ID3D12Resource> m_temp_upload_resource_vb_bitangents;
+    ComPtr<ID3D12Resource> m_temp_upload_resource_vb_colors;
     ComPtr<ID3D12Resource> m_temp_upload_resource_ib;
     bool m_transparent;
 };

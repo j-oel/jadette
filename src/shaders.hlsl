@@ -101,6 +101,17 @@ struct pixel_shader_input
     half2 texcoord : TEXCOORD;
 };
 
+struct pixel_shader_vertex_color_input
+{
+    float4 sv_position : SV_POSITION;
+    float4 position : POSITION;
+    float4 color : COLOR;
+    float3 normal : NORMAL;
+    float3 tangent : TANGENT;
+    float3 bitangent : BITANGENT;
+    half2 texcoord : TEXCOORD;
+};
+
 // Converts a unit quaternion representing a rotation to a rotation matrix.
 half4x4 quaternion_to_matrix(half4 q)
 {
@@ -192,17 +203,25 @@ pixel_shader_input vertex_shader_model_matrix(float4 position : POSITION, float3
 }
 
 
-pixel_shader_input vertex_shader_model_trans_rot(float4 position : POSITION, float3 normal : NORMAL,
-    float4 tangent : TANGENT, float4 bitangent : BITANGENT, float2 texcoord : TEXCOORD,
-    half4 translation : TRANSLATION, half4 rotation : ROTATION)
+pixel_shader_vertex_color_input vertex_shader_model_matrix_vertex_colors(
+    float4 position : POSITION, float3 normal : NORMAL, float4 tangent : TANGENT,
+    float4 bitangent : BITANGENT, float2 texcoord : TEXCOORD, float4 color,
+    half4x4 model : MODEL, half4x4 scaled_model : SCALED_MODEL)
 {
-    half4x4 rotation_matrix = quaternion_to_matrix(rotation);
-    half4x4 model = rotation_matrix;
-    model = translate(model, translation);
-    half4x4 scaled_model = mul(scaling(translation.w), rotation_matrix);
-    scaled_model = translate(scaled_model, translation);
-    return vertex_shader_model_matrix(position, normal, tangent, bitangent, texcoord, model,
-        scaled_model);
+    pixel_shader_input result_without_color = vertex_shader_model_matrix(position, normal,
+        tangent, bitangent, texcoord, model, scaled_model);
+
+    pixel_shader_vertex_color_input result;
+
+    result.sv_position = result_without_color.sv_position;
+    result.position = result_without_color.position;
+    result.normal = result_without_color.normal;
+    result.tangent = result_without_color.tangent;
+    result.bitangent = result_without_color.bitangent;
+    result.texcoord = result_without_color.texcoord;
+    result.color = color;
+
+    return result;
 }
 
 struct Trans_rot
@@ -221,15 +240,46 @@ Trans_rot get_trans_rot(uint instance_id)
     return result;
 }
 
+struct Model_matrices
+{
+    half4x4 model;
+    half4x4 scaled_model;
+};
+
+Model_matrices get_matrices(uint instance_id)
+{
+    Model_matrices m;
+    Trans_rot t = get_trans_rot(instance_id);
+    float4 translation = t.translation;
+    float4 rotation = t.rotation;
+
+    half4x4 rotation_matrix = quaternion_to_matrix(rotation);
+    m.model = translate(rotation_matrix, translation);
+    half4x4 scaled_model = mul(scaling(translation.w), rotation_matrix);
+    m.scaled_model = translate(scaled_model, translation);
+    return m;
+}
+
 pixel_shader_input vertex_shader_srv_instance_data(uint instance_id : SV_InstanceID, 
     float4 position : POSITION, float4 normal : NORMAL, float4 tangent : TANGENT,
     float4 bitangent : BITANGENT)
 {
-    Trans_rot trans_rot = get_trans_rot(instance_id);
-
     float2 texcoord = float2(position.w, normal.w);
-    return vertex_shader_model_trans_rot(float4(position.xyz, 1), normal.xyz, tangent, bitangent,
-        texcoord, trans_rot.translation, trans_rot.rotation);
+    Model_matrices m = get_matrices(instance_id);
+
+    return vertex_shader_model_matrix(float4(position.xyz, 1), normal.xyz,
+        tangent, bitangent, texcoord, m.model, m.scaled_model);
+}
+
+pixel_shader_vertex_color_input vertex_shader_srv_instance_data_vertex_colors(
+    uint instance_id : SV_InstanceID, float4 position : POSITION, float4 normal : NORMAL,
+    float4 tangent : TANGENT, float4 bitangent : BITANGENT, float4 color : COLOR)
+{
+    float2 texcoord = float2(position.w, normal.w);
+    Model_matrices m = get_matrices(instance_id);
+
+    return vertex_shader_model_matrix_vertex_colors(float4(position.xyz, 1), normal.xyz,
+        tangent, bitangent, texcoord, color, m.model, m.scaled_model);
 }
 
 
@@ -295,44 +345,11 @@ float3 tangent_space_normal_mapping(pixel_shader_input input)
     return normal;
 }
 
-float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFace) : SV_TARGET
+
+float4 direct_lighting(pixel_shader_input input, Material m,
+    float4 color, float4 ao_roughness_metalness)
 {
-    float4 color = float4(0.4, 0.4, 0.4, 1.0f);
-    float4 ao_roughness_metalness = float4(1.0f, 0.5f, 0.5f, 1.0f);
-
-    Material m = materials.m[values.material_id];
-
-    if (values.render_settings & texture_mapping_enabled)
-    {
-        uint texture_index = m.diff_tex;
-        if (m.material_settings & mirror_texture_addressing)
-            color = tex[texture_index].Sample(texture_mirror_sampler, input.texcoord);
-        else
-            color = tex[texture_index].Sample(texture_sampler, input.texcoord);
-    }
-
-    if (m.material_settings & aorm_map_exists)
-    {
-        uint texture_index = m.ao_roughness_metalness_map;
-        if (m.material_settings & mirror_texture_addressing)
-            ao_roughness_metalness =
-                tex[texture_index].Sample(texture_mirror_sampler, input.texcoord);
-        else
-            ao_roughness_metalness = tex[texture_index].Sample(texture_sampler, input.texcoord);
-    }
-
-    const float alpha_cut_out_cut_off_value = 0.01;
-    if (color.a < alpha_cut_out_cut_off_value)
-        discard;
-
-    const float emissive_strength = 0.5f;
-    if (m.material_settings & emissive)
-        return color * emissive_strength;
-
     float3 normal;
-
-    // Flip normal of two-sided triangle if necessary
-    input.normal *= is_front_face ? 1.0f : -1.0f;
 
     if (values.render_settings & normal_mapping_enabled &&
         m.material_settings & normal_map_exists)
@@ -369,7 +386,7 @@ float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFac
                 const float inverted_light_size = 30;
                 const float specular_exponent = (1.0f - roughness) * inverted_light_size;
 
-                float4 specular = lights.l[i].color * specular_intensity *
+                const float4 specular = lights.l[i].color * specular_intensity *
                     specularity * saturate(pow(saturate(
                     dot(2 * dot(normal, -light) * normal + light,
                     normalize(input.position.xyz - eye))), specular_exponent));
@@ -378,7 +395,8 @@ float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFac
                 if (values.render_settings & shadow_mapping_enabled && cast_shadow)
                     shadow = shadow_value(input, i);
 
-                float4 diffuse = diffuse_intensity * color * lights.l[i].color * normal_dot_light;
+                const float4 diffuse = diffuse_intensity * color *
+                                       lights.l[i].color * normal_dot_light;
 
                 const float diffuse_attenuation = max(diffuse_reach_minus_distance, 0) /
                     diffuse_reach;
@@ -387,22 +405,101 @@ float4 pixel_shader(pixel_shader_input input, bool is_front_face : SV_IsFrontFac
                     specular_reach;
 
                 accumulated_light += shadow * (diffuse * diffuse_attenuation +
-                                               specular * specular_attenuation);
+                    specular * specular_attenuation);
             }
         }
     }
 
-    float4 ambient_light = vectors.ambient_light;
-    
-    const float ao = ao_roughness_metalness.r;
-    if (m.material_settings & use_ao_in_aorm_map)
-        ambient_light *= ao;
+    return accumulated_light;
+}
 
-    const float4 ambient = color * ambient_light;
-    const float4 result = ambient + accumulated_light;
+
+float4 pixel_shader(pixel_shader_input input, float4 vertex_color,
+    bool is_front_face : SV_IsFrontFace)
+{
+    float4 color = float4(0.4, 0.4, 0.4, 1.0f);
+    float4 ao_roughness_metalness = float4(1.0f, 0.5f, 0.5f, 1.0f);
+
+    Material m = materials.m[values.material_id];
+
+    if (values.render_settings & texture_mapping_enabled)
+    {
+        uint texture_index = m.diff_tex;
+        if (m.material_settings & mirror_texture_addressing)
+            color = tex[texture_index].Sample(texture_mirror_sampler, input.texcoord);
+        else
+            color = tex[texture_index].Sample(texture_sampler, input.texcoord);
+    }
+
+    const float alpha_cut_out_cut_off_value = 0.01;
+    if (color.a < alpha_cut_out_cut_off_value)
+        discard;
+
+    color *= vertex_color;
+
+    float4 result = float4(0.0f, 0.0f, 0.0f, 0.0f);
+
+    if (m.material_settings & emissive)
+    {
+        float emissive_strength = 0.5f;
+        result = color * emissive_strength;
+
+        // If an early out return statement is put here we get the following compiler warning:
+        // warning X4000: use of potentially uninitialized variable
+    }
+    else
+    {
+        if (m.material_settings & aorm_map_exists)
+        {
+            uint texture_index = m.ao_roughness_metalness_map;
+            if (m.material_settings & mirror_texture_addressing)
+                ao_roughness_metalness =
+                tex[texture_index].Sample(texture_mirror_sampler, input.texcoord);
+            else
+                ao_roughness_metalness = tex[texture_index].Sample(texture_sampler, input.texcoord);
+        }
+
+        // Flip normal of two-sided triangle if necessary
+        input.normal *= is_front_face ? 1.0f : -1.0f;
+
+        float4 pixel_lit_with_direct_lighting =
+            direct_lighting(input, m, color, ao_roughness_metalness);
+
+        float4 ambient_light = vectors.ambient_light;
+
+        const float ao = ao_roughness_metalness.r;
+        if (m.material_settings & use_ao_in_aorm_map)
+            ambient_light *= ao;
+
+        const float4 ambient = color * ambient_light;
+        result = pixel_lit_with_direct_lighting + ambient;
+    }
 
     return result;
 }
+
+
+float4 pixel_shader_no_vertex_colors(pixel_shader_input input,
+    bool is_front_face : SV_IsFrontFace) : SV_TARGET
+{
+    float4 vertex_color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    return pixel_shader(input, vertex_color, is_front_face);
+}
+
+float4 pixel_shader_vertex_colors(pixel_shader_vertex_color_input input,
+    bool is_front_face : SV_IsFrontFace) : SV_TARGET
+{
+    pixel_shader_input input_without_color;
+    input_without_color.sv_position = input.sv_position;
+    input_without_color.position = input.position;
+    input_without_color.normal = input.normal;
+    input_without_color.tangent = input.tangent;
+    input_without_color.bitangent = input.bitangent;
+    input_without_color.texcoord = input.texcoord;
+
+    return pixel_shader(input_without_color, input.color, is_front_face);
+}
+
 
 struct depths_alpha_cut_out_vertex_shader_output
 {

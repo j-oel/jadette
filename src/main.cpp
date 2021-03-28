@@ -88,6 +88,10 @@ Config read_config(const std::string& config_file)
         {
             file >> config.vsync;
         }
+        else if (input == "use_vertex_colors")
+        {
+            file >> config.use_vertex_colors;
+        }
         else if (input == "backface_culling")
         {
             file >> config.backface_culling;

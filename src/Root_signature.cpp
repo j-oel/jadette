@@ -144,6 +144,16 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
         handle_errors(hr, pixel_shader_entry_function, error_messages);
     }
 
+    D3D12_INPUT_ELEMENT_DESC input_element_desc_position_normal_tangents_color[] =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "NORMAL", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        // Texture coordinates are stored in the w components of position and normal.
+        { "TANGENT", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 2, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "BITANGENT", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 3, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "COLOR", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 4, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    };
+
     D3D12_INPUT_ELEMENT_DESC input_element_desc_position_normal_tangents[] =
     {
         { "POSITION", 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -166,7 +176,10 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
     };
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC s {};
-    if (input_layout == Input_layout::position_normal_tangents)
+    if (input_layout == Input_layout::position_normal_tangents_color)
+        s.InputLayout = { input_element_desc_position_normal_tangents_color,
+        _countof(input_element_desc_position_normal_tangents_color) };
+    else if (input_layout == Input_layout::position_normal_tangents)
         s.InputLayout = { input_element_desc_position_normal_tangents,
         _countof(input_element_desc_position_normal_tangents) };
     if (input_layout == Input_layout::position_normal)

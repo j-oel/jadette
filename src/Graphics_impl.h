@@ -85,6 +85,7 @@ private:
     User_interface m_user_interface;
 
     UINT m_render_settings;
+    bool m_use_vertex_colors;
 
     UINT m_width;
     UINT m_height;

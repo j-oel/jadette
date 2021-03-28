@@ -23,6 +23,7 @@ SCENARIO("The Obj parser works")
     vector<XMHALF2> input_texture_coords;
     vector<XMHALF4> input_tangents;
     vector<XMHALF4> input_bitangents;
+    vector<XMHALF4> input_colors;
 
     Vertices vertices;
     vector<int> indices;
@@ -41,8 +42,8 @@ SCENARIO("The Obj parser works")
         WHEN("the data has been parsed")
         {
             bool more_objects = read_obj_file(obj_data, vertices, indices, input_vertices,
-                input_normals, input_texture_coords, input_tangents, input_bitangents, material,
-                &collection->materials);
+                input_normals, input_texture_coords, input_tangents, input_bitangents,
+                input_colors, material, &collection->materials);
 
             THEN("the vertex is available")
             {
@@ -69,8 +70,8 @@ SCENARIO("The Obj parser works")
         WHEN("the data has been parsed")
         {
             bool more_objects = read_obj_file(obj_data, vertices, indices, input_vertices,
-                input_normals, input_texture_coords, input_tangents, input_bitangents, material,
-                &collection->materials);
+                input_normals, input_texture_coords, input_tangents, input_bitangents,
+                input_colors, material, &collection->materials);
 
             THEN("the vertex position is available")
             {
@@ -105,6 +106,44 @@ SCENARIO("The Obj parser works")
                 REQUIRE(position.m128_f32[3] == Approx(0.2f).epsilon(0.001));
                 // obj files use an inverted v-axis
                 REQUIRE(normal.m128_f32[3] == Approx(0.6f).epsilon(0.001));
+            }
+        }
+    }
+
+
+    GIVEN("Some minimal Wavefront Obj data with vertex colors")
+    {
+
+        istringstream obj_data("v 1 2 9 0.3 0.8 0.1\n"
+                               "vn 0 0 0\n"
+                               "f 1//1");
+
+        WHEN("the data has been parsed")
+        {
+            bool more_objects = read_obj_file(obj_data, vertices, indices, input_vertices,
+                input_normals, input_texture_coords, input_tangents, input_bitangents,
+                input_colors, material, &collection->materials);
+
+            THEN("the position is available")
+            {
+                REQUIRE(vertices.positions.size() == 1);
+
+                auto position = convert_half4_to_vector(vertices.positions[0].position);
+
+                REQUIRE(position.m128_f32[0] == 1.0f);
+                REQUIRE(position.m128_f32[1] == 2.0f);
+                REQUIRE(position.m128_f32[2] == 9.0f);
+            }
+
+            THEN("the vertex colors are available")
+            {
+                REQUIRE(vertices.colors.size() == 1);
+
+                auto color = convert_half4_to_vector(vertices.colors[0].color);
+
+                REQUIRE(color.m128_f32[0] == Approx(0.3f).epsilon(0.001));
+                REQUIRE(color.m128_f32[1] == Approx(0.8f).epsilon(0.001));
+                REQUIRE(color.m128_f32[2] == Approx(0.1f).epsilon(0.001));
             }
         }
     }

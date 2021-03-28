@@ -42,6 +42,7 @@ void Mesh::release_temp_resources()
     m_temp_upload_resource_vb_normals.Reset();
     m_temp_upload_resource_vb_tangents.Reset();
     m_temp_upload_resource_vb_bitangents.Reset();
+    m_temp_upload_resource_vb_colors.Reset();
     m_temp_upload_resource_ib.Reset();
 }
 
@@ -51,6 +52,14 @@ void Mesh::draw(ID3D12GraphicsCommandList& command_list, int draw_instances_coun
 {
     switch (input_layout)
     {
+        case Input_layout::position_normal_tangents_color:
+        {
+            D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_positions_buffer_view,
+            m_vertex_normals_buffer_view, m_vertex_tangents_buffer_view,
+                m_vertex_bitangents_buffer_view, m_vertex_colors_buffer_view };
+            command_list.IASetVertexBuffers(0, _countof(vertex_buffer_views), vertex_buffer_views);
+            break;
+        }
         case Input_layout::position_normal_tangents:
         {
             D3D12_VERTEX_BUFFER_VIEW vertex_buffer_views[] = { m_vertex_positions_buffer_view,
@@ -176,6 +185,12 @@ void Mesh::create_and_fill_vertex_buffers(const Vertices& vertices,
     create_and_fill_vertex_buffer(device, command_list, m_vertex_bitangents_buffer,
         m_temp_upload_resource_vb_bitangents, vertices.bitangents, m_vertex_bitangents_buffer_view);
     SET_DEBUG_NAME(m_vertex_bitangents_buffer, L"Vertex Bitangents Buffer");
+
+    create_and_fill_vertex_buffer(device, command_list, m_vertex_colors_buffer,
+        m_temp_upload_resource_vb_colors, vertices.colors.empty()?
+        std::vector<Vertex_color>(vertices.positions.size()) // Create dummy colors to avoid errors
+        : vertices.colors, m_vertex_colors_buffer_view);
+    SET_DEBUG_NAME(m_vertex_colors_buffer, L"Vertex Colors Buffer");
 }
 
 void Mesh::create_and_fill_index_buffer(const std::vector<int>& indices,

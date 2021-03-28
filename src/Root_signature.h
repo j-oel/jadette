@@ -56,7 +56,8 @@ public:
 };
 
 
-enum class Input_layout { position_normal_tangents, position_normal, position };
+enum class Input_layout { position_normal_tangents_color, position_normal_tangents,
+    position_normal, position };
 enum class Depth_write { enabled, disabled, alpha_blending };
 enum class Backface_culling { enabled, disabled };
 enum class Alpha_blending { enabled, disabled };

@@ -70,6 +70,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     m_input(input),
     m_user_interface(m_dx12_display, m_texture_descriptor_heap, texture_index_of_depth_buffer(),
         input, window, config),
+    m_use_vertex_colors(config.use_vertex_colors),
     m_width(config.width),
     m_height(config.height),
     m_shaders_compiled(false),
@@ -234,10 +235,17 @@ void Graphics_impl::create_pipeline_state(ComPtr<ID3D12PipelineState>& pipeline_
 
     auto dsv_format = m_depth_stencil[0].dsv_format();
 
+    Input_layout input_layout = m_use_vertex_colors ? Input_layout::position_normal_tangents_color
+                                                    : Input_layout::position_normal_tangents;
+    const char* vertex_shader = m_use_vertex_colors ?
+        "vertex_shader_srv_instance_data_vertex_colors" :
+        "vertex_shader_srv_instance_data";
+    const char* pixel_shader = m_use_vertex_colors ? "pixel_shader_vertex_colors"
+                                                   : "pixel_shader_no_vertex_colors";
+
     ::create_pipeline_state(m_device, pipeline_state, m_root_signature.get(),
-        "vertex_shader_srv_instance_data", "pixel_shader", dsv_format,
-        render_targets_count, Input_layout::position_normal_tangents, backface_culling,
-        alpha_blending, depth_write);
+        vertex_shader, pixel_shader, dsv_format, render_targets_count, input_layout,
+        backface_culling, alpha_blending, depth_write);
     SET_DEBUG_NAME(pipeline_state, debug_name);
 }
 
@@ -286,9 +294,11 @@ void Graphics_impl::set_and_clear_render_target()
 void Graphics_impl::record_frame_rendering_commands_in_command_list()
 {
     Commands c(*m_command_list.Get(), m_dx12_display->back_buf_index(),
-        &m_depth_stencil[m_dx12_display->back_buf_index()],
-        Texture_mapping::enabled, Input_layout::position_normal_tangents, &m_view, m_scene.get(),
-        &m_depth_pass, &m_root_signature, m_root_signature.m_root_param_index_of_instance_data);
+        &m_depth_stencil[m_dx12_display->back_buf_index()], Texture_mapping::enabled,
+        m_use_vertex_colors ? Input_layout::position_normal_tangents_color
+                            : Input_layout::position_normal_tangents,
+        &m_view, m_scene.get(), &m_depth_pass,
+        &m_root_signature, m_root_signature.m_root_param_index_of_instance_data);
 
     Mesh::reset_draw_calls();
     c.set_back_buf_index(m_dx12_display->back_buf_index());
