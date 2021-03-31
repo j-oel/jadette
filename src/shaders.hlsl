@@ -13,7 +13,8 @@ struct values_struct
 };
 ConstantBuffer<values_struct> values : register(b0);
 
-static const uint normal_map_exists = 1;
+static const uint diffuse_map_exists = 1;
+static const uint normal_map_exists = 1 << 1;
 static const uint invert_y_in_normal_map = 1 << 2;
 static const uint two_channel_normal_map = 1 << 3;
 static const uint mirror_texture_addressing = 1 << 4;
@@ -422,7 +423,8 @@ float4 pixel_shader(pixel_shader_input input, float4 vertex_color,
 
     Material m = materials.m[values.material_id];
 
-    if (values.render_settings & texture_mapping_enabled)
+    if (values.render_settings & texture_mapping_enabled &&
+        m.material_settings & diffuse_map_exists)
     {
         uint texture_index = m.diff_tex;
         if (m.material_settings & mirror_texture_addressing)

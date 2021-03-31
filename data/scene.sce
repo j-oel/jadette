@@ -10,7 +10,8 @@
 # object <object_name> static|dynamic <model_name> <texture_name> <x> <y> <z> <scale>
 #
 # where <model_name> and <texture_name> should refer to an already defined model
-# and texture respectively.
+# and texture respectively. If no texture is available, <texture_name> can be
+# set to "none" (without the quotes).
 # Use "static" for objects that shouldn't be able to move and "dynamic" for
 # objects that can move.
 # <x> <y> <z> are three floating point numbers that define the position of the object.

@@ -351,6 +351,7 @@ void read_mtl_file(const string file_name, map<string, Material>& materials)
         else if (input == "map_Kd")
         {
             file >> material.diffuse_map;
+            material.settings |= diffuse_map_exists;
         }
         else if (input == "map_Bump")
         {

@@ -86,8 +86,8 @@ void read_scene_file(const std::string& file_name, Scene_components& sc,
     auto add_material = [&](UINT diff_tex_index, UINT normal_map_index, UINT aorm_map_index,
         UINT material_settings) -> int
     {
-        Shader_material shader_material = { diff_tex_index - texture_start_index,
-            normal_map_index, aorm_map_index, material_settings };
+        Shader_material shader_material = { diff_tex_index, normal_map_index,
+                                            aorm_map_index, material_settings };
         sc.materials.push_back(shader_material);
 
         int current_material_id = material_id;
@@ -164,6 +164,7 @@ void read_scene_file(const std::string& file_name, Scene_components& sc,
             {
                 vector<shared_ptr<Texture>> used_textures;
                 auto mesh = meshes[model];
+                UINT diffuse_map_index = 0;
                 UINT normal_index = 0;
 
                 shared_ptr<Texture> normal_map_tex = nullptr;
@@ -172,14 +173,19 @@ void read_scene_file(const std::string& file_name, Scene_components& sc,
                 {
                     normal_map_tex = get_texture(normal_map);
                     used_textures.push_back(normal_map_tex);
-                    material_settings = normal_map_exists;
+                    material_settings |= normal_map_exists;
                     normal_index = normal_map_tex->index() - texture_start_index;
                 }
-                auto diffuse_map_tex = get_texture(diffuse_map);
-                used_textures.push_back(diffuse_map_tex);
+                if (diffuse_map != "none")
+                {
+                    auto diffuse_map_tex = get_texture(diffuse_map);
+                    used_textures.push_back(diffuse_map_tex);
+                    material_settings |= diffuse_map_exists;
+                    diffuse_map_index = diffuse_map_tex->index() - texture_start_index;
+                }
 
                 UINT aorm_map_index = 0;
-                int current_material = add_material(diffuse_map_tex->index(), normal_index,
+                int current_material = add_material(diffuse_map_index, normal_index,
                     aorm_map_index, material_settings);
 
                 create_object(name, mesh, used_textures, dynamic, position, current_material, 1,
@@ -194,6 +200,7 @@ void read_scene_file(const std::string& file_name, Scene_components& sc,
                 for (auto& m : model_collection->models)
                 {
                     vector<shared_ptr<Texture>> used_textures;
+                    UINT diffuse_map_index = 0;
                     UINT normal_index = 0;
                     UINT material_settings = 0;
                     int current_material_id = -1;
@@ -226,10 +233,14 @@ void read_scene_file(const std::string& file_name, Scene_components& sc,
                                 used_textures.push_back(aorm_map_tex);
                                 aorm_map_index = aorm_map_tex->index() - texture_start_index;
                             }
-                            auto diffuse_map_tex = get_texture(diffuse_map);
-                            used_textures.push_back(diffuse_map_tex);
+                            if (!diffuse_map.empty())
+                            {
+                                auto diffuse_map_tex = get_texture(diffuse_map);
+                                used_textures.push_back(diffuse_map_tex);
+                                diffuse_map_index = diffuse_map_tex->index() - texture_start_index;
+                            }
 
-                            current_material_id = add_material(diffuse_map_tex->index(),
+                            current_material_id = add_material(diffuse_map_index,
                                 normal_index, aorm_map_index, material_settings);
                             material.id = current_material_id;
                         }
@@ -248,10 +259,15 @@ void read_scene_file(const std::string& file_name, Scene_components& sc,
                             normal_index = normal_map_tex->index() - texture_start_index;
                         }
 
-                        auto diffuse_map_tex = get_texture(diffuse_map);
-                        used_textures.push_back(diffuse_map_tex);
+                        if (diffuse_map != "none")
+                        {
+                            auto diffuse_map_tex = get_texture(diffuse_map);
+                            used_textures.push_back(diffuse_map_tex);
+                            material_settings |= diffuse_map_exists;
+                            diffuse_map_index = diffuse_map_tex->index() - texture_start_index;
+                        }
 
-                        current_material_id = add_material(diffuse_map_tex->index(),
+                        current_material_id = add_material(diffuse_map_index,
                             normal_index, aorm_map_index, material_settings);
                     }
 
@@ -357,24 +373,30 @@ void read_scene_file(const std::string& file_name, Scene_components& sc,
                 throw Model_not_defined(model);
 
             vector<shared_ptr<Texture>> used_textures;
+            UINT material_settings = 0;
+            UINT diffuse_map_index = 0;
 
-            auto diffuse_map_tex = get_texture(diffuse_map);
-            used_textures.push_back(diffuse_map_tex);
+            if (diffuse_map != "none")
+            {
+                auto diffuse_map_tex = get_texture(diffuse_map);
+                used_textures.push_back(diffuse_map_tex);
+                material_settings |= diffuse_map_exists;
+                diffuse_map_index = diffuse_map_tex->index() - texture_start_index;
+            }
 
             shared_ptr<Texture> normal_map_tex = nullptr;
 
             UINT normal_index = 0;
-            UINT material_settings = 0;
             if (!normal_map.empty())
             {
                 normal_map_tex = get_texture(normal_map);
                 used_textures.push_back(normal_map_tex);
-                material_settings = normal_map_exists;
+                material_settings |= normal_map_exists;
                 normal_index = normal_map_tex->index() - texture_start_index;
             }
 
             UINT aorm_map_index = 0;
-            int curr_material_id = add_material(diffuse_map_tex->index(),
+            int curr_material_id = add_material(diffuse_map_index,
                 normal_index, aorm_map_index, material_settings);
 
             constexpr int triangle_start_index = 0;
