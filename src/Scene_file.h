@@ -18,6 +18,12 @@ void read_scene_file(const std::string& file_name, Scene_components& sc,
     int& texture_index, ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
     int root_param_index_of_values);
 
+// Exposed for unit tests
+void read_scene_file_stream(std::istream& file, Scene_components& sc,
+    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
+    int& texture_index, ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
+    int root_param_index_of_values);
+
 
 struct Read_error
 {

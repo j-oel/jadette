@@ -21,6 +21,16 @@ ComPtr<ID3D12GraphicsCommandList> create_command_list(ComPtr<ID3D12Device> devic
     return command_list;
 }
 
+void create_texture_descriptor_heap(ComPtr<ID3D12Device> device,
+    ComPtr<ID3D12DescriptorHeap>& descriptor_heap, UINT textures_count)
+{
+    D3D12_DESCRIPTOR_HEAP_DESC s {};
+    s.NumDescriptors = textures_count;
+    s.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    s.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    throw_if_failed(device->CreateDescriptorHeap(&s, IID_PPV_ARGS(&descriptor_heap)));
+}
+
 void create_descriptor_heap(ComPtr<ID3D12Device> device,
     ComPtr<ID3D12DescriptorHeap>& render_target_view_heap, UINT descriptor_count)
 {

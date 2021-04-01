@@ -75,6 +75,9 @@ template <typename T> void copy_to_read_back_memory(ID3D12GraphicsCommandList& c
 ComPtr<ID3D12GraphicsCommandList> create_command_list(ComPtr<ID3D12Device> device,
     ComPtr<ID3D12CommandAllocator> command_allocator);
 
+void create_texture_descriptor_heap(ComPtr<ID3D12Device> device,
+    ComPtr<ID3D12DescriptorHeap>& descriptor_heap, UINT textures_count);
+
 void create_descriptor_heap(ComPtr<ID3D12Device> device,
     ComPtr<ID3D12DescriptorHeap>& render_target_view_heap, UINT descriptor_count);
 

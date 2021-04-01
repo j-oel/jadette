@@ -35,9 +35,24 @@ void throw_if_file_not_openable(const std::string& file_name)
 }
 
 
+
+void read_scene_file(const std::string& file_name, Scene_components& sc, ComPtr<ID3D12Device> device,
+    ID3D12GraphicsCommandList& command_list, int& texture_index,
+    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_values)
+{
+    using std::ifstream;
+    ifstream file(file_name);
+    if (!file.is_open())
+        throw Scene_file_open_error();
+
+    read_scene_file_stream(file, sc, device, command_list, texture_index, texture_descriptor_heap,
+        root_param_index_of_values);
+}
+
+
 // Only performs basic error checking for the moment. Not very robust.
 // You should ensure that the scene file is valid.
-void read_scene_file(const std::string& file_name, Scene_components& sc,
+void read_scene_file_stream(std::istream& file, Scene_components& sc,
     ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
     int& texture_index, ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
     int root_param_index_of_values)
@@ -46,7 +61,6 @@ void read_scene_file(const std::string& file_name, Scene_components& sc,
     using std::vector;
     using std::shared_ptr;
     using std::string;
-    using std::ifstream;
     using DirectX::XMFLOAT3;
     using namespace Material_settings;
 
@@ -56,9 +70,6 @@ void read_scene_file(const std::string& file_name, Scene_components& sc,
     map<string, string> texture_files;
     map<string, Dynamic_object> objects;
 
-    ifstream file(file_name);
-    if (!file.is_open())
-        throw Scene_file_open_error();
     int object_id = 0;
     int transform_ref = 0;
     int material_id = 0;

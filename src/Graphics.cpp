@@ -219,11 +219,7 @@ void Graphics_impl::scaling_changed(float dpi)
 int Graphics_impl::create_texture_descriptor_heap()
 {
     const int textures_count = 200;
-    D3D12_DESCRIPTOR_HEAP_DESC s {};
-    s.NumDescriptors = textures_count;
-    s.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-    s.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-    throw_if_failed(m_device->CreateDescriptorHeap(&s, IID_PPV_ARGS(&m_texture_descriptor_heap)));
+    ::create_texture_descriptor_heap(m_device, m_texture_descriptor_heap, textures_count);
     return textures_count;
 }
 
