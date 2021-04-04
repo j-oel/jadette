@@ -135,8 +135,9 @@ void View_controller::mouse_look(View& view, double delta_time)
             total_rotation = XMQuaternionMultiply(rotation_sideways, rotation_up_down);
         }
 
-        view.focus_point() = rotate_around_point(view.focus_point(), view.eye_position(),
+        auto new_focus_point = rotate_around_point(view.focus_point(), view.eye_position(),
             total_rotation);
+        view.set_focus_point(new_focus_point);
 
         move_mouse_pointer_to_center();
     }
@@ -229,8 +230,11 @@ void View_controller::first_person_view_update(View& view)
     const XMVECTOR delta_pos = forward_direction * forward_speed + side_direction * side_speed + 
         vertical_direction * vertical_speed;
 
-    view.eye_position() += delta_pos;
-    view.focus_point() += delta_pos;
+    auto new_eye_position = view.eye_position() + delta_pos;
+    view.set_eye_position(new_eye_position);
+
+    auto new_focus_point = view.focus_point() + delta_pos;
+    view.set_focus_point(new_focus_point);
 
     mouse_look(view, delta_time);
 }
@@ -317,7 +321,7 @@ void orbit_rotate_view(View& view, POINT mouse_initial, POINT mouse_current)
         view_x_axis_did_not_flip(new_view_direction, old_view_direction);
 
     if (new_eye_position_is_valid)
-        view.eye_position() = new_eye_position;
+        view.set_eye_position(new_eye_position);
 }
 
 
@@ -363,8 +367,11 @@ void View_controller::orbit_update(View& view)
     const XMVECTOR delta_pos = forward_direction * zoom +
         pan_sensitivity * delta_time * (view_x_axis * pan_x + view_y_axis * pan_y);
 
-    view.eye_position() += delta_pos;
-    view.focus_point() += delta_pos;
+    auto new_eye_position = view.eye_position() + delta_pos;
+    view.set_eye_position(new_eye_position);
+
+    auto new_focus_point = view.focus_point() + delta_pos;
+    view.set_focus_point(new_focus_point);
 
     m_mouse_initial_position = mouse_current;
 }

@@ -16,27 +16,31 @@ public:
         float near_z, float far_z, float fov,
         DirectX::XMVECTOR up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
     void update();
-    const DirectX::XMVECTOR& eye_position() const { return m_eye_position; }
     void set_eye_position(DirectX::XMFLOAT3 position);
+    void set_eye_position(DirectX::XMVECTOR position);
     void set_focus_point(DirectX::XMFLOAT3 focus_point);
-    DirectX::XMVECTOR& eye_position() { return m_eye_position; }
-    DirectX::XMVECTOR& focus_point() { return m_focus_point; }
-    DirectX::XMVECTOR& up() { return m_up; }
+    void set_focus_point(DirectX::XMVECTOR focus_point);
+    void set_up_vector(DirectX::XMFLOAT3 up);
+    DirectX::XMVECTOR eye_position() const { return DirectX::XMLoadFloat3(&m_eye_position); }
+    DirectX::XMVECTOR focus_point() const { return  DirectX::XMLoadFloat3(&m_focus_point); }
+    DirectX::XMVECTOR up() const { return  DirectX::XMLoadFloat3(&m_up); }
     void set_view(ID3D12GraphicsCommandList& command_list, 
         int root_param_index_of_matrices) const;
-    const DirectX::XMMATRIX& view_projection_matrix() const { return m_view_projection_matrix; }
-    const DirectX::XMMATRIX& view_matrix() const { return m_view_matrix; }
-    const DirectX::XMMATRIX& projection_matrix() const { return m_projection_matrix; }
+    DirectX::XMMATRIX view_projection_matrix() const
+    { return DirectX::XMLoadFloat4x4(&m_view_projection_matrix); }
+    DirectX::XMMATRIX view_matrix() const { return DirectX::XMLoadFloat4x4(&m_view_matrix); }
+    DirectX::XMMATRIX projection_matrix() const
+    { return DirectX::XMLoadFloat4x4(&m_projection_matrix); }
     UINT width() const { return m_width; }
     UINT height() const { return m_height; }
 private:
-    DirectX::XMMATRIX m_view_matrix;
-    DirectX::XMMATRIX m_projection_matrix;
-    DirectX::XMMATRIX m_view_projection_matrix;
+    DirectX::XMFLOAT4X4 m_view_matrix;
+    DirectX::XMFLOAT4X4 m_projection_matrix;
+    DirectX::XMFLOAT4X4 m_view_projection_matrix;
 
-    DirectX::XMVECTOR m_eye_position;
-    DirectX::XMVECTOR m_focus_point;
-    DirectX::XMVECTOR m_up;
+    DirectX::XMFLOAT3 m_eye_position;
+    DirectX::XMFLOAT3 m_focus_point;
+    DirectX::XMFLOAT3 m_up;
 
     D3D12_VIEWPORT m_viewport;
     D3D12_RECT m_scissor_rect;

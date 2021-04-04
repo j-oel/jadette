@@ -49,14 +49,14 @@ void Shadow_map::update(Light& light)
     
     light.focus_point.w = static_cast<float>(m_size); // Hijack the unused w component.
 
-    XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+    XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
     auto light_direction = light_position - focus_point;
-    if (light_direction.m128_f32[2] == 0.0f)      // Try to avoid an up vector parallel to 
-        up = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f); // the light direction, because the calculation 
-                                                  // of the view matrix breaks down in that case.
-    m_view.up() = up;
-    m_view.eye_position() = light_position;
-    m_view.focus_point() = focus_point;
+    if (light_direction.m128_f32[2] == 0.0f) // Try to avoid an up vector parallel to 
+        up = { 0.0f, 0.0f, 1.0f };           // the light direction, because the calculation
+                                             // of the view matrix breaks down in that case.
+    m_view.set_up_vector(up);
+    m_view.set_eye_position(light_position);
+    m_view.set_focus_point(focus_point);
     m_view.update();
 
     calculate_shadow_transform(m_view);

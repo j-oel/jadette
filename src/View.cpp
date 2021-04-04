@@ -14,12 +14,9 @@ using namespace DirectX;
 
 
 View::View(UINT width, UINT height, DirectX::XMVECTOR eye_position, DirectX::XMVECTOR focus_point,
-    float near_z, float far_z, float fov, DirectX::XMVECTOR up) :
-    m_view_matrix(XMMatrixIdentity()),
-    m_projection_matrix(XMMatrixIdentity()),
-    m_eye_position(eye_position),
-    m_focus_point(focus_point),
-    m_up(up) /* = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)*/,
+    float near_z, float far_z, float fov,
+    DirectX::XMVECTOR up /* = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)*/) :
+
     m_viewport(CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height))),
     m_scissor_rect({ 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) }),
     m_width(width),
@@ -28,27 +25,52 @@ View::View(UINT width, UINT height, DirectX::XMVECTOR eye_position, DirectX::XMV
     m_near_z(near_z),
     m_far_z(far_z)
 {
+    XMStoreFloat4x4(&m_view_matrix, XMMatrixIdentity());
+    XMStoreFloat4x4(&m_projection_matrix, XMMatrixIdentity());
+    XMStoreFloat3(&m_eye_position, eye_position);
+    XMStoreFloat3(&m_focus_point, focus_point);
+    XMStoreFloat3(&m_up, up);
+
     update();
 }
 
 void View::update()
 {
-    m_view_matrix = XMMatrixLookAtLH(m_eye_position, m_focus_point, m_up);
+    XMMATRIX view_matrix = XMMatrixLookAtLH(XMLoadFloat3(&m_eye_position),
+        XMLoadFloat3(&m_focus_point), XMLoadFloat3(&m_up));
+    XMStoreFloat4x4(&m_view_matrix, view_matrix);
 
     const float aspect_ratio = static_cast<float>(m_width) / m_height;
-    m_projection_matrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_fov),
+    XMMATRIX projection_matrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_fov),
         aspect_ratio, m_near_z, m_far_z);
-    m_view_projection_matrix = XMMatrixMultiply(m_view_matrix, m_projection_matrix);
+    XMStoreFloat4x4(&m_projection_matrix, projection_matrix);
+    XMMATRIX view_projection_matrix = XMMatrixMultiply(view_matrix, projection_matrix);
+    XMStoreFloat4x4(&m_view_projection_matrix, view_projection_matrix);
 }
 
 void View::set_eye_position(DirectX::XMFLOAT3 position)
 {
-    m_eye_position = XMLoadFloat3(&position);
+    m_eye_position = position;
+}
+
+void View::set_eye_position(DirectX::XMVECTOR position)
+{
+    XMStoreFloat3(&m_eye_position, position);
 }
 
 void View::set_focus_point(DirectX::XMFLOAT3 focus_point)
 {
-    m_focus_point = XMLoadFloat3(&focus_point);
+    m_focus_point = focus_point;
+}
+
+void View::set_focus_point(DirectX::XMVECTOR focus_point)
+{
+    XMStoreFloat3(&m_focus_point, focus_point);
+}
+
+void View::set_up_vector(DirectX::XMFLOAT3 up)
+{
+    m_up = up;
 }
 
 void View::set_view(ID3D12GraphicsCommandList& command_list,
