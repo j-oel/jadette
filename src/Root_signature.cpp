@@ -125,7 +125,7 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
     UINT compile_flags = 0;
 #endif
 
-    constexpr wchar_t shader_path[] = L"../src/shaders.hlsl";
+    constexpr wchar_t shader_path[] = L"../src/shaders/shaders.hlsl";
     ComPtr<ID3DBlob> error_messages;
     constexpr D3D_SHADER_MACRO* defines = nullptr;
     constexpr ID3DInclude* include = nullptr;
@@ -143,6 +143,28 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
             "ps_5_1", compile_flags, flags2_not_used, &pixel_shader, &error_messages);
         handle_errors(hr, pixel_shader_entry_function, error_messages);
     }
+
+    CD3DX12_SHADER_BYTECODE compiled_pixel_shader = pixel_shader_entry_function?
+        CD3DX12_SHADER_BYTECODE(pixel_shader.Get()) : CD3DX12_SHADER_BYTECODE { 0, 0 };
+
+    create_pipeline_state(device, pipeline_state, root_signature,
+        CD3DX12_SHADER_BYTECODE(vertex_shader.Get()), compiled_pixel_shader,
+        dsv_format, render_targets_count, input_layout, backface_culling, alpha_blending,
+        depth_write, rtv_format0, rtv_format1);
+}
+
+
+void create_pipeline_state(ComPtr<ID3D12Device> device,
+    ComPtr<ID3D12PipelineState>& pipeline_state, ComPtr<ID3D12RootSignature> root_signature,
+    CD3DX12_SHADER_BYTECODE compiled_vertex_shader, CD3DX12_SHADER_BYTECODE compiled_pixel_shader,
+    DXGI_FORMAT dsv_format, UINT render_targets_count, Input_layout input_layout,
+    Backface_culling backface_culling, Alpha_blending alpha_blending/* = Alpha_blending::disabled*/,
+    Depth_write depth_write/* = Depth_write::enabled*/,
+    DXGI_FORMAT rtv_format0/* = DXGI_FORMAT_R8G8B8A8_UNORM*/,
+    DXGI_FORMAT rtv_format1/* = DXGI_FORMAT_R8G8B8A8_UNORM*/)
+{
+
+
 
     D3D12_INPUT_ELEMENT_DESC input_element_desc_position_normal_tangents_color[] =
     {
@@ -188,11 +210,8 @@ void create_pipeline_state(ComPtr<ID3D12Device> device, ComPtr<ID3D12PipelineSta
     else if (input_layout == Input_layout::position)
         s.InputLayout = { input_element_desc_position, _countof(input_element_desc_position) };
     s.pRootSignature = root_signature.Get();
-    s.VS = CD3DX12_SHADER_BYTECODE(vertex_shader.Get());
-    if (pixel_shader_entry_function)
-        s.PS = CD3DX12_SHADER_BYTECODE(pixel_shader.Get());
-    else
-        s.PS = { 0, 0 };
+    s.VS = compiled_vertex_shader;
+    s.PS = compiled_pixel_shader;
     s.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
     s.SampleMask = UINT_MAX; // Sample mask for blend state
     s.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);

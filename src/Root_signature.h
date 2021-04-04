@@ -70,3 +70,12 @@ void create_pipeline_state(ComPtr<ID3D12Device> device,
     Depth_write depth_write = Depth_write::enabled,
     DXGI_FORMAT rtv_format0 = DXGI_FORMAT_R8G8B8A8_UNORM,
     DXGI_FORMAT rtv_format1 = DXGI_FORMAT_R8G8B8A8_UNORM);
+
+void create_pipeline_state(ComPtr<ID3D12Device> device,
+    ComPtr<ID3D12PipelineState>& pipeline_state, ComPtr<ID3D12RootSignature> root_signature,
+    CD3DX12_SHADER_BYTECODE compiled_vertex_shader, CD3DX12_SHADER_BYTECODE compiled_pixel_shader,
+    DXGI_FORMAT dsv_format, UINT render_targets_count, Input_layout input_layout,
+    Backface_culling backface_culling, Alpha_blending alpha_blending = Alpha_blending::disabled,
+    Depth_write depth_write = Depth_write::enabled,
+    DXGI_FORMAT rtv_format0 = DXGI_FORMAT_R8G8B8A8_UNORM,
+    DXGI_FORMAT rtv_format1 = DXGI_FORMAT_R8G8B8A8_UNORM);

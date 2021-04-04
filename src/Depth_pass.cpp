@@ -13,6 +13,15 @@
 #include "Scene.h"
 #include "Commands.h"
 
+#if defined(_DEBUG)
+#include "build/d-depths_vertex_shader_srv_instance_data.h"
+#include "build/d-depths_alpha_cut_out_vertex_shader_srv_instance_data.h"
+#include "build/d-pixel_shader_depths_alpha_cut_out.h"
+#else
+#include "build/depths_vertex_shader_srv_instance_data.h"
+#include "build/depths_alpha_cut_out_vertex_shader_srv_instance_data.h"
+#include "build/pixel_shader_depths_alpha_cut_out.h"
+#endif
 
 Depth_pass::Depth_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format, bool backface_culling,
     UINT* render_settings) : m_root_signature(device),
@@ -21,28 +30,60 @@ Depth_pass::Depth_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format, bool
     create_pipeline_states(device, dsv_format, backface_culling);
 }
 
+void Depth_pass::create_pipeline_state(ComPtr<ID3D12Device> device,
+    ComPtr<ID3D12PipelineState>& pipeline_state, bool alpha_cut_out,
+    const wchar_t* debug_name, Backface_culling backface_culling)
+{
+    UINT render_targets_count = 0;
+
+    auto compiled_pixel_shader =
+        CD3DX12_SHADER_BYTECODE(g_pixel_shader_depths_alpha_cut_out,
+            _countof(g_pixel_shader_depths_alpha_cut_out));
+    CD3DX12_SHADER_BYTECODE compiled_empty_pixel_shader = { 0, 0 };
+
+    auto compiled_vertex_shader = alpha_cut_out? 
+        CD3DX12_SHADER_BYTECODE(g_depths_alpha_cut_out_vertex_shader_srv_instance_data,
+            _countof(g_depths_alpha_cut_out_vertex_shader_srv_instance_data)) :
+        CD3DX12_SHADER_BYTECODE(g_depths_vertex_shader_srv_instance_data,
+            _countof(g_depths_vertex_shader_srv_instance_data));
+
+    const char* vertex_shader_entry = alpha_cut_out ?
+        "depths_alpha_cut_out_vertex_shader_srv_instance_data" :
+        "depths_vertex_shader_srv_instance_data";
+
+    const char* pixel_shader_entry = alpha_cut_out ? "pixel_shader_depths_alpha_cut_out"
+        : nullptr;
+
+    Input_layout input_layout = alpha_cut_out ? Input_layout::position_normal :
+        Input_layout::position;
+
+    ComPtr<ID3D12RootSignature> root_signature = alpha_cut_out ?
+        m_alpha_cut_out_root_signature.get() : m_root_signature.get();
+
+    if (pipeline_state)
+        ::create_pipeline_state(device, pipeline_state, root_signature,
+            vertex_shader_entry, pixel_shader_entry,
+            m_dsv_format, render_targets_count, input_layout, backface_culling);
+    else
+        ::create_pipeline_state(device, pipeline_state, root_signature,
+            compiled_vertex_shader, alpha_cut_out? compiled_pixel_shader :
+            compiled_empty_pixel_shader, m_dsv_format, render_targets_count, input_layout,
+            backface_culling);
+
+    SET_DEBUG_NAME(pipeline_state, debug_name);
+}
+
 void Depth_pass::create_pipeline_states(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format,
     bool backface_culling)
 {
-    UINT render_targets_count = 0;
-    const char* empty_pixel_shader = nullptr;
+    create_pipeline_state(device, m_pipeline_state, false, L"Depths Pipeline State Object",
+        backface_culling ? Backface_culling::enabled : Backface_culling::disabled);
 
-    create_pipeline_state(device, m_pipeline_state, m_root_signature.get(),
-        "depths_vertex_shader_srv_instance_data", empty_pixel_shader,
-        dsv_format, render_targets_count, Input_layout::position, backface_culling ?
-        Backface_culling::enabled : Backface_culling::disabled);
-    SET_DEBUG_NAME(m_pipeline_state, L"Depths Pipeline State Object");
+    create_pipeline_state(device, m_pipeline_state_two_sided, false,
+        L"Depths Pipeline State Object Two Sided", Backface_culling::disabled);
 
-    create_pipeline_state(device, m_pipeline_state_two_sided, m_root_signature.get(),
-        "depths_vertex_shader_srv_instance_data", empty_pixel_shader,
-        dsv_format, render_targets_count, Input_layout::position,
-        Backface_culling::disabled);
-    SET_DEBUG_NAME(m_pipeline_state_two_sided, L"Depths Pipeline State Object Two Sided");
-
-    create_pipeline_state(device, m_pipeline_state_alpha_cut_out, m_alpha_cut_out_root_signature.get(),
-        "depths_alpha_cut_out_vertex_shader_srv_instance_data", "pixel_shader_depths_alpha_cut_out",
-        dsv_format, render_targets_count, Input_layout::position_normal, Backface_culling::disabled);
-    SET_DEBUG_NAME(m_pipeline_state_alpha_cut_out, L"Depths Alpha Cut Out Pipeline State Object");
+    create_pipeline_state(device, m_pipeline_state_alpha_cut_out, true,
+        L"Depths Alpha Cut Out Pipeline State Object", Backface_culling::disabled);
 }
 
 void set_render_target(ID3D12GraphicsCommandList& command_list,

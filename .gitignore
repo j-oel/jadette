@@ -1,5 +1,2 @@
-Debug/
-Release/
-Minimal/
-x64/
+build/
 .vs/

@@ -91,7 +91,7 @@ private:
     UINT m_height;
 
     std::thread m_scene_loading_thread;
-    std::thread m_shader_compilation_thread;
+    std::thread m_shader_loading_thread;
     std::atomic<bool> m_shaders_compiled;
     std::atomic<bool> m_scene_loaded;
     bool m_init_done;

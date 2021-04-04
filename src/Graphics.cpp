@@ -14,7 +14,18 @@
 #include "Commands.h"
 #include "Mesh.h"
 #include "Shadow_map.h"
- 
+
+#if defined(_DEBUG)
+#include "build/d-pixel_shader_vertex_colors.h"
+#include "build/d-pixel_shader_no_vertex_colors.h"
+#include "build/d-vertex_shader_srv_instance_data.h"
+#include "build/d-vertex_shader_srv_instance_data_vertex_colors.h"
+#else
+#include "build/pixel_shader_vertex_colors.h"
+#include "build/pixel_shader_no_vertex_colors.h"
+#include "build/vertex_shader_srv_instance_data.h"
+#include "build/vertex_shader_srv_instance_data_vertex_colors.h"
+#endif
 
 Graphics::Graphics(HWND window, const Config& config, Input& input)
 {
@@ -108,7 +119,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
         m_scene_loaded = true;
     };
     
-    auto compile_shaders = [=]()
+    auto load_shaders = [=]()
     {
         create_pipeline_states(config);
 
@@ -116,7 +127,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     };
 
     m_scene_loading_thread = std::thread(load_scene);
-    m_shader_compilation_thread = std::thread(compile_shaders);
+    m_shader_loading_thread = std::thread(load_shaders);
 }
 
 Graphics_impl::~Graphics_impl()
@@ -131,7 +142,7 @@ Graphics_impl::~Graphics_impl()
 void Graphics_impl::finish_init()
 {
     m_scene_loading_thread.join();
-    m_shader_compilation_thread.join();
+    m_shader_loading_thread.join();
     m_init_done = true;
 }
 
@@ -195,7 +206,7 @@ void Graphics_impl::render_loading_message()
     m_command_list->Close();
 
 #ifndef NO_TEXT
-    std::wstring message = L"Compiling shaders...";
+    std::wstring message = L"Loading shaders...";
     if (m_shaders_compiled)
         message += L" done.";
     message += L"\nLoading scene...";
@@ -233,15 +244,36 @@ void Graphics_impl::create_pipeline_state(ComPtr<ID3D12PipelineState>& pipeline_
 
     Input_layout input_layout = m_use_vertex_colors ? Input_layout::position_normal_tangents_color
                                                     : Input_layout::position_normal_tangents;
+    
     const char* vertex_shader = m_use_vertex_colors ?
         "vertex_shader_srv_instance_data_vertex_colors" :
         "vertex_shader_srv_instance_data";
     const char* pixel_shader = m_use_vertex_colors ? "pixel_shader_vertex_colors"
                                                    : "pixel_shader_no_vertex_colors";
 
-    ::create_pipeline_state(m_device, pipeline_state, m_root_signature.get(),
-        vertex_shader, pixel_shader, dsv_format, render_targets_count, input_layout,
-        backface_culling, alpha_blending, depth_write);
+    if (!pipeline_state)
+    {
+        auto compiled_vertex_shader = m_use_vertex_colors ?
+            CD3DX12_SHADER_BYTECODE(g_vertex_shader_srv_instance_data_vertex_colors,
+                _countof(g_vertex_shader_srv_instance_data_vertex_colors)) :
+            CD3DX12_SHADER_BYTECODE(g_vertex_shader_srv_instance_data,
+                _countof(g_vertex_shader_srv_instance_data));
+
+        auto compiled_pixel_shader = m_use_vertex_colors ?
+            CD3DX12_SHADER_BYTECODE(g_pixel_shader_vertex_colors,
+                _countof(g_pixel_shader_vertex_colors)) :
+            CD3DX12_SHADER_BYTECODE(g_pixel_shader_no_vertex_colors,
+                _countof(g_pixel_shader_no_vertex_colors));
+
+        ::create_pipeline_state(m_device, pipeline_state, m_root_signature.get(),
+            compiled_vertex_shader, compiled_pixel_shader,
+            dsv_format, render_targets_count, input_layout,
+            backface_culling, alpha_blending, depth_write);
+    }
+    else
+        ::create_pipeline_state(m_device, pipeline_state, m_root_signature.get(),
+            vertex_shader, pixel_shader, dsv_format, render_targets_count, input_layout,
+            backface_culling, alpha_blending, depth_write);
     SET_DEBUG_NAME(pipeline_state, debug_name);
 }
 
