@@ -29,7 +29,7 @@ public:
     void set_back_buf_index(UINT index) { m_back_buf_index = index; }
 
     void upload_data_to_gpu();
-    void record_shadow_map_generation_commands_in_command_list();
+    void generate_shadow_maps();
     void early_z_pass();
     void set_root_signature();
     void clear_depth_stencil();

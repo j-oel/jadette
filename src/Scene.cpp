@@ -101,7 +101,7 @@ public:
     void draw_two_sided_objects(ID3D12GraphicsCommandList& command_list,
         Texture_mapping texture_mapping, const Input_layout& input_layout) const;
     void upload_data_to_gpu(ID3D12GraphicsCommandList& command_list, UINT back_buf_index);
-    void record_shadow_map_generation_commands_in_command_list(UINT back_buf_index,
+    void generate_shadow_maps(UINT back_buf_index,
         Depth_pass& depth_pass, ID3D12GraphicsCommandList& command_list, Scene& scene);
     int triangles_count() const { return m_triangles_count; }
     size_t vertices_count() const { return m_vertices_count; }
@@ -211,10 +211,10 @@ void Scene::upload_data_to_gpu(ID3D12GraphicsCommandList& command_list, UINT bac
     impl->upload_data_to_gpu(command_list, back_buf_index);
 }
 
-void Scene::record_shadow_map_generation_commands_in_command_list(UINT back_buf_index,
+void Scene::generate_shadow_maps(UINT back_buf_index,
     Depth_pass& depth_pass, ID3D12GraphicsCommandList& command_list)
 {
-    impl->record_shadow_map_generation_commands_in_command_list(back_buf_index, depth_pass,
+    impl->generate_shadow_maps(back_buf_index, depth_pass,
         command_list, *this);
 }
 
@@ -379,6 +379,7 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
             m.dynamic_objects.clear();
             m.transparent_objects.clear();
             m.alpha_cut_out_objects.clear();
+            m.two_sided_objects.clear();
             m.rotating_objects.clear();
             m.flying_objects.clear();
             std::rethrow_exception(exc);
@@ -681,7 +682,7 @@ void Scene_impl::upload_data_to_gpu(ID3D12GraphicsCommandList& command_list,
             m.dynamic_model_transforms);
 }
 
-void Scene_impl::record_shadow_map_generation_commands_in_command_list(UINT back_buf_index,
+void Scene_impl::generate_shadow_maps(UINT back_buf_index,
     Depth_pass& depth_pass, ID3D12GraphicsCommandList& command_list, Scene& scene)
 {
     for (auto& s : m_shadow_maps)

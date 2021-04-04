@@ -6,6 +6,9 @@
 
 
 #pragma once
+
+// To disable the text rendering (which uses D3D11On12), for example necessary 
+// when running Nsight Graphics, uncomment the following line:
 //#define NO_TEXT
 
 

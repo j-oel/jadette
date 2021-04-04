@@ -161,8 +161,7 @@ void Graphics_impl::update()
         if (m_user_interface.reload_shaders_requested())
         {
             create_pipeline_states(m_config);
-            m_depth_pass.reload_shaders(m_device, m_depth_stencil[0].dsv_format(),
-                m_config.backface_culling);
+            m_depth_pass.reload_shaders(m_device, m_config.backface_culling);
             m_user_interface.reload_shaders(m_device, m_config.backface_culling);
         }
     }
@@ -333,7 +332,7 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     c.upload_data_to_gpu();
     c.set_descriptor_heap(m_texture_descriptor_heap);
     if (m_render_settings & shadow_mapping_enabled)
-        c.record_shadow_map_generation_commands_in_command_list();
+        c.generate_shadow_maps();
     if (m_user_interface.early_z_pass())
         c.early_z_pass();
     else

@@ -35,11 +35,10 @@ void Commands::upload_data_to_gpu()
     m_scene->upload_data_to_gpu(m_command_list, m_back_buf_index);
 }
 
-void Commands::record_shadow_map_generation_commands_in_command_list()
+void Commands::generate_shadow_maps()
 {
     assert(m_scene);
-    m_scene->record_shadow_map_generation_commands_in_command_list(m_back_buf_index,
-        *m_depth_pass, m_command_list);
+    m_scene->generate_shadow_maps(m_back_buf_index, *m_depth_pass, m_command_list);
 }
 
 void Commands::early_z_pass()

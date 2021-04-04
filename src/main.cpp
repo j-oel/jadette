@@ -277,6 +277,9 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM w_param, LPA
             return 0;
         }
 
+        // "The system sends this message when there are no other messages in the
+        // application's message queue."
+        // https://docs.microsoft.com/en-us/windows/win32/gdi/wm-paint
         case WM_PAINT:
             if (engine)
             {

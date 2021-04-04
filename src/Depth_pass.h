@@ -41,14 +41,12 @@ public:
         UINT* render_settings);
     void record_commands(UINT back_buf_index, Scene& scene, const View& view,
         Depth_stencil& depth_stencil, ID3D12GraphicsCommandList& command_list);
-    void reload_shaders(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format,
-        bool backface_culling);
+    void reload_shaders(ComPtr<ID3D12Device> device, bool backface_culling);
 private:
     void create_pipeline_state(ComPtr<ID3D12Device> device,
         ComPtr<ID3D12PipelineState>& pipeline_state, bool alpha_cut_out,
         const wchar_t* debug_name, Backface_culling backface_culling);
-    void create_pipeline_states(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format,
-        bool backface_culling);
+    void create_pipeline_states(ComPtr<ID3D12Device> device, bool backface_culling);
     ComPtr<ID3D12PipelineState> m_pipeline_state;
     ComPtr<ID3D12PipelineState> m_pipeline_state_two_sided;
     ComPtr<ID3D12PipelineState> m_pipeline_state_alpha_cut_out;

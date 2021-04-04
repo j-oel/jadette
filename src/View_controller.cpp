@@ -86,8 +86,8 @@ XMVECTOR rotate_around_point(XMVECTOR point_to_rotate, XMVECTOR point_to_rotate_
     XMVECTOR rotation_quaternion)
 {
     XMVECTOR no_scaling = XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f);
-    XMMATRIX rotation_matrix = XMMatrixTransformation(XMVectorZero(), XMVectorZero(),
-        no_scaling, point_to_rotate_around, rotation_quaternion, XMVectorZero());
+    XMMATRIX rotation_matrix = XMMatrixAffineTransformation(no_scaling,
+        point_to_rotate_around, rotation_quaternion, XMVectorZero());
 
     return XMVector3TransformCoord(point_to_rotate, rotation_matrix);
 }
@@ -314,10 +314,10 @@ void orbit_rotate_view(View& view, POINT mouse_initial, POINT mouse_current)
     constexpr float min_angle = 0.0f + absolute_minimum_angle;
     constexpr float max_angle = 180.0f - absolute_minimum_angle;
 
-    const bool view_direction_is_not_parallell_with_up_vector =
+    const bool view_direction_is_not_parallel_with_up_vector =
         abs(new_angle) > min_angle && abs(new_angle) < max_angle;
 
-    const bool new_eye_position_is_valid = view_direction_is_not_parallell_with_up_vector and
+    const bool new_eye_position_is_valid = view_direction_is_not_parallel_with_up_vector and
         view_x_axis_did_not_flip(new_view_direction, old_view_direction);
 
     if (new_eye_position_is_valid)
