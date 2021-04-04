@@ -29,7 +29,7 @@ class Root_signature
 public:
     virtual void set_constants(ID3D12GraphicsCommandList& command_list,
         UINT back_buf_index, Scene* scene, const View* view) = 0;
-    ComPtr<ID3D12RootSignature> get() { return m_root_signature; }
+    ComPtr<ID3D12RootSignature> get() const { return m_root_signature; }
 protected:
     void create(ComPtr<ID3D12Device> device, const CD3DX12_ROOT_PARAMETER1* root_parameters,
         UINT root_parameters_count, const D3D12_STATIC_SAMPLER_DESC* samplers,

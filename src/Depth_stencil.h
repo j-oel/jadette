@@ -24,7 +24,7 @@ public:
     void set_debug_names(const wchar_t* dsv_heap_name, const wchar_t* buffer_name);
     D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle() const;
     D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle() const { return m_depth_buffer_gpu_descriptor_handle; }
-    DXGI_FORMAT dsv_format() { return m_dsv_format; }
+    DXGI_FORMAT dsv_format() const { return m_dsv_format; }
 private:
     void create_descriptor_heap(ComPtr<ID3D12Device> device);
     void create_depth_stencil_view(ComPtr<ID3D12Device> device);

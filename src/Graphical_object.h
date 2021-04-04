@@ -28,10 +28,10 @@ public:
         int id, int material_id, int instances = 1,
         int triangle_index = 0);
 
-    void draw(ID3D12GraphicsCommandList& command_list, const Input_layout& input_layout);
+    void draw(ID3D12GraphicsCommandList& command_list, const Input_layout& input_layout) const;
     void release_temp_resources();
-    int triangles_count();
-    size_t vertices_count();
+    int triangles_count() const;
+    size_t vertices_count() const;
     int instances() const { return m_instances; }
     int id() const { return m_id; }
     int material_id() const { return m_material_id; }

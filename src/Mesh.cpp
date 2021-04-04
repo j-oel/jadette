@@ -48,7 +48,7 @@ void Mesh::release_temp_resources()
 
 
 void Mesh::draw(ID3D12GraphicsCommandList& command_list, int draw_instances_count,
-    const Input_layout& input_layout, int triangle_index)
+    const Input_layout& input_layout, int triangle_index) const
 {
     switch (input_layout)
     {
@@ -90,12 +90,12 @@ void Mesh::draw(ID3D12GraphicsCommandList& command_list, int draw_instances_coun
     ++s_draw_calls;
 }
 
-int Mesh::triangles_count()
+int Mesh::triangles_count() const
 {
     return m_transparent? 1 : m_index_count / 3;
 }
 
-size_t Mesh::vertices_count()
+size_t Mesh::vertices_count() const
 {
     return m_transparent? 3 : m_vertices_count;
 }

@@ -73,7 +73,7 @@ void Shadow_map::generate(UINT back_buf_index,
 }
 
 void Shadow_map::set_shadow_map_for_shader(ID3D12GraphicsCommandList& command_list, 
-    UINT back_buf_index, int root_param_index_of_shadow_map)
+    UINT back_buf_index, int root_param_index_of_shadow_map) const
 {
     command_list.SetGraphicsRootDescriptorTable(root_param_index_of_shadow_map,
         m_depth_stencil[back_buf_index].gpu_handle());

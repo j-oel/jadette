@@ -17,7 +17,7 @@ public:
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
         const std::string& texture_filename, UINT texture_index);
     void set_texture_for_shader(ID3D12GraphicsCommandList& command_list,
-        int root_param_index_of_textures);
+        int root_param_index_of_textures) const;
     void release_temp_resources();
     UINT index() const { return m_texture_index; }
 private:

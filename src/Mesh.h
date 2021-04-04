@@ -67,10 +67,10 @@ public:
     void release_temp_resources();
 
     void draw(ID3D12GraphicsCommandList& command_list, int draw_instances_count,
-        const Input_layout& input_layout, int triangle_index);
+        const Input_layout& input_layout, int triangle_index) const;
 
-    int triangles_count();
-    size_t vertices_count();
+    int triangles_count() const;
+    size_t vertices_count() const;
     DirectX::XMVECTOR center(int triangle_index) const;
 
     static int draw_calls() { return s_draw_calls; }
@@ -178,7 +178,8 @@ public:
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index);
     void upload_new_data_to_gpu(ID3D12GraphicsCommandList& command_list,
         const std::vector<Per_instance_transform>& instance_data);
-    D3D12_GPU_DESCRIPTOR_HANDLE srv_gpu_handle() { return m_structured_buffer_gpu_descriptor_handle; }
+    D3D12_GPU_DESCRIPTOR_HANDLE srv_gpu_handle() const 
+    { return m_structured_buffer_gpu_descriptor_handle; }
 private:
     ComPtr<ID3D12Resource> m_instance_vertex_buffer;
     ComPtr<ID3D12Resource> m_upload_resource;

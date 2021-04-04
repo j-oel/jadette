@@ -108,14 +108,14 @@ public:
     size_t objects_count() const { return m.graphical_objects.size(); }
     size_t lights_count() const { return m.lights.size(); }
     void set_static_instance_data_shader_constant(ID3D12GraphicsCommandList& command_list,
-        int root_param_index_of_instance_data);
+        int root_param_index_of_instance_data) const;
     void set_dynamic_instance_data_shader_constant(ID3D12GraphicsCommandList& command_list,
-        UINT back_buf_index, int root_param_index_of_instance_data);
+        UINT back_buf_index, int root_param_index_of_instance_data) const;
     void set_lights_data_shader_constant(ID3D12GraphicsCommandList& command_list,
         UINT back_buf_index, int root_param_index_of_lights_data,
-        int root_param_index_of_shadow_map);
+        int root_param_index_of_shadow_map) const;
     void set_material_shader_constant(ID3D12GraphicsCommandList& command_list,
-        int root_param_index_of_textures, int root_param_index_of_materials);
+        int root_param_index_of_textures, int root_param_index_of_materials) const;
     void manipulate_object(DirectX::XMFLOAT3& delta_pos, DirectX::XMFLOAT4& delta_rotation);
     void select_object(int object_id);
     bool object_selected() { return m_object_selected; }
@@ -239,13 +239,13 @@ size_t Scene::lights_count() const
 }
 
 void Scene::set_static_instance_data_shader_constant(ID3D12GraphicsCommandList& command_list,
-    int root_param_index_of_instance_data)
+    int root_param_index_of_instance_data) const
 {
     impl->set_static_instance_data_shader_constant(command_list, root_param_index_of_instance_data);
 }
 
 void Scene::set_dynamic_instance_data_shader_constant(ID3D12GraphicsCommandList& command_list,
-    UINT back_buf_index, int root_param_index_of_instance_data)
+    UINT back_buf_index, int root_param_index_of_instance_data) const
 {
     impl->set_dynamic_instance_data_shader_constant(command_list, back_buf_index,
         root_param_index_of_instance_data);
@@ -253,14 +253,14 @@ void Scene::set_dynamic_instance_data_shader_constant(ID3D12GraphicsCommandList&
 
 void Scene::set_lights_data_shader_constant(ID3D12GraphicsCommandList& command_list,
     UINT back_buf_index, int root_param_index_of_lights_data,
-    int root_param_index_of_shadow_map)
+    int root_param_index_of_shadow_map) const
 {
     impl->set_lights_data_shader_constant(command_list, back_buf_index,
         root_param_index_of_lights_data, root_param_index_of_shadow_map);
 }
 
 void Scene::set_material_shader_constant(ID3D12GraphicsCommandList& command_list,
-    int root_param_index_of_textures, int root_param_index_of_materials)
+    int root_param_index_of_textures, int root_param_index_of_materials) const
 {
     impl->set_material_shader_constant(command_list, root_param_index_of_textures,
         root_param_index_of_materials);
@@ -700,7 +700,7 @@ void Scene_impl::upload_static_instance_data(ID3D12GraphicsCommandList& command_
 }
 
 void Scene_impl::set_static_instance_data_shader_constant(ID3D12GraphicsCommandList& command_list,
-    int root_param_index_of_instance_data)
+    int root_param_index_of_instance_data) const
 {
     if (!m.static_objects.empty())
         command_list.SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
@@ -708,7 +708,7 @@ void Scene_impl::set_static_instance_data_shader_constant(ID3D12GraphicsCommandL
 }
 
 void Scene_impl::set_dynamic_instance_data_shader_constant(ID3D12GraphicsCommandList& command_list,
-    UINT back_buf_index, int root_param_index_of_instance_data)
+    UINT back_buf_index, int root_param_index_of_instance_data) const
 {
     if (!m.dynamic_objects.empty())
         command_list.SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
@@ -716,7 +716,8 @@ void Scene_impl::set_dynamic_instance_data_shader_constant(ID3D12GraphicsCommand
 }
 
 void Scene_impl::set_lights_data_shader_constant(ID3D12GraphicsCommandList& command_list,
-    UINT back_buf_index, int root_param_index_of_lights_data, int root_param_index_of_shadow_map)
+    UINT back_buf_index, int root_param_index_of_lights_data,
+    int root_param_index_of_shadow_map) const
 {
     if (!m.lights.empty())
         command_list.SetGraphicsRootDescriptorTable(root_param_index_of_lights_data,
@@ -728,7 +729,7 @@ void Scene_impl::set_lights_data_shader_constant(ID3D12GraphicsCommandList& comm
 }
 
 void Scene_impl::set_material_shader_constant(ID3D12GraphicsCommandList& command_list,
-    int root_param_index_of_textures, int root_param_index_of_materials)
+    int root_param_index_of_textures, int root_param_index_of_materials) const
 {
     command_list.SetGraphicsRootDescriptorTable(root_param_index_of_materials,
         m_materials_data->gpu_handle());

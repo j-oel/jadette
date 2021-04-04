@@ -53,7 +53,7 @@ Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<
 }
 
 void Graphical_object::draw(ID3D12GraphicsCommandList& command_list,
-    const Input_layout& input_layout)
+    const Input_layout& input_layout) const
 {
     m_mesh->draw(command_list, m_instances, input_layout, m_triangle_index);
 }
@@ -65,12 +65,12 @@ void Graphical_object::release_temp_resources()
     m_mesh->release_temp_resources();
 }
 
-int Graphical_object::triangles_count()
+int Graphical_object::triangles_count() const
 {
     return m_mesh->triangles_count();
 }
 
-size_t Graphical_object::vertices_count()
+size_t Graphical_object::vertices_count() const
 {
     return m_mesh->vertices_count();
 }

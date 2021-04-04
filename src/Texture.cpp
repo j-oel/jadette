@@ -86,7 +86,7 @@ Texture::Texture(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command
 }
 
 void Texture::set_texture_for_shader(ID3D12GraphicsCommandList& command_list, 
-    int root_param_index_of_textures)
+    int root_param_index_of_textures) const
 {
     command_list.SetGraphicsRootDescriptorTable(root_param_index_of_textures,
         m_texture_gpu_descriptor_handle);
