@@ -104,6 +104,10 @@ Config read_config(const std::string& config_file)
         {
             file >> config.monitor;
         }
+        else if (input == "swap_chain_buffer_count")
+        {
+            file >> config.swap_chain_buffer_count;
+        }
         else if (!input.empty() && input[0] == '#')
         {
             std::getline(file, input);

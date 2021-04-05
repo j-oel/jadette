@@ -24,7 +24,7 @@ using Microsoft::WRL::ComPtr;
 class Dx12_display
 {
 public:
-    Dx12_display(HWND window, UINT width, UINT height, bool vsync);
+    Dx12_display(HWND window, UINT width, UINT height, bool vsync, UINT swap_chain_buffer_count);
     ~Dx12_display();
 
     void begin_render(ComPtr<ID3D12GraphicsCommandList> command_list);
@@ -57,19 +57,20 @@ private:
 
     ComPtr<ID3D12Device> m_device;
     ComPtr<IDXGISwapChain3> m_swap_chain;
-    static constexpr UINT m_swap_chain_buffer_count = 2;
-    ComPtr<ID3D12Resource> m_render_targets[m_swap_chain_buffer_count];
+    UINT m_swap_chain_buffer_count;
+    static constexpr UINT m_max_swap_chain_buffer_count = 4;
+    ComPtr<ID3D12Resource> m_render_targets[m_max_swap_chain_buffer_count];
     ComPtr<ID3D12DescriptorHeap> m_render_target_view_heap;
-    D3D12_CPU_DESCRIPTOR_HANDLE m_render_target_view_handles[m_swap_chain_buffer_count];
+    D3D12_CPU_DESCRIPTOR_HANDLE m_render_target_view_handles[m_max_swap_chain_buffer_count];
     ComPtr<ID3D12GraphicsCommandList> m_command_list;
-    ComPtr<ID3D12CommandAllocator> m_command_allocators[m_swap_chain_buffer_count];
+    ComPtr<ID3D12CommandAllocator> m_command_allocators[m_max_swap_chain_buffer_count];
     ComPtr<ID3D12CommandQueue> m_command_queue;
     UINT m_width;
     UINT m_height;
 
-    ComPtr<ID3D12Fence> m_frame_fences[m_swap_chain_buffer_count];
-    UINT64 m_frame_fence_values[m_swap_chain_buffer_count];
-    HANDLE m_fence_events[m_swap_chain_buffer_count];
+    ComPtr<ID3D12Fence> m_frame_fences[m_max_swap_chain_buffer_count];
+    UINT64 m_frame_fence_values[m_max_swap_chain_buffer_count];
+    HANDLE m_fence_events[m_max_swap_chain_buffer_count];
     UINT m_back_buf_index;
 
     bool m_vsync;

@@ -67,7 +67,8 @@ namespace
 Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     m_config(config),
     m_dx12_display(
-        std::make_shared<Dx12_display>(window, config.width, config.height, config.vsync)),
+        std::make_shared<Dx12_display>(window, config.width, config.height, config.vsync,
+            config.swap_chain_buffer_count)),
     m_device(m_dx12_display->device()),
     m_textures_count(create_texture_descriptor_heap()),
     m_depth_stencil(1, Depth_stencil(m_device, config.width, config.height,

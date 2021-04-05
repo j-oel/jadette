@@ -11,8 +11,12 @@
 #include "Dx12_util.h"
 
 
-Dx12_display::Dx12_display(HWND window, UINT width, UINT height, bool vsync) :
+Dx12_display::Dx12_display(HWND window, UINT width, UINT height, bool vsync,
+    UINT swap_chain_buffer_count) :
     m_device(nullptr),
+    m_swap_chain_buffer_count(
+        swap_chain_buffer_count > m_max_swap_chain_buffer_count ?
+        m_max_swap_chain_buffer_count : swap_chain_buffer_count),
     m_back_buf_index(0),
     m_width(width),
     m_height(height),
