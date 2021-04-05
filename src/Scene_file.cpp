@@ -368,7 +368,6 @@ void read_scene_file_stream(std::istream& file, Scene_components& sc,
 
             int instances = count.x * count.y * count.z;
             bool dynamic = static_dynamic == "dynamic" ? true : false;
-            auto new_object_count = sc.graphical_objects.size() + instances;
             sc.graphical_objects.reserve(sc.graphical_objects.size() + instances);
             if (dynamic)
                 sc.dynamic_objects.reserve(sc.dynamic_objects.size() + instances);

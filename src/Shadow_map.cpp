@@ -81,7 +81,7 @@ void Shadow_map::set_shadow_map_for_shader(ID3D12GraphicsCommandList& command_li
 
 D3D12_STATIC_SAMPLER_DESC Shadow_map::shadow_map_sampler(UINT sampler_shader_register)
 {
-    CD3DX12_STATIC_SAMPLER_DESC s;
+    CD3DX12_STATIC_SAMPLER_DESC s { };
     s.Init(sampler_shader_register);
     s.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
     s.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;

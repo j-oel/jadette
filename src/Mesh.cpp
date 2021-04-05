@@ -116,7 +116,7 @@ namespace
     {
         const UINT vertex_buffer_size = static_cast<UINT>(source_data.size() * sizeof(T));
         create_and_fill_buffer(device, command_list, destination_buffer,
-            temp_upload_resource, source_data, vertex_buffer_size, view);
+            temp_upload_resource, source_data, vertex_buffer_size, view, vertex_buffer_size);
         view.StrideInBytes = sizeof(T);
     }
 }
@@ -201,7 +201,8 @@ void Mesh::create_and_fill_index_buffer(const std::vector<int>& indices,
     const UINT index_buffer_size = static_cast<UINT>(indices.size() * sizeof(int));
 
     create_and_fill_buffer(device, command_list, m_index_buffer, 
-        m_temp_upload_resource_ib, indices, index_buffer_size, m_index_buffer_view);
+        m_temp_upload_resource_ib, indices, index_buffer_size,
+        m_index_buffer_view, index_buffer_size);
 
     SET_DEBUG_NAME(m_index_buffer, L"Index Buffer");
 
@@ -288,15 +289,13 @@ void construct_instance_data(ComPtr<ID3D12Device> device,
 
     create_and_fill_buffer(device, command_list, instance_vertex_buffer,
         upload_resource, instance_data, vertex_buffer_size, instance_vertex_buffer_view,
-        after_state);
+        vertex_buffer_size, after_state);
 
     instance_vertex_buffer_view.StrideInBytes = sizeof(T);
 }
 
-Instance_data::Instance_data(ComPtr<ID3D12Device> device,
-    ID3D12GraphicsCommandList& command_list,
-    UINT instance_count, Per_instance_transform data,
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index)
+Instance_data::Instance_data(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
+    UINT instance_count, ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index)
 {
     if (instance_count == 0)
         return;

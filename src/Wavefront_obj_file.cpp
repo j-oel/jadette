@@ -45,7 +45,6 @@ bool read_obj_file(std::istream& file, Vertices& vertices, vector<int>& indices,
 
     string input;
 
-    bool first_object = true;
     bool more_objects = false;
 
     constexpr int max_vertex_components = 7;

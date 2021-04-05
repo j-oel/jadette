@@ -162,7 +162,7 @@ void Object_id_pass::read_data_from_gpu(std::vector<int>& data)
 }
 
 void create_render_target_view(ComPtr<ID3D12Device> device, ComPtr <ID3D12Resource>& render_target,
-    D3D12_CPU_DESCRIPTOR_HANDLE render_target_view_destination_descriptor, UINT size)
+    D3D12_CPU_DESCRIPTOR_HANDLE render_target_view_destination_descriptor)
 {
     constexpr D3D12_RENDER_TARGET_VIEW_DESC* value_for_default_descriptor = nullptr;
     device->CreateRenderTargetView(render_target.Get(), value_for_default_descriptor,
@@ -204,5 +204,5 @@ void Object_id_pass::create_render_target(ComPtr<ID3D12Device> device)
     SET_DEBUG_NAME(m_render_target_view_heap, L"Object Id Render Target View Heap");
 
     m_render_target_view = m_render_target_view_heap->GetCPUDescriptorHandleForHeapStart();
-    create_render_target_view(device, m_render_target, m_render_target_view, size);
+    create_render_target_view(device, m_render_target, m_render_target_view);
 }

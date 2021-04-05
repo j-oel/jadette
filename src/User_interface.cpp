@@ -203,8 +203,7 @@ void User_interface::object_selection_and_mouse_pointer_update(UINT back_buf_ind
     }
 }
 
-DirectX::XMVECTOR rotate_object(View& view, POINT mouse_initial, POINT mouse_current, POINT center,
-    float radius)
+DirectX::XMVECTOR rotate_object(View& view, POINT mouse_initial, POINT mouse_current, float radius)
 {
     DirectX::XMVECTOR rotation_quaternion = DirectX::XMQuaternionIdentity();
     // The rotation direction is inverted relative to when rotating the view.
@@ -213,7 +212,8 @@ DirectX::XMVECTOR rotate_object(View& view, POINT mouse_initial, POINT mouse_cur
     return rotation_quaternion;
 }
 
-void User_interface::object_update(const User_action& user_action, Input& input, Scene& scene, View& view)
+void User_interface::object_update(const User_action& user_action, Input& input, Scene& scene,
+    View& view)
 {
     static POINT mouse_initial_position = input.mouse_position();
 
@@ -263,7 +263,7 @@ void User_interface::object_update(const User_action& user_action, Input& input,
     else if (user_action.rotate_object)
     {
         rotation_quaternion = rotate_object(view, mouse_initial_position, mouse_current,
-            m_input.mouse_down_position(), m_selected_object_radius);
+            m_selected_object_radius);
     }
 
     const XMVECTOR forward_direction = XMVector3Normalize(view.focus_point() - view.eye_position());

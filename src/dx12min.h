@@ -11,4 +11,8 @@
 #include <wrl/client.h> // For ComPtr
 #define COM_NO_WINDOWS_H
 #include <ole2.h>
+
+#pragma warning(push)
+#pragma warning(disable: 4324)
 #include "3rdparty/MS/d3dx12.h"
+#pragma warning(pop)

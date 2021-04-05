@@ -83,13 +83,13 @@ void create_descriptor_heap(ComPtr<ID3D12Device> device,
 
 
 template <typename T>
-void upload_buffer_to_gpu(const T& source_data, UINT size,
+void upload_buffer_to_gpu(const T& source_data, size_t size,
     ComPtr<ID3D12Resource>& destination_buffer,
     ComPtr<ID3D12Resource>& temp_upload_resource,
     ID3D12GraphicsCommandList& command_list,
     D3D12_RESOURCE_STATES after_state)
 {
-    char* temp_upload_resource_data;
+    char* temp_upload_resource_data = nullptr;
     const size_t begin = 0;
     const size_t end = 0;
     const CD3DX12_RANGE empty_cpu_read_range(begin, end);
@@ -138,23 +138,24 @@ void create_and_fill_buffer(ComPtr<ID3D12Device> device,
     ID3D12GraphicsCommandList& command_list,
     ComPtr<ID3D12Resource>& destination_buffer,
     ComPtr<ID3D12Resource>& temp_upload_resource,
-    const T& source_data, UINT size, View_type& view,
+    const T& source_data, UINT data_size, View_type& view, UINT view_size,
     D3D12_RESOURCE_STATES after_state = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER)
 {
-    create_upload_heap(device, size, temp_upload_resource);
-    create_gpu_buffer(device, size, destination_buffer);
+    assert(data_size <= view_size);
+    create_upload_heap(device, view_size, temp_upload_resource);
+    create_gpu_buffer(device, view_size, destination_buffer);
 
-    upload_buffer_to_gpu(source_data, size, destination_buffer,
+    upload_buffer_to_gpu(source_data, data_size, destination_buffer,
         temp_upload_resource, command_list, after_state);
 
     view.BufferLocation = destination_buffer->GetGPUVirtualAddress();
-    view.SizeInBytes = size;
+    view.SizeInBytes = view_size;
 }
 
 template <typename T>
 void upload_new_data(ID3D12GraphicsCommandList& command_list,
     const std::vector<T>& instance_data, ComPtr<ID3D12Resource>& instance_vertex_buffer,
-    ComPtr<ID3D12Resource>& upload_resource, UINT& vertex_buffer_size,
+    ComPtr<ID3D12Resource>& upload_resource, size_t vertex_buffer_size,
     D3D12_RESOURCE_STATES before_state = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER)
 {
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(instance_vertex_buffer.Get(),

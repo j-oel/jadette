@@ -69,8 +69,8 @@ class Constant_buffer
 {
 public:
     Constant_buffer(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
-        UINT count, T data,
-        ComPtr<ID3D12DescriptorHeap> descriptor_heap, UINT descriptor_index);
+        const std::vector<T>& data, ComPtr<ID3D12DescriptorHeap> descriptor_heap,
+        UINT descriptor_index);
     void upload_new_data_to_gpu(ID3D12GraphicsCommandList& command_list,
         const std::vector<T>& data);
     D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle() { return m_constant_buffer_gpu_descriptor_handle; }
@@ -78,7 +78,6 @@ private:
     ComPtr<ID3D12Resource> m_constant_buffer;
     ComPtr<ID3D12Resource> m_upload_resource;
     D3D12_GPU_DESCRIPTOR_HANDLE m_constant_buffer_gpu_descriptor_handle;
-    UINT m_constant_buffer_size;
 };
 
 class Scene_impl
@@ -428,11 +427,9 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
     if (scene_error)
         return;
 
-    m_materials_data = std::make_unique<Constant_buffer<Shader_material>>(device, command_list,
-        static_cast<UINT>(m.materials.size()), Shader_material(),
-        descriptor_heap, descriptor_start_index_of_materials(swap_chain_buffer_count));
-
-    m_materials_data->upload_new_data_to_gpu(command_list, m.materials);
+    m_materials_data = std::make_unique<Constant_buffer<Shader_material>>(device,
+        command_list, m.materials, descriptor_heap,
+        descriptor_start_index_of_materials(swap_chain_buffer_count));
 
     for (UINT i = texture_index; i < texture_start_index + max_textures; ++i)
     {
@@ -467,19 +464,19 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
     for (UINT i = 0; i < swap_chain_buffer_count; ++i)
     {
         m_dynamic_instance_data.push_back(std::make_unique<Instance_data>(device, command_list,
-            static_cast<UINT>(m.dynamic_objects.size()), Per_instance_transform(),
-            descriptor_heap, descriptor_start_index_of_dynamic_instance_data() + i));
+            static_cast<UINT>(m.dynamic_objects.size()), descriptor_heap,
+            descriptor_start_index_of_dynamic_instance_data() + i));
 
-        m_lights_data.push_back(std::make_unique<Constant_buffer<Light>>(device, command_list,
-            static_cast<UINT>(m.lights.size()), Light(),
-            descriptor_heap, descriptor_start_index_of_lights_data(swap_chain_buffer_count) + i));
+        m_lights_data.push_back(std::make_unique<Constant_buffer<Light>>(device,
+            command_list, m.lights, descriptor_heap,
+            descriptor_start_index_of_lights_data(swap_chain_buffer_count) + i));
     }
 
     m_static_instance_data = std::make_unique<Instance_data>(device, command_list,
         // It's graphical_objects here because every graphical_object has a an entry in
         // m_static_model_transforms. This is mainly (only?) because the fly_around_in_circle
         // function requires that currently. This is all quite messy and should be fixed.
-        static_cast<UINT>(m.graphical_objects.size()), Per_instance_transform(), descriptor_heap,
+        static_cast<UINT>(m.graphical_objects.size()), descriptor_heap,
         descriptor_index_of_static_instance_data());
 
     upload_resources_to_gpu(device, command_list);
@@ -553,11 +550,11 @@ void Scene_impl::update()
     for (auto& ufo : m.flying_objects) // :-)
     {
         XMMATRIX new_model_matrix = fly_around_in_circle(ufo, m.static_model_transforms);
-        XMVECTOR quaternion = XMQuaternionRotationMatrix(new_model_matrix);
+        XMVECTOR rotation = XMQuaternionRotationMatrix(new_model_matrix);
         XMVECTOR translation = new_model_matrix.r[3];
         XMHALF4 translation_half4;
         convert_vector_to_half4(translation_half4, translation);
-        set_instance_data(m.dynamic_model_transforms[ufo.transform_ref], translation_half4, quaternion);
+        set_instance_data(m.dynamic_model_transforms[ufo.transform_ref], translation_half4, rotation);
     }
 }
 
@@ -582,7 +579,6 @@ void Scene_impl::draw_objects(ID3D12GraphicsCommandList& command_list,
         if (texture_mapping == Texture_mapping::enabled)
         {
             auto material_id = graphical_object->material_id();
-            constexpr UINT size_in_words_of_value = 1;
             command_list.SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
                 size_in_words_of_value, &material_id, value_offset_for_material_id());
         }
@@ -809,23 +805,22 @@ void Scene_impl::upload_resources_to_gpu(ComPtr<ID3D12Device> device,
 
 template <typename T>
 Constant_buffer<T>::Constant_buffer(ComPtr<ID3D12Device> device,
-    ID3D12GraphicsCommandList& command_list, UINT count, T data,
+    ID3D12GraphicsCommandList& command_list, const std::vector<T>& data,
     ComPtr<ID3D12DescriptorHeap> descriptor_heap, UINT descriptor_index)
 {
-    if (count == 0)
+    if (data.empty())
         return;
 
-    constexpr int alignment = 256;
-    m_constant_buffer_size = static_cast<UINT>(count * sizeof(T));
-    if (m_constant_buffer_size % alignment)
-        m_constant_buffer_size = ((m_constant_buffer_size / alignment) + 1) * alignment;
-    std::vector<T> buffer_data;
-    buffer_data.resize(count);
+    constexpr int constant_buffer_min_size = 256;
+    UINT data_size = static_cast<UINT>(data.size() * sizeof(T));
+    auto view_size = data_size;
+    if (view_size % constant_buffer_min_size)
+        view_size = ((view_size / constant_buffer_min_size) + 1) * constant_buffer_min_size;
 
     D3D12_CONSTANT_BUFFER_VIEW_DESC buffer_view_desc {};
 
-    create_and_fill_buffer(device, command_list, m_constant_buffer,
-        m_upload_resource, buffer_data, m_constant_buffer_size, buffer_view_desc,
+    create_and_fill_buffer(device, command_list, m_constant_buffer, m_upload_resource, 
+        data, data_size, buffer_view_desc, view_size,
         D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
     UINT position = descriptor_position_in_descriptor_heap(device, descriptor_index);
@@ -843,5 +838,5 @@ void Constant_buffer<T>::upload_new_data_to_gpu(ID3D12GraphicsCommandList& comma
     const std::vector<T>& data)
 {
     upload_new_data(command_list, data, m_constant_buffer, m_upload_resource,
-        m_constant_buffer_size, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+        data.size() * sizeof(T), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 }

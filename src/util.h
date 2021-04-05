@@ -83,9 +83,7 @@ void set_mouse_cursor(HWND window, Mouse_cursor mouse_cursor);
 
 inline POINT operator-(POINT p1, POINT p2)
 {
-    POINT result;
-    result.x = p1.x - p2.x;
-    result.y = p1.y - p2.y;
+    POINT result { p1.x - p2.x, p1.y - p2.y };
     return result;
 }
 

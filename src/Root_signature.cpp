@@ -18,9 +18,10 @@ namespace
 {
     void handle_errors(HRESULT hr, const std::string& shader, ComPtr<ID3DBlob> error_messages)
     {
-        if (error_messages)
+        if (FAILED(hr))
         {
-            OutputDebugStringA(static_cast<LPCSTR>(error_messages->GetBufferPointer()));
+            if (error_messages)
+                OutputDebugStringA(static_cast<LPCSTR>(error_messages->GetBufferPointer()));
             if (shader.empty())
                 throw Root_signature_serialization_error();
             else
@@ -103,7 +104,7 @@ Simple_root_signature::Simple_root_signature(ComPtr<ID3D12Device> device)
 }
 
 void Simple_root_signature::set_constants(ID3D12GraphicsCommandList& command_list,
-    UINT back_buf_index, Scene* scene, const View* view)
+    UINT, Scene*, const View* view)
 {
     view->set_view(command_list, m_root_param_index_of_matrices);
 }
