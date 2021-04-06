@@ -671,7 +671,7 @@ void Scene_impl::upload_data_to_gpu(ID3D12GraphicsCommandList& command_list,
     if (!m.lights.empty())
         m_lights_data[back_buf_index]->upload_new_data_to_gpu(command_list, m.lights);
 
-    if (!m.static_objects.empty())
+    if (!m.graphical_objects.empty())
         upload_static_instance_data(command_list);
     if (!m.dynamic_objects.empty())
         m_dynamic_instance_data[back_buf_index]->upload_new_data_to_gpu(command_list,
@@ -698,7 +698,7 @@ void Scene_impl::upload_static_instance_data(ID3D12GraphicsCommandList& command_
 void Scene_impl::set_static_instance_data_shader_constant(ID3D12GraphicsCommandList& command_list,
     int root_param_index_of_instance_data) const
 {
-    if (!m.static_objects.empty())
+    if (!m.graphical_objects.empty())
         command_list.SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
             m_static_instance_data->srv_gpu_handle());
 }
