@@ -122,9 +122,6 @@
     <ClInclude Include="dx12min.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Graphics_impl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="windefmin.h">
       <Filter>Header Files</Filter>
     </ClInclude>

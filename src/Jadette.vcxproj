@@ -342,7 +342,6 @@
     <ClInclude Include="Dx12_util.h" />
     <ClInclude Include="Engine.h" />
     <ClInclude Include="Graphical_object.h" />
-    <ClInclude Include="Graphics_impl.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Object_id_pass.h" />
