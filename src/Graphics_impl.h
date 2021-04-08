@@ -20,26 +20,6 @@
 using Microsoft::WRL::ComPtr;
 
 
-class Main_root_signature : public Root_signature
-{
-public:
-    Main_root_signature(ComPtr<ID3D12Device> device, UINT* render_settings);
-    virtual void set_constants(ID3D12GraphicsCommandList& command_list, 
-        UINT back_buf_index, Scene* scene, const View* view);
-
-    const int m_root_param_index_of_values = 0;
-    const int m_root_param_index_of_matrices = 1;
-    const int m_root_param_index_of_textures = 2;
-    const int m_root_param_index_of_materials = 3;
-    const int m_root_param_index_of_vectors = 4;
-    const int m_root_param_index_of_shadow_map = 5;
-    const int m_root_param_index_of_instance_data = 6;
-    const int m_root_param_index_of_lights_data = 7;
-private:
-    UINT* m_render_settings;
-};
-
-
 class Graphics_impl
 {
 
@@ -77,8 +57,8 @@ private:
     ComPtr<ID3D12PipelineState> m_pipeline_state_alpha_cut_out_early_z;
     ComPtr<ID3D12PipelineState> m_pipeline_state_alpha_cut_out;
 
+    Root_signature m_root_signature;
     Depth_pass m_depth_pass;
-    Main_root_signature m_root_signature;
     std::unique_ptr<Scene> m_scene;
     View m_view;
     Input& m_input;

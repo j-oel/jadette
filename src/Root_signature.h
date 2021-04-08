@@ -27,32 +27,32 @@ struct Root_signature_serialization_error
 class Root_signature
 {
 public:
-    virtual void set_constants(ID3D12GraphicsCommandList& command_list,
-        UINT, Scene*, const View* view) = 0;
+    Root_signature(ComPtr<ID3D12Device> device, UINT* render_settings);
+    void set_constants(ID3D12GraphicsCommandList& command_list,
+        UINT, Scene*, const View* view);
+    void set_view(ID3D12GraphicsCommandList& command_list, const View* view);
     ComPtr<ID3D12RootSignature> get() const { return m_root_signature; }
-protected:
+
+    const int m_root_param_index_of_values = 0;
+    const int m_root_param_index_of_matrices = 1;
+    const int m_root_param_index_of_textures = 2;
+    const int m_root_param_index_of_materials = 3;
+    const int m_root_param_index_of_vectors = 4;
+    const int m_root_param_index_of_shadow_map = 5;
+    const int m_root_param_index_of_instance_data = 6;
+    const int m_root_param_index_of_lights_data = 7;
+private:
+    UINT* m_render_settings;
     void create(ComPtr<ID3D12Device> device, const CD3DX12_ROOT_PARAMETER1* root_parameters,
         UINT root_parameters_count, const D3D12_STATIC_SAMPLER_DESC* samplers,
         UINT samplers_count);
     void init_descriptor_table(CD3DX12_ROOT_PARAMETER1& root_parameter, 
         CD3DX12_DESCRIPTOR_RANGE1& descriptor_range, UINT base_register,
+        D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE,
         UINT register_space = 0, UINT descriptors_count = 1);
     void init_matrices(CD3DX12_ROOT_PARAMETER1& root_parameter, UINT count, 
         UINT shader_register);
     ComPtr<ID3D12RootSignature> m_root_signature;
-};
-
-
-class Simple_root_signature : public Root_signature
-{
-public:
-    Simple_root_signature(ComPtr<ID3D12Device> device);
-    virtual void set_constants(ID3D12GraphicsCommandList& command_list,
-        UINT back_buf_index, Scene* scene, const View* view);
-
-    const int m_root_param_index_of_values = 0;
-    const int m_root_param_index_of_matrices = 1;
-    const int m_root_param_index_of_instance_data = 2;
 };
 
 

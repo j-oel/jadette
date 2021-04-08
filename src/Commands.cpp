@@ -75,6 +75,20 @@ void Commands::set_shader_constants()
     m_root_signature->set_constants(m_command_list, m_back_buf_index, m_scene, m_view);
 }
 
+void Commands::set_view_for_shader()
+{
+    assert(m_root_signature);
+    m_root_signature->set_view(m_command_list, m_view);
+}
+
+void Commands::set_shadow_map_for_shader()
+{
+    assert(m_scene);
+    assert(m_root_signature);
+    m_scene->set_shadow_map_for_shader(m_command_list, m_back_buf_index,
+        m_root_signature->m_root_param_index_of_shadow_map);
+}
+
 void Commands::close()
 {
     throw_if_failed(m_command_list.Close());
@@ -129,8 +143,7 @@ void Commands::simple_render_pass(ComPtr<ID3D12PipelineState> dynamic_objects_pi
     ComPtr<ID3D12PipelineState> static_objects_pipeline_state,
     ComPtr<ID3D12PipelineState> two_sided_objects_pipeline_state)
 {
-    set_root_signature();
-    set_shader_constants();
+    set_view_for_shader();
     clear_depth_stencil();
     draw_dynamic_objects(dynamic_objects_pipeline_state);
     draw_static_objects(static_objects_pipeline_state);

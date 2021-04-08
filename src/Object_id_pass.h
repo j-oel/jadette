@@ -22,7 +22,8 @@ class Read_back_depth_stencil;
 class Object_id_pass
 {
 public:
-    Object_id_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format, UINT width, UINT height,
+    Object_id_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format,
+        Root_signature* root_signature, UINT width, UINT height,
         bool backface_culling);
     void record_commands(UINT back_buf_index, Scene& scene, const View& view,
         Read_back_depth_stencil& depth_stencil, ID3D12GraphicsCommandList& command_list);
@@ -46,7 +47,7 @@ private:
     ComPtr<ID3D12PipelineState> m_pipeline_state_dynamic_objects;
     ComPtr<ID3D12PipelineState> m_pipeline_state_static_objects;
     ComPtr<ID3D12PipelineState> m_pipeline_state_two_sided_objects;
-    Simple_root_signature m_root_signature;
+    Root_signature* m_root_signature;
     DXGI_FORMAT m_dsv_format;
     DXGI_FORMAT m_rtv_format;
     UINT m_width;

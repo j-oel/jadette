@@ -27,7 +27,7 @@ class View;
 class User_interface
 {
 public:
-    User_interface(std::shared_ptr<Dx12_display> dx12_display,
+    User_interface(std::shared_ptr<Dx12_display> dx12_display, Root_signature* root_signature,
         ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index,
         Input& input, HWND window, const Config& config);
     void update(UINT back_buf_index, Scene& scene, View& view);

@@ -28,6 +28,7 @@ public:
         int root_param_index_of_instance_data);
     void set_back_buf_index(UINT index) { m_back_buf_index = index; }
 
+    void set_input_layout(Input_layout input_layout) { m_input_layout = input_layout; }
     void upload_data_to_gpu();
     void generate_shadow_maps();
     void early_z_pass();
@@ -35,6 +36,8 @@ public:
     void clear_depth_stencil();
     void set_descriptor_heap(ComPtr<ID3D12DescriptorHeap> descriptor_heap);
     void set_shader_constants();
+    void set_view_for_shader();
+    void set_shadow_map_for_shader();
     void draw_static_objects(ComPtr<ID3D12PipelineState> pipeline_state);
     void draw_dynamic_objects(ComPtr<ID3D12PipelineState> pipeline_state);
     void draw_transparent_objects(ComPtr<ID3D12PipelineState> pipeline_state);

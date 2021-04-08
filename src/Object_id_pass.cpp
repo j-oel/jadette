@@ -26,8 +26,9 @@
 
 enum Data_written { not_done, done };
 
-Object_id_pass::Object_id_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format, UINT width,
-    UINT height, bool backface_culling) : m_root_signature(device), m_dsv_format(dsv_format),
+Object_id_pass::Object_id_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format,
+    Root_signature* root_signature, UINT width, UINT height, bool backface_culling) :
+    m_root_signature(root_signature), m_dsv_format(dsv_format),
     m_rtv_format(DXGI_FORMAT_R32_SINT), m_width(width), m_height(height),
     m_current_state(D3D12_RESOURCE_STATE_COPY_SOURCE)
 {
@@ -64,12 +65,12 @@ void Object_id_pass::create_pipeline_state(ComPtr<ID3D12Device> device,
     UINT render_targets_count = 1;
 
     if (pipeline_state)
-        ::create_pipeline_state(device, pipeline_state, m_root_signature.get(),
+        ::create_pipeline_state(device, pipeline_state, m_root_signature->get(),
             vertex_shader_entry, "pixel_shader_object_ids",
             m_dsv_format, render_targets_count, Input_layout::position, backface_culling,
             Alpha_blending::disabled, Depth_write::enabled, m_rtv_format);
     else
-        ::create_pipeline_state(device, pipeline_state, m_root_signature.get(),
+        ::create_pipeline_state(device, pipeline_state, m_root_signature->get(),
             compiled_vertex_shader, compiled_pixel_shader,
             m_dsv_format, render_targets_count, Input_layout::position, backface_culling,
             Alpha_blending::disabled, Depth_write::enabled, m_rtv_format);
@@ -123,8 +124,10 @@ void Object_id_pass::record_commands(UINT back_buf_index, Scene& scene, const Vi
     set_and_clear_render_target(command_list, depth_stencil);
 
     Commands c(command_list, back_buf_index, &depth_stencil, Texture_mapping::disabled,
-        Input_layout::position, &view, &scene, nullptr, &m_root_signature,
-        m_root_signature.m_root_param_index_of_instance_data);
+        Input_layout::position, &view, &scene, nullptr, m_root_signature,
+        m_root_signature->m_root_param_index_of_instance_data);
+    c.set_root_signature();
+    c.set_shader_constants();
     c.simple_render_pass(m_pipeline_state_dynamic_objects, m_pipeline_state_static_objects,
         m_pipeline_state_two_sided_objects);
 

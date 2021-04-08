@@ -19,15 +19,15 @@
 
 
 User_interface::User_interface(std::shared_ptr<Dx12_display> dx12_display,
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index, Input& input,
-    HWND window, const Config& config) :
+    Root_signature* root_signature, ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, 
+    UINT texture_index, Input& input, HWND window, const Config& config) :
     m_dx12_display(dx12_display), m_texture_descriptor_heap(texture_descriptor_heap),
     m_view_controller(input, window, config.edit_mode, config.invert_mouse, config.mouse_sensitivity),
     m_depth_stencil_for_object_id(dx12_display->device(), config.width, config.height,
         Bit_depth::bpp32, D3D12_RESOURCE_STATE_DEPTH_WRITE,
         texture_descriptor_heap, texture_index),
     m_object_id_pass(dx12_display->device(), m_depth_stencil_for_object_id.dsv_format(),
-        config.width, config.height, config.backface_culling),
+        root_signature, config.width, config.height, config.backface_culling),
     m_input(input),
     m_selected_object_depth(0.0f),
     m_selected_object_radius(0.0f),

@@ -65,10 +65,13 @@ public:
     void set_dynamic_instance_data_shader_constant(ID3D12GraphicsCommandList& command_list,
         UINT back_buf_index, int root_param_index_of_instance_data) const;
     void set_lights_data_shader_constant(ID3D12GraphicsCommandList& command_list,
-        UINT back_buf_index, int root_param_index_of_lights_data,
-        int root_param_index_of_shadow_map) const;
+        UINT back_buf_index, int root_param_index_of_lights_data) const;
+    void set_shadow_map_for_shader(ID3D12GraphicsCommandList& command_list,
+        UINT back_buf_index, int root_param_index_of_shadow_map) const;
     void set_material_shader_constant(ID3D12GraphicsCommandList& command_list,
-        int root_param_index_of_textures, int root_param_index_of_materials) const;
+        int root_param_index_of_materials) const;
+    void set_texture_shader_constant(ID3D12GraphicsCommandList& command_list,
+        int root_param_index_of_textures) const;
     void manipulate_object(DirectX::XMFLOAT3& delta_pos, DirectX::XMFLOAT4& delta_rotation);
     void select_object(int object_id);
     bool object_selected();

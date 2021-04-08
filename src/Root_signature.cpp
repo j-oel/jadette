@@ -10,6 +10,7 @@
 #include "util.h"
 #include "Scene.h"
 #include "View.h"
+#include "Shadow_map.h"
 
 #include <D3DCompiler.h>
 
@@ -30,7 +31,122 @@ namespace
     }
 }
 
-void Root_signature::create(ComPtr<ID3D12Device> device, 
+Root_signature::Root_signature(ComPtr<ID3D12Device> device, UINT* render_settings) :
+    m_render_settings(render_settings)
+{
+    constexpr int root_parameters_count = 8;
+    CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count]{};
+
+    constexpr int values_count = 4; // Needs to be a multiple of 4, because constant buffers are
+                                    // viewed as sets of 4x32-bit values, see:
+// https://docs.microsoft.com/en-us/windows/win32/direct3d12/using-constants-directly-in-the-root-signature
+
+    UINT shader_register = 0;
+    constexpr int register_space = 0;
+    root_parameters[m_root_param_index_of_values].InitAsConstants(
+        values_count, shader_register, register_space, D3D12_SHADER_VISIBILITY_ALL);
+
+    constexpr int matrices_count = 1;
+    ++shader_register;
+    init_matrices(root_parameters[m_root_param_index_of_matrices], matrices_count, shader_register);
+    constexpr int vectors_count = 2;
+    ++shader_register;
+    root_parameters[m_root_param_index_of_vectors].InitAsConstants(
+        vectors_count * size_in_words_of_XMVECTOR, shader_register, register_space,
+        D3D12_SHADER_VISIBILITY_PIXEL);
+
+    UINT base_register = 0;
+    CD3DX12_DESCRIPTOR_RANGE1 descriptor_range1, descriptor_range2, descriptor_range3,
+        descriptor_range4, descriptor_range5;
+    UINT register_space_for_textures = 1;
+    init_descriptor_table(root_parameters[m_root_param_index_of_textures],
+        descriptor_range1, base_register, D3D12_DESCRIPTOR_RANGE_FLAG_NONE,
+        register_space_for_textures, Scene::max_textures);
+    UINT register_space_for_shadow_map = 2;
+    init_descriptor_table(root_parameters[m_root_param_index_of_shadow_map],
+        descriptor_range2, ++base_register, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE,
+        register_space_for_shadow_map,
+        Shadow_map::max_shadow_maps_count);
+    init_descriptor_table(root_parameters[m_root_param_index_of_instance_data],
+        descriptor_range3, ++base_register);
+
+    root_parameters[m_root_param_index_of_instance_data].ShaderVisibility =
+        D3D12_SHADER_VISIBILITY_VERTEX;
+
+    constexpr int total_srv_count = Scene::max_textures + Shadow_map::max_shadow_maps_count;
+    constexpr int max_simultaneous_srvs = 128;
+    static_assert(total_srv_count <= max_simultaneous_srvs,
+        "For a resource binding tier 1 device, the number of srvs in a root signature is limited.");
+
+    constexpr UINT descriptors_count = 1;
+    base_register = 3;
+    descriptor_range4.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, descriptors_count, base_register);
+    constexpr UINT descriptor_range_count = 1;
+    root_parameters[m_root_param_index_of_lights_data].InitAsDescriptorTable(descriptor_range_count,
+        &descriptor_range4, D3D12_SHADER_VISIBILITY_PIXEL);
+
+    base_register = 4;
+    descriptor_range5.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, descriptors_count, base_register);
+    root_parameters[m_root_param_index_of_materials].InitAsDescriptorTable(descriptor_range_count,
+        &descriptor_range5, D3D12_SHADER_VISIBILITY_PIXEL);
+
+    UINT sampler_shader_register = 0;
+    CD3DX12_STATIC_SAMPLER_DESC texture_sampler_description(sampler_shader_register);
+
+    CD3DX12_STATIC_SAMPLER_DESC texture_mirror_sampler_description(++sampler_shader_register,
+        D3D12_FILTER_ANISOTROPIC,
+        D3D12_TEXTURE_ADDRESS_MODE_MIRROR, D3D12_TEXTURE_ADDRESS_MODE_MIRROR);
+
+    D3D12_STATIC_SAMPLER_DESC shadow_sampler_description =
+        Shadow_map::shadow_map_sampler(++sampler_shader_register);
+
+    D3D12_STATIC_SAMPLER_DESC samplers[] = { texture_sampler_description,
+                                             texture_mirror_sampler_description,
+                                             shadow_sampler_description };
+
+    create(device, root_parameters, _countof(root_parameters), samplers, _countof(samplers));
+
+    SET_DEBUG_NAME(m_root_signature, L"Main Root Signature");
+}
+
+namespace
+{
+    UINT value_offset_for_render_settings()
+    {
+        return value_offset_for_material_id() + 1;
+    }
+}
+
+void Root_signature::set_constants(ID3D12GraphicsCommandList& command_list,
+    UINT back_buf_index, Scene* scene, const View* view)
+{
+    constexpr UINT size_in_words_of_value = 1;
+    command_list.SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
+        size_in_words_of_value, m_render_settings, value_offset_for_render_settings());
+
+    int offset = 0;
+    auto eye = view->eye_position();
+    eye.m128_f32[3] = static_cast<float>(scene->lights_count()); // Hijack the unused w component.
+    command_list.SetGraphicsRoot32BitConstants(m_root_param_index_of_vectors,
+        size_in_words_of_XMVECTOR, &eye, offset);
+
+    offset += size_in_words_of_XMVECTOR;
+    auto ambient = scene->ambient_light();
+    command_list.SetGraphicsRoot32BitConstants(m_root_param_index_of_vectors,
+        size_in_words_of_XMVECTOR, &ambient, offset);
+
+    scene->set_lights_data_shader_constant(command_list, back_buf_index,
+        m_root_param_index_of_lights_data);
+    scene->set_shadow_map_for_shader(command_list, back_buf_index,
+        m_root_param_index_of_shadow_map);
+
+    scene->set_texture_shader_constant(command_list, m_root_param_index_of_textures);
+    scene->set_material_shader_constant(command_list, m_root_param_index_of_materials);
+
+    view->set_view(command_list, m_root_param_index_of_matrices);
+}
+
+void Root_signature::create(ComPtr<ID3D12Device> device,
     const CD3DX12_ROOT_PARAMETER1* root_parameters, 
     UINT root_parameters_count, const D3D12_STATIC_SAMPLER_DESC* samplers, 
     UINT samplers_count)
@@ -52,12 +168,14 @@ void Root_signature::create(ComPtr<ID3D12Device> device,
         root_signature->GetBufferSize(), IID_PPV_ARGS(&m_root_signature)));
 }
 
-void Root_signature::init_descriptor_table(CD3DX12_ROOT_PARAMETER1& root_parameter, 
-    CD3DX12_DESCRIPTOR_RANGE1& descriptor_range, UINT base_register, UINT register_space /* = 0*/,
+void Root_signature::init_descriptor_table(CD3DX12_ROOT_PARAMETER1& root_parameter,
+    CD3DX12_DESCRIPTOR_RANGE1& descriptor_range, UINT base_register,
+    D3D12_DESCRIPTOR_RANGE_FLAGS flags /* = D3D12_DESCRIPTOR_RANGE_FLAG_NONE*/,
+    UINT register_space /* = 0*/,
     UINT descriptors_count /* = 1 */)
 {
     descriptor_range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, descriptors_count, base_register,
-        register_space);
+        register_space, flags);
     constexpr UINT descriptor_range_count = 1;
     root_parameter.InitAsDescriptorTable(descriptor_range_count, &descriptor_range,
         D3D12_SHADER_VISIBILITY_PIXEL);
@@ -72,39 +190,7 @@ void Root_signature::init_matrices(CD3DX12_ROOT_PARAMETER1& root_parameter,
         D3D12_SHADER_VISIBILITY_VERTEX);
 }
 
-Simple_root_signature::Simple_root_signature(ComPtr<ID3D12Device> device)
-{
-    constexpr int root_parameters_count = 3;
-    CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count]{};
-
-    constexpr int values_count = 4; // Needs to be a multiple of 4, because constant buffers are
-                                    // viewed as sets of 4x32-bit values, see:
-// https://docs.microsoft.com/en-us/windows/win32/direct3d12/using-constants-directly-in-the-root-signature
-
-    UINT shader_register = 0;
-    constexpr int register_space = 0;
-    root_parameters[m_root_param_index_of_values].InitAsConstants(
-        values_count, shader_register, register_space, D3D12_SHADER_VISIBILITY_VERTEX);
-
-    ++shader_register;
-    constexpr int matrices_count = 1;
-    init_matrices(root_parameters[m_root_param_index_of_matrices], matrices_count, shader_register);
-
-    UINT base_register = 2;
-    CD3DX12_DESCRIPTOR_RANGE1 descriptor_range;
-    init_descriptor_table(root_parameters[m_root_param_index_of_instance_data],
-        descriptor_range, base_register);
-    root_parameters[m_root_param_index_of_instance_data].ShaderVisibility =
-        D3D12_SHADER_VISIBILITY_VERTEX;
-
-    constexpr int samplers_count = 0;
-    create(device, root_parameters, _countof(root_parameters), nullptr, samplers_count);
-
-    SET_DEBUG_NAME(m_root_signature, L"Depth Pass Root Signature");
-}
-
-void Simple_root_signature::set_constants(ID3D12GraphicsCommandList& command_list,
-    UINT, Scene*, const View* view)
+void Root_signature::set_view(ID3D12GraphicsCommandList& command_list, const View* view)
 {
     view->set_view(command_list, m_root_param_index_of_matrices);
 }
