@@ -18,7 +18,7 @@ using namespace DirectX::PackedVector;
 
 SCENARIO("The Obj parser works")
 {
-    vector<XMHALF4> input_vertices;
+    vector<XMFLOAT4> input_vertices;
     vector<XMHALF4> input_normals;
     vector<XMHALF2> input_texture_coords;
     vector<XMHALF4> input_tangents;
@@ -49,7 +49,7 @@ SCENARIO("The Obj parser works")
             {
                 REQUIRE(vertices.positions.size() == 1);
                 
-                auto position = convert_half4_to_vector(vertices.positions[0].position);
+                auto position = XMLoadFloat4(&vertices.positions[0].position);
                 
                 REQUIRE(position.m128_f32[0] == 1.0f);
                 REQUIRE(position.m128_f32[1] == 2.0f);
@@ -77,7 +77,7 @@ SCENARIO("The Obj parser works")
             {
                 REQUIRE(vertices.positions.size() == 1);
 
-                auto position = convert_half4_to_vector(vertices.positions[0].position);
+                auto position = XMLoadFloat4(&vertices.positions[0].position);
 
                 REQUIRE(position.m128_f32[0] == 3.0f);
                 REQUIRE(position.m128_f32[1] == 6.0f);
@@ -100,7 +100,7 @@ SCENARIO("The Obj parser works")
                 REQUIRE(vertices.positions.size() == 1);
                 REQUIRE(vertices.normals.size() == 1);
 
-                auto position = convert_half4_to_vector(vertices.positions[0].position);
+                auto position = XMLoadFloat4(&vertices.positions[0].position);
                 auto normal = convert_half4_to_vector(vertices.normals[0].normal);
 
                 REQUIRE(position.m128_f32[3] == Approx(0.2f).epsilon(0.001));
@@ -128,7 +128,7 @@ SCENARIO("The Obj parser works")
             {
                 REQUIRE(vertices.positions.size() == 1);
 
-                auto position = convert_half4_to_vector(vertices.positions[0].position);
+                auto position = XMLoadFloat4(&vertices.positions[0].position);
 
                 REQUIRE(position.m128_f32[0] == 1.0f);
                 REQUIRE(position.m128_f32[1] == 2.0f);
@@ -166,7 +166,7 @@ SCENARIO("The Obj parser works")
             {
                 REQUIRE(vertices.positions.size() == 1);
 
-                auto position = convert_half4_to_vector(vertices.positions[0].position);
+                auto position = XMLoadFloat4(&vertices.positions[0].position);
 
                 REQUIRE(position.m128_f32[0] == 1.0f);
                 REQUIRE(position.m128_f32[1] == 2.0f);

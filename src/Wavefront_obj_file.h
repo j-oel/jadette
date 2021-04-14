@@ -46,7 +46,7 @@ std::shared_ptr<Model_collection> read_obj_file(const std::string& filename,
 
 // Exposed for unit tests
 bool read_obj_file(std::istream& file, Vertices& vertices, std::vector<int>& indices,
-    std::vector<DirectX::PackedVector::XMHALF4>& input_vertices,
+    std::vector<DirectX::XMFLOAT4>& input_vertices,
     std::vector<DirectX::PackedVector::XMHALF4>& input_normals,
     std::vector<DirectX::PackedVector::XMHALF2>& input_texture_coords,
     std::vector<DirectX::PackedVector::XMHALF4>& input_tangents,

@@ -77,6 +77,7 @@ Vertices convert_to_packed_vertices(const std::vector<Float_vertex>& input_verti
     std::vector<int>& indices)
 {
     using DirectX::PackedVector::XMConvertFloatToHalf;
+    using DirectX::PackedVector::XMConvertHalfToFloat;
     using DirectX::XMLoadFloat3;
     using DirectX::XMVECTOR;
     Vertices vertices;
@@ -84,8 +85,8 @@ Vertices convert_to_packed_vertices(const std::vector<Float_vertex>& input_verti
     {
         Vertex_position v;
         Vertex_normal n;
-        v.position = { XMConvertFloatToHalf(i_v.position.x), XMConvertFloatToHalf(i_v.position.y),
-        XMConvertFloatToHalf(i_v.position.z), i_v.uv.x };
+        v.position = { i_v.position.x, i_v.position.y, i_v.position.z,
+            XMConvertHalfToFloat(i_v.uv.x) };
         vertices.positions.push_back(v);
         n.normal = { XMConvertFloatToHalf(i_v.normal.x), XMConvertFloatToHalf(i_v.normal.y),
         XMConvertFloatToHalf(i_v.normal.z), i_v.uv.y };

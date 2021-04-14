@@ -127,7 +127,7 @@ DirectX::XMVECTOR calculate_center(const Vertices& vertices)
 
     XMVECTOR accumulation = XMVectorZero();
     for (auto p : vertices.positions)
-        accumulation += convert_half4_to_vector(p.position);
+        accumulation += XMLoadFloat4(&p.position);
 
     auto center = accumulation / static_cast<float>(vertices.positions.size());
     return center;
@@ -143,7 +143,7 @@ DirectX::XMVECTOR calculate_center_of_triangle(const Vertices& vertices,
         i < index * vertex_count_per_face + vertex_count_per_face; ++i)
     {
         auto p = vertices.positions[indices[i]];
-        accumulation += convert_half4_to_vector(p.position);
+        accumulation += XMLoadFloat4(&p.position);
     }
 
     auto center = accumulation / vertex_count_per_face;

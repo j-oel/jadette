@@ -12,6 +12,7 @@
 
 using DirectX::PackedVector::XMHALF4;
 using DirectX::PackedVector::XMHALF2;
+using DirectX::XMFLOAT4;
 using DirectX::XMVECTOR;
 using DirectX::PackedVector::XMConvertHalfToFloat;
 using std::vector;
@@ -25,7 +26,7 @@ void read_mtl_file(const string file_name, map<string, Material>& materials);
 
 
 bool read_obj_file(std::istream& file, Vertices& vertices, vector<int>& indices,
-    vector<XMHALF4>& input_vertices, vector<XMHALF4>& input_normals,
+    vector<XMFLOAT4>& input_vertices, vector<XMHALF4>& input_normals,
     vector<XMHALF2>& input_texture_coords, vector<XMHALF4>& input_tangents, 
     vector<XMHALF4>& input_bitangents, vector<XMHALF4>& input_colors, string& material,
     map<string, Material>* materials)
@@ -69,11 +70,11 @@ bool read_obj_file(std::istream& file, Vertices& vertices, vector<int>& indices,
 
             if (i >= 3)
             {
-                XMHALF4 v;
-                v.x = XMConvertFloatToHalf(vf[0]);
-                v.y = XMConvertFloatToHalf(vf[1]);
-                v.z = XMConvertFloatToHalf(vf[2]);
-                v.w = XMConvertFloatToHalf(1);
+                XMFLOAT4 v;
+                v.x = vf[0];
+                v.y = vf[1];
+                v.z = vf[2];
+                v.w = 1.0f;
                 input_vertices.push_back(v);
 
                 if (i == max_vertex_components)
@@ -193,17 +194,16 @@ bool read_obj_file(std::istream& file, Vertices& vertices, vector<int>& indices,
                 }
 
                 indices.push_back(static_cast<int>(indices.size()));
-
-                XMHALF4 position_plus_u = input_vertices[vertex_index - 1];
+                XMFLOAT4 position_plus_u = input_vertices[vertex_index - 1];
                 XMHALF4 normal_plus_v = input_normals[normal_index - 1];
 
-                v[i] = convert_half4_to_vector(position_plus_u);
+                v[i] = XMLoadFloat4(&position_plus_u);
 
                 if (uvs)
                 {
-                    position_plus_u.w = input_texture_coords[uv_index - 1].x;
+                    position_plus_u.w = XMConvertHalfToFloat(input_texture_coords[uv_index - 1].x);
                     normal_plus_v.w = input_texture_coords[uv_index - 1].y;
-                    uv[i].m128_f32[0] = XMConvertHalfToFloat(position_plus_u.w);
+                    uv[i].m128_f32[0] = position_plus_u.w;
                     uv[i].m128_f32[1] = XMConvertHalfToFloat(normal_plus_v.w);
                 }
 
@@ -246,7 +246,7 @@ bool read_obj_file(std::istream& file, Vertices& vertices, vector<int>& indices,
 
 void read_obj_file(const string& filename, Vertices& vertices, vector<int>& indices)
 {
-    vector<XMHALF4> input_vertices;
+    vector<XMFLOAT4> input_vertices;
     vector<XMHALF4> input_normals;
     vector<XMHALF2> input_texture_coords;
     vector<XMHALF4> input_tangents;
@@ -278,7 +278,7 @@ std::shared_ptr<Model_collection> read_obj_file(const string& filename,
     using namespace Material_settings;
     std::ifstream file(filename);
 
-    vector<XMHALF4> input_vertices;
+    vector<XMFLOAT4> input_vertices;
     vector<XMHALF4> input_normals;
     vector<XMHALF2> input_texture_coords;
     vector<XMHALF4> input_tangents;

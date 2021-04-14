@@ -16,7 +16,7 @@ using Microsoft::WRL::ComPtr;
 
 struct Vertex_position
 {
-    DirectX::PackedVector::XMHALF4 position;
+    DirectX::XMFLOAT4 position;
 };
 
 struct Vertex_normal
