@@ -2,6 +2,9 @@
 # model <model_name> <filename>|plane|cube
 # now model_name can be used to refer to this model.
 #
+# If the second texture coordinate (the V in UV) should not be flipped,
+# use "model_dont_flip_v" instead of "model".
+#
 # Similar for a texture:
 # texture <texture_name> <filename>
 #

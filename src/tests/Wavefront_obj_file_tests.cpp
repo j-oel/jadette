@@ -43,7 +43,7 @@ SCENARIO("The Obj parser works")
         {
             bool more_objects = read_obj_file(obj_data, vertices, indices, input_vertices,
                 input_normals, input_texture_coords, input_tangents, input_bitangents,
-                input_colors, material, &collection->materials);
+                input_colors, material, &collection->materials, Obj_flip_v:: yes);
 
             THEN("the vertex is available")
             {
@@ -71,7 +71,7 @@ SCENARIO("The Obj parser works")
         {
             bool more_objects = read_obj_file(obj_data, vertices, indices, input_vertices,
                 input_normals, input_texture_coords, input_tangents, input_bitangents,
-                input_colors, material, &collection->materials);
+                input_colors, material, &collection->materials, Obj_flip_v::yes);
 
             THEN("the vertex position is available")
             {
@@ -122,7 +122,7 @@ SCENARIO("The Obj parser works")
         {
             bool more_objects = read_obj_file(obj_data, vertices, indices, input_vertices,
                 input_normals, input_texture_coords, input_tangents, input_bitangents,
-                input_colors, material, &collection->materials);
+                input_colors, material, &collection->materials, Obj_flip_v::yes);
 
             THEN("the position is available")
             {
@@ -160,7 +160,7 @@ SCENARIO("The Obj parser works")
         {
             bool more_objects = read_obj_file(obj_data, vertices, indices, input_vertices,
                 input_normals, input_texture_coords, input_tangents, input_bitangents,
-                input_colors, material, &collection->materials);
+                input_colors, material, &collection->materials, Obj_flip_v::yes);
 
             THEN("the position is available")
             {

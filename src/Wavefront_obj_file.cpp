@@ -29,7 +29,7 @@ bool read_obj_file(std::istream& file, Vertices& vertices, vector<int>& indices,
     vector<XMFLOAT4>& input_vertices, vector<XMHALF4>& input_normals,
     vector<XMHALF2>& input_texture_coords, vector<XMHALF4>& input_tangents, 
     vector<XMHALF4>& input_bitangents, vector<XMHALF4>& input_colors, string& material,
-    map<string, Material>* materials)
+    map<string, Material>* materials, Obj_flip_v flip_v)
 {
     // Tangents and bitangents are not present in standard Wavefront obj files. It is an
     // extension that I have devised myself. I have modified the open source tool assimp
@@ -108,7 +108,8 @@ bool read_obj_file(std::istream& file, Vertices& vertices, vector<int>& indices,
             file >> f;
             vt.x = XMConvertFloatToHalf(f);
             file >> f;
-            f = 1.0f - f; // Obj files seems to use an inverted v-axis.
+            if (flip_v == Obj_flip_v::yes)
+                f = 1.0f - f;
             vt.y = XMConvertFloatToHalf(f);
             input_texture_coords.push_back(vt);
         }
@@ -244,7 +245,8 @@ bool read_obj_file(std::istream& file, Vertices& vertices, vector<int>& indices,
     return more_objects;
 }
 
-void read_obj_file(const string& filename, Vertices& vertices, vector<int>& indices)
+void read_obj_file(const string& filename, Vertices& vertices, vector<int>& indices,
+    Obj_flip_v flip_v)
 {
     vector<XMFLOAT4> input_vertices;
     vector<XMHALF4> input_normals;
@@ -256,7 +258,7 @@ void read_obj_file(const string& filename, Vertices& vertices, vector<int>& indi
     string not_used;
     ifstream file(filename);
     read_obj_file(file, vertices, indices, input_vertices, input_normals, input_texture_coords,
-        input_tangents, input_bitangents, input_colors, not_used, nullptr);
+        input_tangents, input_bitangents, input_colors, not_used, nullptr, flip_v);
 }
 
 void create_one_model_per_triangle(std::shared_ptr<Model_collection> collection,
@@ -273,7 +275,7 @@ void create_one_model_per_triangle(std::shared_ptr<Model_collection> collection,
 }
 
 std::shared_ptr<Model_collection> read_obj_file(const string& filename, 
-    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list)
+    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list, Obj_flip_v flip_v)
 {
     using namespace Material_settings;
     std::ifstream file(filename);
@@ -294,7 +296,7 @@ std::shared_ptr<Model_collection> read_obj_file(const string& filename,
         string material;
         more_objects = read_obj_file(file, vertices, indices, input_vertices, input_normals,
             input_texture_coords, input_tangents, input_bitangents, input_colors, material,
-            &collection->materials);
+            &collection->materials, flip_v);
 
         constexpr int triangle_start_index = 0;
         auto material_iter = collection->materials.find(material);

@@ -299,7 +299,7 @@ void read_scene_file_stream(std::istream& file, Scene_components& sc,
             throw_if_file_not_openable(texture_file_path);
             texture_files[name] = texture_file_path;
         }
-        else if (input == "model")
+        else if (input == "model" || input == "model_dont_flip_v")
         {
             string name;
             file >> name;
@@ -315,7 +315,8 @@ void read_scene_file_stream(std::istream& file, Scene_components& sc,
                 string model_file = data_path + model;
                 throw_if_file_not_openable(model_file);
 
-                auto collection = read_obj_file(model_file, device, command_list);
+                Obj_flip_v flip_v = input == "model_dont_flip_v"? Obj_flip_v::no : Obj_flip_v::yes;
+                auto collection = read_obj_file(model_file, device, command_list, flip_v);
                 model_collections[name] = collection;
 
                 auto add_texture = [&](const string& file_name)

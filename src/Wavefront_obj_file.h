@@ -35,13 +35,17 @@ struct Model_collection
     std::map<std::string, Material> materials;
 };
 
+// Whether the importer should flip the second texture coordinate (the V in UV).
+enum class Obj_flip_v { yes, no };
+
 // Read Wavefront .obj files.
 // See https://en.wikipedia.org/wiki/Wavefront_.obj_file
 
-void read_obj_file(const std::string& filename, Vertices& vertices, std::vector<int>& indices);
+void read_obj_file(const std::string& filename, Vertices& vertices, std::vector<int>& indices,
+    Obj_flip_v flip_v);
 
 std::shared_ptr<Model_collection> read_obj_file(const std::string& filename,
-    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list);
+    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list, Obj_flip_v flip_v);
 
 
 // Exposed for unit tests
@@ -52,7 +56,7 @@ bool read_obj_file(std::istream& file, Vertices& vertices, std::vector<int>& ind
     std::vector<DirectX::PackedVector::XMHALF4>& input_tangents,
     std::vector<DirectX::PackedVector::XMHALF4>& input_bitangents,
     std::vector<DirectX::PackedVector::XMHALF4>& input_colors, std::string& material,
-    std::map<std::string, Material>* materials);
+    std::map<std::string, Material>* materials, Obj_flip_v flip_v);
 
 
 
