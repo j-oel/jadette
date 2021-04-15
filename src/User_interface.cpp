@@ -206,9 +206,7 @@ void User_interface::object_selection_and_mouse_pointer_update(UINT back_buf_ind
 DirectX::XMVECTOR rotate_object(View& view, POINT mouse_initial, POINT mouse_current, float radius)
 {
     DirectX::XMVECTOR rotation_quaternion = DirectX::XMQuaternionIdentity();
-    // The rotation direction is inverted relative to when rotating the view.
-    // This is accomplished by swapping mouse_current and mouse_initial.
-    arcball(mouse_current, mouse_initial, mouse_initial, view, radius, rotation_quaternion);
+    arcball(mouse_initial, mouse_current, mouse_initial, view, radius, rotation_quaternion);
     return rotation_quaternion;
 }
 

@@ -49,9 +49,9 @@ model cube_from_file cube.obj
 # the previously defined normal map texture.
 # normal_mapped_rotating_array is the combination of the two above.
 
-normal_mapped_rotating_array dynamic cube_from_file pattern 1 0 0 3 3 3 3.0 3.0 3.0 1 normal_map
+normal_mapped_array dynamic cube_from_file pattern -1 0 0 3 3 3 -3.0 3.0 3.0 1 normal_map
 model cube_model cube
-array static cube_model pattern 0 0 0 40 40 40 -3.0 3.0 3.0 0.4
+array static cube_model pattern 0 0 0 40 40 40 3.0 3.0 3.0 0.4
 
 
 model platform_model platform.obj
@@ -59,24 +59,24 @@ model platform_model platform.obj
 # If a model file (.obj file) references materials defined in an .mtl file, 
 # the <texture_name> argument is ignored:
 
-object plane1 static plane_model not_used -20 -10 0 30
-object plane2 static plane_model_two_sided not_used 10 -8 0 30
-object platform static platform_model not_used 20 -7 4 1
+object plane1 static plane_model not_used 20 -10 0 30
+object plane2 static plane_model_two_sided not_used -10 -8 0 30
+object platform static platform_model not_used -20 -7 4 1
 
 model cube_transparent cube_transparent.obj
 object transparent_cube dynamic cube_transparent not_used 0 3 -5 2
-object transparent_cube2 dynamic cube_transparent not_used 8 4 -4 1.4
+object transparent_cube2 dynamic cube_transparent not_used -8 4 -4 1.4
 
 model grating plane_grating.obj
-object grating1 static grating not_used 4 3 -3 2
-object grating2 static grating not_used 4.2 3.3 -5 2
-object grating3 static grating not_used 3.9 3.3 -6 2.5
+object grating1 static grating not_used -4 3 -3 2
+object grating2 static grating not_used -4.2 3.3 -5 2
+object grating3 static grating not_used -3.9 3.3 -6 2.5
 
 
 # To define the view:
 # view <position_x> <position_y> <position_z> <focus_point_x> <focus_point_y> <focus_point_z>
 
-view 10 15 -20 0 0 0
+view -10 15 -20 0 0 0
 
 # To define a light:
 # light <x> <y> <z> <fx> <fy> <fz> <diff_int> <diff_r> <spec_int> <spec_r> <r> <g> <b> <shadow>
@@ -87,10 +87,10 @@ view 10 15 -20 0 0 0
 # <r> <g> <b> is the color,
 # shadow should be 1 if the light is a shadow casting light, 0 otherwise.
 
-light 10 20 5 0 0 0 4 40 3 50 0.5 0.4 0.2 1
-light 20 0 -30 20 7 10 0.5 50 0.8 60 1.0 1.0 1.0 0
-light -15 5 -10 -15 0 -10 1 20 1.5 25 1.0 0.0 0.0 0
-light -5 7 0 -5 0 0 0.5 18 0.7 20 0.0 0.0 1.0 0
+light -10 20 5 0 0 0 4 40 3 50 0.5 0.4 0.2 1
+light -20 0 -30 20 7 10 0.5 50 0.8 60 1.0 1.0 1.0 0
+light 15 5 -10 -15 0 -10 1 20 1.5 25 1.0 0.0 0.0 0
+light 5 7 0 -5 0 0 0.5 18 0.7 20 0.0 0.0 1.0 0
 
 # To set the ambient light:
 # ambient <r> <g> <b>

@@ -302,6 +302,7 @@ void create_pipeline_state(ComPtr<ID3D12Device> device,
     s.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
     s.SampleMask = UINT_MAX; // Sample mask for blend state
     s.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+    s.RasterizerState.FrontCounterClockwise = TRUE;
     if (backface_culling == Backface_culling::disabled)
         s.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
     auto d = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);

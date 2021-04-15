@@ -107,7 +107,7 @@ void View_controller::mouse_look(View& view, double delta_time)
         const XMVECTOR up_direction = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
         XMVECTOR rotation_sideways = XMQuaternionRotationNormal(up_direction, 
-            -static_cast<float>(delta.x * m_mouse_look_sensitivity * delta_time));
+            static_cast<float>(delta.x * m_mouse_look_sensitivity * delta_time));
 
         XMVECTOR eye_to_focus_point = XMVector3Normalize(view.focus_point() - view.eye_position());
 
@@ -225,7 +225,7 @@ void View_controller::first_person_view_update(View& view)
     forward_direction = XMVector3Normalize(forward_direction);
 
     const XMVECTOR vertical_direction = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    XMVECTOR side_direction = XMVector3Cross(-forward_direction, vertical_direction);
+    XMVECTOR side_direction = XMVector3Cross(forward_direction, vertical_direction);
 
     const XMVECTOR delta_pos = forward_direction * forward_speed + side_direction * side_speed + 
         vertical_direction * vertical_speed;
@@ -300,7 +300,9 @@ void orbit_rotate_view(View& view, POINT mouse_initial, POINT mouse_current)
 {
     const float radius = view.width() * 0.5f;
     XMVECTOR rotation_quaternion = XMQuaternionIdentity();
-    arcball(mouse_initial, mouse_current, mouse_initial, view, radius, rotation_quaternion);
+    // The rotation direction is inverted relative to when rotating an object.
+    // This is accomplished by swapping mouse_current and mouse_initial.
+    arcball(mouse_current, mouse_initial, mouse_initial, view, radius, rotation_quaternion);
 
     const XMVECTOR old_view_direction = view.eye_position() - view.focus_point();
     const XMVECTOR new_eye_position = rotate_around_point(view.eye_position(), view.focus_point(),
@@ -351,7 +353,7 @@ void View_controller::orbit_update(View& view)
     }
     else if (m_input.is_shift_and_left_mouse_button_down())
     {
-        pan_x = -static_cast<float>(mouse_delta.x);
+        pan_x = static_cast<float>(mouse_delta.x);
         pan_y = -static_cast<float>(mouse_delta.y);
     }
     else if (m_input.is_left_mouse_button_down())

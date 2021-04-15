@@ -36,12 +36,12 @@ View::View(UINT width, UINT height, DirectX::XMVECTOR eye_position, DirectX::XMV
 
 void View::update()
 {
-    XMMATRIX view_matrix = XMMatrixLookAtLH(XMLoadFloat3(&m_eye_position),
+    XMMATRIX view_matrix = XMMatrixLookAtRH(XMLoadFloat3(&m_eye_position),
         XMLoadFloat3(&m_focus_point), XMLoadFloat3(&m_up));
     XMStoreFloat4x4(&m_view_matrix, view_matrix);
 
     const float aspect_ratio = static_cast<float>(m_width) / m_height;
-    XMMATRIX projection_matrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(m_fov),
+    XMMATRIX projection_matrix = XMMatrixPerspectiveFovRH(XMConvertToRadians(m_fov),
         aspect_ratio, m_near_z, m_far_z);
     XMStoreFloat4x4(&m_projection_matrix, projection_matrix);
     XMMATRIX view_projection_matrix = XMMatrixMultiply(view_matrix, projection_matrix);

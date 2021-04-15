@@ -617,11 +617,11 @@ void Scene_impl::draw_dynamic_objects(ID3D12GraphicsCommandList& command_list,
 }
 
 
-struct Graphical_object_z_of_center_greater
+struct Graphical_object_z_of_center_less
 {
     bool operator()(const std::shared_ptr<Graphical_object>& o1, const std::shared_ptr<Graphical_object>& o2)
     {
-        return o1->center().m128_f32[2] > o2->center().m128_f32[2];
+        return o1->center().m128_f32[2] < o2->center().m128_f32[2];
     }
 };
 
@@ -654,7 +654,7 @@ void Scene_impl::sort_transparent_objects_back_to_front(const View& view)
     }
 
     std::sort(m.transparent_objects.begin(), m.transparent_objects.end(),
-        Graphical_object_z_of_center_greater());
+        Graphical_object_z_of_center_less());
 }
 
 void Scene_impl::draw_transparent_objects(ID3D12GraphicsCommandList& command_list,
