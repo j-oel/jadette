@@ -319,8 +319,6 @@ void record_frame_time(double& frame_time, double& fps)
 void User_interface::render_2d_text(size_t objects_count, int triangles_count,
     size_t vertices_count, size_t lights_count, int draw_calls)
 {
-#ifndef NO_TEXT
-
     static double frame_time = 0.0;
     static double fps = 0.0;
     record_frame_time(frame_time, fps);
@@ -375,8 +373,6 @@ void User_interface::render_2d_text(size_t objects_count, int triangles_count,
         ss << "Press F1 for help";
 
     render_2d_text(ss.str());
-
-#endif
 }
 
 void User_interface::render_2d_text(const std::wstring& message)
@@ -385,6 +381,8 @@ void User_interface::render_2d_text(const std::wstring& message)
     float x_position = 5.0f;
     float y_position = 5.0f;
     m_text.draw(message.c_str(), x_position, y_position, m_dx12_display->back_buf_index());
+#else
+    ignore_unused_variable(message);
 #endif
 }
 
@@ -392,5 +390,7 @@ void User_interface::scaling_changed(float dpi)
 {
 #ifndef NO_TEXT
     m_text.scaling_changed(dpi);
+#else
+    ignore_unused_variable(dpi);
 #endif
 }

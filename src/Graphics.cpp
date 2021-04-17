@@ -51,14 +51,18 @@ public:
 private:
     void finish_init();
     void render_loading_message();
+    void render_info_text();
     void record_frame_rendering_commands_in_command_list();
+    Commands commands();
     void set_and_clear_render_target();
+    void prepare_render_target_for_present();
     int create_texture_descriptor_heap();
     void create_pipeline_state(ComPtr<ID3D12PipelineState>& pipeline_state,
         const wchar_t* debug_name, Backface_culling backface_culling,
         Alpha_blending alpha_blending, Depth_write depth_write);
     void create_pipeline_states(const Config& config);
     ComPtr<ID3D12GraphicsCommandList> create_main_command_list();
+    void reload_shaders_if_requested();
 
     Config m_config;
     std::shared_ptr<Dx12_display> m_dx12_display;
@@ -211,6 +215,13 @@ void Graphics_impl::finish_init()
     m_init_done = true;
 }
 
+UINT update_render_settings(const User_interface& user_interface)
+{
+    return (user_interface.texture_mapping() ? texture_mapping_enabled : 0) |
+           (user_interface.shadow_mapping()  ? shadow_mapping_enabled  : 0) |
+           (user_interface.normal_mapping()  ? normal_mapping_enabled  : 0);
+}
+
 void Graphics_impl::update()
 {
     if (!m_scene_loaded || !m_shaders_compiled)
@@ -221,26 +232,11 @@ void Graphics_impl::update()
 
     m_user_interface.update(m_dx12_display->back_buf_index(), *m_scene.get(), m_view);
 
-    try
-    {
-        if (m_user_interface.reload_shaders_requested())
-        {
-            create_pipeline_states(m_config);
-            m_depth_pass.reload_shaders(m_device, m_config.backface_culling);
-            m_user_interface.reload_shaders(m_device, m_config.backface_culling);
-        }
-    }
-    catch (Shader_compilation_error& e)
-    {
-        print("Shader compilation of " + e.m_shader +
-            " failed. See output window if you run in debugger.");
-    }
+    reload_shaders_if_requested();
 
     m_scene->update();
 
-    m_render_settings = (m_user_interface.texture_mapping() ? texture_mapping_enabled : 0) |
-                        (m_user_interface.shadow_mapping() ? shadow_mapping_enabled : 0) |
-                        (m_user_interface.normal_mapping()  ? normal_mapping_enabled  : 0);
+    m_render_settings = update_render_settings(m_user_interface);
 }
 
 void Graphics_impl::render()
@@ -253,8 +249,7 @@ void Graphics_impl::render()
 
         m_dx12_display->execute_command_list(m_command_list);
 
-        m_user_interface.render_2d_text(m_scene->objects_count(), m_scene->triangles_count(),
-            m_scene->vertices_count(), m_scene->lights_count(), Mesh::draw_calls());
+        render_info_text();
     }
     else
     {
@@ -284,6 +279,33 @@ void Graphics_impl::render_loading_message()
     using namespace std::chrono_literals;
     std::this_thread::sleep_for(30ms); // It would be wasteful to render this with full frame rate,
                                        // hence sleep for a while.
+}
+
+void Graphics_impl::render_info_text()
+{
+#ifndef NO_TEXT
+    m_user_interface.render_2d_text(m_scene->objects_count(), m_scene->triangles_count(),
+        m_scene->vertices_count(), m_scene->lights_count(), Mesh::draw_calls());
+#endif
+    Mesh::reset_draw_calls();
+}
+
+void Graphics_impl::reload_shaders_if_requested()
+{
+    try
+    {
+        if (m_user_interface.reload_shaders_requested())
+        {
+            create_pipeline_states(m_config);
+            m_depth_pass.reload_shaders(m_device, m_config.backface_culling);
+            m_user_interface.reload_shaders(m_device, m_config.backface_culling);
+        }
+    }
+    catch (Shader_compilation_error& e)
+    {
+        print("Shader compilation of " + e.m_shader +
+            " failed. See output window if you run in debugger.");
+    }
 }
 
 void Graphics_impl::scaling_changed(float dpi)
@@ -383,7 +405,16 @@ void Graphics_impl::set_and_clear_render_target()
         m_depth_stencil[m_dx12_display->back_buf_index()].cpu_handle());
 }
 
-void Graphics_impl::record_frame_rendering_commands_in_command_list()
+void Graphics_impl::prepare_render_target_for_present()
+{
+    // If text is enabled, the text object takes care of the render target state transition.
+#ifdef NO_TEXT
+    m_dx12_display->barrier_transition(D3D12_RESOURCE_STATE_RENDER_TARGET,
+        D3D12_RESOURCE_STATE_PRESENT);
+#endif
+}
+
+Commands Graphics_impl::commands()
 {
     Commands c(*m_command_list.Get(), m_dx12_display->back_buf_index(),
         &m_depth_stencil[m_dx12_display->back_buf_index()], Texture_mapping::enabled,
@@ -392,8 +423,15 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
         &m_view, m_scene.get(), &m_depth_pass,
         &m_root_signature, m_root_signature.m_root_param_index_of_instance_data);
 
-    Mesh::reset_draw_calls();
-    c.set_back_buf_index(m_dx12_display->back_buf_index());
+    return c;
+}
+
+// This is the central function that defines the main rendering algorithm,
+// i.e. on a fairly high level what is done to render a frame, and in what order.
+// The goal is that this should look as close as possible to pseudo code.
+void Graphics_impl::record_frame_rendering_commands_in_command_list()
+{
+    Commands c { commands() };
     c.upload_data_to_gpu();
     c.set_descriptor_heap(m_texture_descriptor_heap);
     c.set_root_signature();
@@ -426,10 +464,7 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
         c.draw_transparent_objects(m_pipeline_state_transparency);
     }
 
-    // If text is enabled, the text object takes care of the render target state transition.
-#ifdef NO_TEXT
-    m_dx12_display->barrier_transition(D3D12_RESOURCE_STATE_RENDER_TARGET, 
-        D3D12_RESOURCE_STATE_PRESENT);
-#endif
+    prepare_render_target_for_present();
+
     c.close();
 }
