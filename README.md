@@ -34,10 +34,16 @@ width="700" alt="Jadette Tree House screenshot 1">
 
 
 This screenshot is from my standard test scene that is included in this repository 
-(very basic models and textures to keep the size of this repo small):
+(very basic models and textures to keep the size of the repo small):
 
 <img src="https://raw.githubusercontent.com/j-oel/jadette-media/master/screenshots/jadette-standard-scene1.png" 
 width="700" alt="Jadette Standard Scene screenshot 1">
+
+## How to navigate the code
+
+When I explore a new code base I like to start at the main function and drill my way down. I think this gives a good overview, but in some code bases there might be a lot of layers and what is the most interesting parts might not be immediately obvious, so it sometimes takes some time to find them. However, in the case of Jadette, this should be a pretty good exploration strategy for most people; the main function is located in the file [main.cpp](https://github.com/j-oel/jadette/blob/master/src/main.cpp). Nevertheless, If you're not so interested in Win32 specifics you could go directly to [Graphics.cpp](https://github.com/j-oel/jadette/blob/master/src/Graphics.cpp), which is where the high level graphics is controlled from. The functions *update* and *render* are central and good places to start further drill down from.
+
+The file [Scene.cpp](https://github.com/j-oel/jadette/blob/master/src/Scene.cpp) is also really important and you will end up there pretty soon after Graphics.cpp. The most fundamental low level DirectX functionality, such as initialization, handling of the device and swap chain, is located in [Dx12_display.cpp](https://github.com/j-oel/jadette/blob/master/src/Dx12_display.cpp). The user interface is in [User_interface.cpp](https://github.com/j-oel/jadette/blob/master/src/User_interface.cpp) and [View_controller.cpp](https://github.com/j-oel/jadette/blob/master/src/View_controller.cpp). Low level input is sent from main.cpp to [Input.cpp](https://github.com/j-oel/jadette/blob/master/src/Input.cpp), which is used by User_interface and View_controller.
 
 
 ## How to build
