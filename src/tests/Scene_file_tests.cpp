@@ -5,17 +5,12 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
-#include "../3rdparty/catch/catch.hpp"
+#include "pch_tests.h"
 
-#include "../dx12min.h"
 #include "../Scene_file.h"
 #include "../Scene_components.h"
 #include "../util.h"
 #include "../dx12_util.h"
-
-#include <dxgi1_6.h>
-#include <winerror.h>
-#include <sstream>
 
 
 using namespace std;

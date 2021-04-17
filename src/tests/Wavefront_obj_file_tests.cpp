@@ -5,11 +5,9 @@
 // See gpl-3.0.txt or <https://www.gnu.org/licenses/>
 
 
-#include "../3rdparty/catch/catch.hpp"
+#include "pch_tests.h"
 
 #include "../Wavefront_obj_file.h"
-
-#include <sstream>
 
  
 using namespace std;

@@ -54,5 +54,13 @@
     <ClCompile Include="..\util.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="pch_tests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="pch_tests.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
