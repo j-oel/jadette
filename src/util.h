@@ -11,10 +11,12 @@
 #include <exception>
 
 
+template<typename T> void ignore_unused_variable(const T&) { }
+
 #if defined(_DEBUG)
 #define SET_DEBUG_NAME(object, name) object->SetName(name)
 #else
-#define SET_DEBUG_NAME(object, name) 
+#define SET_DEBUG_NAME(object, name) ignore_unused_variable(name)
 #endif
 
 
