@@ -48,4 +48,4 @@ The file [Scene.cpp](https://github.com/j-oel/jadette/blob/master/src/Scene.cpp)
 
 ## How to build
 
-Build with Visual Studio 2019.
+Build with Visual Studio 2019. If you don't already have it, you can download the free Community version [here](https://visualstudio.microsoft.com/downloads/). When installing, in "Workloads", select "Desktop development with C++" or "Game development with C++", they contain the Windows 10 SDK, which in turn contains DirectX 12, Jadette's only external dependencies. Then open Jadette.sln and select *Build Solution* from the *Build* menu (or hit the keyboard shortcut).
