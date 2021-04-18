@@ -57,3 +57,14 @@ struct Scene_components
     DirectX::XMFLOAT3 initial_view_position;
     DirectX::XMFLOAT3 initial_view_focus_point;
 };
+
+inline DirectX::PackedVector::XMHALF4 convert_float4_to_half4(const DirectX::XMFLOAT4& vec)
+{
+    DirectX::PackedVector::XMHALF4 half4;
+    using DirectX::PackedVector::XMConvertFloatToHalf;
+    half4.x = XMConvertFloatToHalf(vec.x);
+    half4.y = XMConvertFloatToHalf(vec.y);
+    half4.z = XMConvertFloatToHalf(vec.z);
+    half4.w = XMConvertFloatToHalf(vec.w);
+    return half4;
+}

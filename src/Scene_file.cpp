@@ -17,16 +17,6 @@ using namespace DirectX;
 using namespace DirectX::PackedVector;
 
 
-XMHALF4 convert_float4_to_half4(const XMFLOAT4& vec)
-{
-    XMHALF4 half4;
-    half4.x = XMConvertFloatToHalf(vec.x);
-    half4.y = XMConvertFloatToHalf(vec.y);
-    half4.z = XMConvertFloatToHalf(vec.z);
-    half4.w = XMConvertFloatToHalf(vec.w);
-    return half4;
-}
-
 void throw_if_file_not_openable(const std::string& file_name)
 {
     std::ifstream file(file_name);
@@ -35,18 +25,16 @@ void throw_if_file_not_openable(const std::string& file_name)
 }
 
 
-
 void read_scene_file(const std::string& file_name, Scene_components& sc, ComPtr<ID3D12Device> device,
     ID3D12GraphicsCommandList& command_list, int& texture_index,
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_values)
+    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap)
 {
     using std::ifstream;
     ifstream file(file_name);
     if (!file.is_open())
         throw Scene_file_open_error();
 
-    read_scene_file_stream(file, sc, device, command_list, texture_index, texture_descriptor_heap,
-        root_param_index_of_values);
+    read_scene_file_stream(file, sc, device, command_list, texture_index, texture_descriptor_heap);
 }
 
 
@@ -54,8 +42,7 @@ void read_scene_file(const std::string& file_name, Scene_components& sc, ComPtr<
 // You should ensure that the scene file is valid.
 void read_scene_file_stream(std::istream& file, Scene_components& sc,
     ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
-    int& texture_index, ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap,
-    int root_param_index_of_values)
+    int& texture_index, ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap)
 {
     using std::map;
     using std::vector;
@@ -115,8 +102,7 @@ void read_scene_file_stream(std::istream& file, Scene_components& sc,
         convert_vector_to_half4(DirectX::XMQuaternionIdentity()) };
         sc.static_model_transforms.push_back(transform);
         auto object = std::make_shared<Graphical_object>(device, mesh, used_textures,
-            root_param_index_of_values, object_id++, material_id,
-            instances, triangle_start_index);
+            object_id++, material_id, instances, triangle_start_index);
 
         sc.graphical_objects.push_back(object);
 

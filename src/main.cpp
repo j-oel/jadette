@@ -62,7 +62,11 @@ Config read_config(const std::string& config_file)
         }
         else if (input == "scene")
         {
+#ifndef NO_SCENE_FILE
             file >> config.scene_file;
+#else
+            file >> input;
+#endif
         }
         else if (input == "edit_mode")
         {
@@ -150,7 +154,11 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int cmd_show)
 
     try
     {
+#ifndef NO_CFG_FILE
         Config config = read_config(config_file);
+#else
+        Config config;
+#endif
         std::vector<Monitor> monitors;
         EnumDisplayMonitors(nullptr, nullptr, monitor_enum_proc, bit_cast<LPARAM>(&monitors));
 

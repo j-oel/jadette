@@ -176,7 +176,10 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     {
         auto swap_chain_buffer_count = m_dx12_display->swap_chain_buffer_count();
         m_scene = std::make_unique<Scene>(m_device, swap_chain_buffer_count,
-            data_path + config.scene_file, m_texture_descriptor_heap,
+#ifndef NO_SCENE_FILE
+            data_path + config.scene_file, 
+#endif
+            m_texture_descriptor_heap,
             m_root_signature.m_root_param_index_of_values);
 
         DirectX::XMFLOAT3 eye_pos;

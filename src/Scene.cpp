@@ -83,9 +83,14 @@ private:
 class Scene_impl
 {
 public:
-    Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count, const std::string& scene_file,
-        ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_values);
+    Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
+        const std::string& scene_file, ComPtr<ID3D12DescriptorHeap> descriptor_heap,
+        int root_param_index_of_values);
+    Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
+        ComPtr<ID3D12DescriptorHeap> descriptor_heap, int root_param_index_of_values);
     ~Scene_impl();
+    void init(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
+        UINT swap_chain_buffer_count, ComPtr<ID3D12DescriptorHeap> descriptor_heap);
     void update();
 
     void draw_static_objects(ID3D12GraphicsCommandList& command_list,
@@ -157,8 +162,15 @@ private:
 
 
 Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count, const std::string& scene_file,
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_values) :
-    impl(new Scene_impl(device, swap_chain_buffer_count, scene_file, texture_descriptor_heap,
+    ComPtr<ID3D12DescriptorHeap> descriptor_heap, int root_param_index_of_values) :
+    impl(new Scene_impl(device, swap_chain_buffer_count, scene_file, descriptor_heap,
+        root_param_index_of_values))
+{
+}
+
+Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count, 
+    ComPtr<ID3D12DescriptorHeap> descriptor_heap, int root_param_index_of_values) :
+    impl(new Scene_impl(device, swap_chain_buffer_count, descriptor_heap,
         root_param_index_of_values))
 {
 }
@@ -308,6 +320,43 @@ DirectX::XMFLOAT4 Scene::ambient_light() const
     return impl->ambient_light();
 }
 
+struct cmd_list_and_allocator
+{
+    ComPtr<ID3D12GraphicsCommandList> command_list;
+    ComPtr<ID3D12CommandAllocator> command_allocator;
+};
+
+cmd_list_and_allocator create_cmd_list_and_allocator(ComPtr<ID3D12Device> device)
+{
+    cmd_list_and_allocator c;
+    throw_if_failed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+        IID_PPV_ARGS(&c.command_allocator)));
+
+    constexpr ID3D12PipelineState* initial_pipeline_state = nullptr;
+    throw_if_failed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
+        c.command_allocator.Get(), initial_pipeline_state, IID_PPV_ARGS(&c.command_list)));
+    SET_DEBUG_NAME(c.command_list, L"Scene Upload Data Command List");
+    return c;
+}
+
+void set_default_scene_components_parameters(Scene_components& sc)
+{
+    sc.ambient_light = { 0.2f, 0.2f, 0.2f, 1.0f };
+    sc.shadow_casting_lights_count = 0;
+    sc.initial_view_position = { 0.0f, 0.0f, -20.0f };
+    sc.initial_view_focus_point = { 0.0f, 0.0f, 0.0f };
+}
+
+void create_texture_null_descriptors(ComPtr<ID3D12Device> device, UINT max_textures,
+    ComPtr<ID3D12DescriptorHeap> descriptor_heap, UINT texture_index, UINT texture_start_index)
+{
+    for (UINT i = texture_index; i < texture_start_index + max_textures; ++i)
+    {
+        // On Tier 1 hardware, all descriptors must be set, even if not used,
+        // hence set them to null descriptors.
+        create_null_descriptor(device, descriptor_heap, i);
+    }
+}
 
 Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
     const std::string& scene_file, ComPtr<ID3D12DescriptorHeap> descriptor_heap,
@@ -315,25 +364,13 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
     m_root_param_index_of_values(root_param_index_of_values),
     m_triangles_count(0), m_vertices_count(0), m_selected_object_id(-1), m_object_selected(false)
 {
-    m.ambient_light = { 0.2f, 0.2f, 0.2f, 1.0f };
-    m.shadow_casting_lights_count = 0;
-    m.initial_view_position = { 0.0f, 0.0f, -20.0f };
-    m.initial_view_focus_point = { 0.0f, 0.0f, 0.0f };
+    set_default_scene_components_parameters(m);
 
     // Initialize COM, needed by Windows Imaging Component (WIC)
     throw_if_failed(CoInitializeEx(nullptr, COINITBASE_MULTITHREADED | COINIT_DISABLE_OLE1DDE));
 
-    ComPtr<ID3D12GraphicsCommandList> cmd_list;
-    ComPtr<ID3D12CommandAllocator> command_allocator;
-
-    throw_if_failed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-        IID_PPV_ARGS(&command_allocator)));
-
-    constexpr ID3D12PipelineState* initial_pipeline_state = nullptr;
-    throw_if_failed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
-        command_allocator.Get(), initial_pipeline_state, IID_PPV_ARGS(&cmd_list)));
-    SET_DEBUG_NAME(cmd_list, L"Scene Upload Data Command List");
-    ID3D12GraphicsCommandList& command_list = *cmd_list.Get();
+    auto c = create_cmd_list_and_allocator(device);
+    auto& command_list = *c.command_list.Get();
 
     int texture_start_index = texture_index_of_textures(swap_chain_buffer_count);
     int texture_index = texture_start_index;
@@ -361,8 +398,7 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
 
     try
     {
-        read_scene_file(scene_file, m, device, command_list, texture_index,
-            descriptor_heap, root_param_index_of_values);
+        read_scene_file(scene_file, m, device, command_list, texture_index, descriptor_heap);
         scene_error = false;
     }
 
@@ -406,12 +442,8 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
             e.material + " referenced by " + e.object + " not defined", "Error");
     }
 
-    for (UINT i = texture_index; i < texture_start_index + max_textures; ++i)
-    {
-        // On Tier 1 hardware, all descriptors must be set, even if not used,
-        // hence set them to null descriptors.
-        create_null_descriptor(device, descriptor_heap, i);
-    }
+    create_texture_null_descriptors(device, max_textures, descriptor_heap, texture_index,
+        texture_start_index);
 
     if (scene_error)
     {
@@ -429,6 +461,12 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
         return;
     }
 
+    init(device, command_list, swap_chain_buffer_count, descriptor_heap);
+}
+
+void Scene_impl::init(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
+    UINT swap_chain_buffer_count, ComPtr<ID3D12DescriptorHeap> descriptor_heap)
+{
     m_materials_data = std::make_unique<Constant_buffer<Shader_material>>(device,
         command_list, m.materials, descriptor_heap,
         descriptor_start_index_of_materials(swap_chain_buffer_count));
@@ -436,7 +474,7 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
     auto shadow_casting_light_is_less_than =
         [](const Light& l1, const Light& l2) -> bool { return l1.position.w > l2.position.w; };
 
-    sort(m.lights.begin(), m.lights.end(), shadow_casting_light_is_less_than );
+    sort(m.lights.begin(), m.lights.end(), shadow_casting_light_is_less_than);
 
     const UINT descriptor_index_increment = static_cast<UINT>(m.shadow_casting_lights_count);
 
@@ -482,9 +520,61 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
         m_vertices_count += g->vertices_count();
     }
 
+    int texture_start_index = texture_index_of_textures(swap_chain_buffer_count);
     UINT position = descriptor_position_in_descriptor_heap(device, texture_start_index);
     m_texture_gpu_descriptor_handle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
         descriptor_heap->GetGPUDescriptorHandleForHeapStart(), position);
+}
+
+void create_tiny_scene(Scene_components& sc, ComPtr<ID3D12Device> device,
+    ID3D12GraphicsCommandList& command_list)
+{
+    XMFLOAT4 position(0.0f, 0.0f, 0.0f, 5.0f);
+    Per_instance_transform transform = { convert_float4_to_half4(position),
+                                         convert_vector_to_half4(DirectX::XMQuaternionIdentity())};
+    sc.static_model_transforms.push_back(transform);
+    auto object = std::make_shared<Graphical_object>(device, command_list,
+        Primitive_type::Cube, 0, 0);
+    sc.graphical_objects.push_back(object);
+    sc.dynamic_objects.push_back(object);
+    sc.dynamic_model_transforms.push_back(transform);
+
+    Shader_material shader_material{};
+    sc.materials.push_back(shader_material);
+
+    float diffuse_intensity = 3;
+    float diffuse_reach = 20;
+    float specular_intensity = 3;
+    float specular_reach = 20;
+    auto light_position = XMFLOAT4(10, 7, -5, 1);
+    auto focus_point = XMFLOAT4(0, 0, 0, 1);
+    auto color = XMFLOAT4(1, 1, 1, 1);
+
+    Light light = { XMFLOAT4X4(), light_position, focus_point, color,
+    diffuse_intensity, diffuse_reach, specular_intensity, specular_reach };
+    sc.lights.push_back(light);
+
+    sc.shadow_casting_lights_count = 1;
+}
+
+Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
+    ComPtr<ID3D12DescriptorHeap> descriptor_heap, int root_param_index_of_values) :
+    m_root_param_index_of_values(root_param_index_of_values),
+    m_triangles_count(0), m_vertices_count(0), m_selected_object_id(-1), m_object_selected(false)
+{
+    set_default_scene_components_parameters(m);
+
+    auto c = create_cmd_list_and_allocator(device);
+    auto& command_list = *c.command_list.Get();
+
+    create_tiny_scene(m, device, command_list);
+
+    int texture_start_index = texture_index_of_textures(swap_chain_buffer_count);
+    int texture_index = texture_start_index;
+    create_texture_null_descriptors(device, max_textures, descriptor_heap, texture_index,
+        texture_start_index);
+
+    init(device, command_list, swap_chain_buffer_count, descriptor_heap);
 }
 
 Scene_impl::~Scene_impl()

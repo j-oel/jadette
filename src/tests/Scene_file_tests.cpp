@@ -71,7 +71,7 @@ SCENARIO("The scene parser works")
         {
             int texture_index = 0;
             read_scene_file_stream(scene_data, sc, device, *command_list.Get(), texture_index,
-                texture_descriptor_heap, 0);
+                texture_descriptor_heap);
 
 
             THEN("the object is available")
@@ -104,7 +104,7 @@ SCENARIO("The scene parser works")
         {
             int texture_index = 0;
             read_scene_file_stream(scene_data, sc, device, *command_list.Get(), texture_index,
-                texture_descriptor_heap, 0);
+                texture_descriptor_heap);
 
 
             THEN("the objects are available")
@@ -145,7 +145,7 @@ SCENARIO("The scene parser works")
         {
             int texture_index = 0;
             read_scene_file_stream(scene_data, sc, device, *command_list.Get(), texture_index,
-                texture_descriptor_heap, 0);
+                texture_descriptor_heap);
 
 
             THEN("the objects are available")
@@ -281,7 +281,7 @@ SCENARIO("The scene parser works")
             {
                 int texture_index = 0;
                 REQUIRE_THROWS_AS(read_scene_file_stream(scene_data, sc, device,
-                    *command_list.Get(), texture_index, texture_descriptor_heap, 0),
+                    *command_list.Get(), texture_index, texture_descriptor_heap),
                     Texture_not_defined);
             }
         }
@@ -299,7 +299,7 @@ SCENARIO("The scene parser works")
             {
                 int texture_index = 0;
                 REQUIRE_THROWS_AS(read_scene_file_stream(scene_data, sc, device,
-                    *command_list.Get(), texture_index, texture_descriptor_heap, 0),
+                    *command_list.Get(), texture_index, texture_descriptor_heap),
                     Model_not_defined);
             }
         }
@@ -318,7 +318,7 @@ SCENARIO("The scene parser works")
             {
                 int texture_index = 0;
                 REQUIRE_THROWS_AS(read_scene_file_stream(scene_data, sc, device,
-                    *command_list.Get(), texture_index, texture_descriptor_heap, 0),
+                    *command_list.Get(), texture_index, texture_descriptor_heap),
                     Object_not_defined);
             }
         }
@@ -335,7 +335,7 @@ SCENARIO("The scene parser works")
             {
                 int texture_index = 0;
                 REQUIRE_THROWS_AS(read_scene_file_stream(scene_data, sc, device,
-                    *command_list.Get(), texture_index, texture_descriptor_heap, 0),
+                    *command_list.Get(), texture_index, texture_descriptor_heap),
                     File_open_error);
             }
         }
@@ -353,7 +353,7 @@ SCENARIO("The scene parser works")
             {
                 int texture_index = 0;
                 REQUIRE_THROWS_AS(read_scene_file_stream(scene_data, sc, device,
-                    *command_list.Get(), texture_index, texture_descriptor_heap, 0),
+                    *command_list.Get(), texture_index, texture_descriptor_heap),
                     File_open_error);
             }
         }
@@ -370,7 +370,7 @@ SCENARIO("The scene parser works")
             {
                 int texture_index = 0;
                 REQUIRE_THROWS_AS(read_scene_file_stream(scene_data, sc, device,
-                    *command_list.Get(), texture_index, texture_descriptor_heap, 0),
+                    *command_list.Get(), texture_index, texture_descriptor_heap),
                     Read_error);
             }
         }
