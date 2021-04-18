@@ -62,6 +62,7 @@ private:
         Alpha_blending alpha_blending, Depth_write depth_write);
     void create_pipeline_states(const Config& config);
     ComPtr<ID3D12GraphicsCommandList> create_main_command_list();
+    void update_user_interface();
     void reload_shaders_if_requested();
 
     Config m_config;
@@ -84,7 +85,9 @@ private:
     std::unique_ptr<Scene> m_scene;
     View m_view;
     Input& m_input;
+#ifndef NO_UI
     User_interface m_user_interface;
+#endif
 
     UINT m_render_settings;
     bool m_use_vertex_colors;
@@ -130,6 +133,7 @@ namespace
     constexpr UINT texture_mapping_enabled = 1;
     constexpr UINT normal_mapping_enabled  = 1 << 2;
     constexpr UINT shadow_mapping_enabled  = 1 << 3;
+    constexpr UINT early_z_pass_enabled    = 1 << 4;
 }
 
 Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
@@ -148,8 +152,11 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     m_view(config.width, config.height, XMVectorSet(0.0, 0.0f, 1.0f, 1.0f),
         XMVectorZero(), 0.1f, 4000.0f, config.fov),
     m_input(input),
+#ifndef NO_UI
     m_user_interface(m_dx12_display, &m_root_signature, m_texture_descriptor_heap,
         texture_index_of_depth_buffer(), input, window, config),
+#endif
+    m_render_settings(texture_mapping_enabled | normal_mapping_enabled | shadow_mapping_enabled),
     m_use_vertex_colors(config.use_vertex_colors),
     m_width(config.width),
     m_height(config.height),
@@ -188,6 +195,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
         DirectX::XMFLOAT3 focus_point;
         m_scene->initial_view_focus_point(focus_point);
         m_view.set_focus_point(focus_point);
+        m_view.update();
         m_scene_loaded = true;
     };
     
@@ -218,12 +226,15 @@ void Graphics_impl::finish_init()
     m_init_done = true;
 }
 
+#ifndef NO_UI
 UINT update_render_settings(const User_interface& user_interface)
 {
     return (user_interface.texture_mapping() ? texture_mapping_enabled : 0) |
            (user_interface.shadow_mapping()  ? shadow_mapping_enabled  : 0) |
-           (user_interface.normal_mapping()  ? normal_mapping_enabled  : 0);
+           (user_interface.normal_mapping()  ? normal_mapping_enabled  : 0) |
+           (user_interface.early_z_pass()  ? early_z_pass_enabled      : 0);
 }
+#endif
 
 void Graphics_impl::update()
 {
@@ -233,13 +244,11 @@ void Graphics_impl::update()
     if (!m_init_done)
         finish_init();
 
-    m_user_interface.update(m_dx12_display->back_buf_index(), *m_scene.get(), m_view);
+    update_user_interface();
 
     reload_shaders_if_requested();
 
     m_scene->update();
-
-    m_render_settings = update_render_settings(m_user_interface);
 }
 
 void Graphics_impl::render()
@@ -267,7 +276,7 @@ void Graphics_impl::render_loading_message()
     set_and_clear_render_target();
     m_command_list->Close();
 
-#ifndef NO_TEXT
+#if !defined(NO_TEXT) && !defined(NO_UI)
     std::wstring message = L"Loading shaders...";
     if (m_shaders_compiled)
         message += L" done.";
@@ -286,15 +295,24 @@ void Graphics_impl::render_loading_message()
 
 void Graphics_impl::render_info_text()
 {
-#ifndef NO_TEXT
+#if !defined(NO_TEXT) && !defined(NO_UI)
     m_user_interface.render_2d_text(m_scene->objects_count(), m_scene->triangles_count(),
         m_scene->vertices_count(), m_scene->lights_count(), Mesh::draw_calls());
 #endif
     Mesh::reset_draw_calls();
 }
 
+void Graphics_impl::update_user_interface()
+{
+#ifndef NO_UI
+    m_user_interface.update(m_dx12_display->back_buf_index(), *m_scene.get(), m_view);
+    m_render_settings = update_render_settings(m_user_interface);
+#endif
+}
+
 void Graphics_impl::reload_shaders_if_requested()
 {
+#ifndef NO_UI
     try
     {
         if (m_user_interface.reload_shaders_requested())
@@ -309,11 +327,16 @@ void Graphics_impl::reload_shaders_if_requested()
         print("Shader compilation of " + e.m_shader +
             " failed. See output window if you run in debugger.");
     }
+#endif
 }
 
 void Graphics_impl::scaling_changed(float dpi)
 {
+#ifndef NO_UI
     m_user_interface.scaling_changed(dpi);
+#else
+    ignore_unused_variable(dpi);
+#endif
 }
 
 int Graphics_impl::create_texture_descriptor_heap()
@@ -411,7 +434,7 @@ void Graphics_impl::set_and_clear_render_target()
 void Graphics_impl::prepare_render_target_for_present()
 {
     // If text is enabled, the text object takes care of the render target state transition.
-#ifdef NO_TEXT
+#if defined(NO_TEXT) || defined(NO_UI)
     m_dx12_display->barrier_transition(D3D12_RESOURCE_STATE_RENDER_TARGET,
         D3D12_RESOURCE_STATE_PRESENT);
 #endif
@@ -441,7 +464,7 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     c.set_shader_constants();
     if (m_render_settings & shadow_mapping_enabled)
         c.generate_shadow_maps();
-    if (m_user_interface.early_z_pass())
+    if (m_render_settings & early_z_pass_enabled)
         c.early_z_pass();
     else
         c.clear_depth_stencil();
@@ -450,7 +473,7 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     c.set_shadow_map_for_shader();
     m_scene->sort_transparent_objects_back_to_front(m_view);
 
-    if (m_user_interface.early_z_pass())
+    if (m_render_settings & early_z_pass_enabled)
     {
         c.draw_dynamic_objects(m_pipeline_state_early_z);
         c.draw_static_objects(m_pipeline_state_early_z);

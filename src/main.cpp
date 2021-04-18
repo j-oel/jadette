@@ -303,13 +303,15 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM w_param, LPA
         case WM_KEYDOWN:
             if (w_param == VK_ESCAPE)
                 PostQuitMessage(0);
+#ifndef NO_UI
             else
                 if (engine)
                 {
                     engine->input.key_down(w_param);
                 }
+#endif
             return 0;
-
+#ifndef NO_UI
         case WM_KEYUP:
             if (engine)
             {
@@ -379,7 +381,7 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM w_param, LPA
             }
             break;
         }
-
+#endif
         case WM_DESTROY:
             PostQuitMessage(0);
             return 0;
