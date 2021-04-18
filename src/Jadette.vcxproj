@@ -203,15 +203,15 @@
       <WarningLevel>Level4</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;NO_TEXT;NO_SCENE_FILE;NO_CFG_FILE;NO_UI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <LanguageStandard>Default</LanguageStandard>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <ExceptionHandling>Sync</ExceptionHandling>
-      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <ExceptionHandling>false</ExceptionHandling>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
       <Optimization>MinSpace</Optimization>
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -258,7 +258,7 @@
       <WarningLevel>Level4</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;NO_TEXT;NO_SCENE_FILE;NO_CFG_FILE;NO_UI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
@@ -266,8 +266,8 @@
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <LanguageStandard>Default</LanguageStandard>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <ExceptionHandling>Sync</ExceptionHandling>
-      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <ExceptionHandling>false</ExceptionHandling>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
       <Optimization>MinSpace</Optimization>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -331,7 +331,10 @@
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mesh.cpp" />
-    <ClCompile Include="Object_id_pass.cpp" />
+    <ClCompile Include="Object_id_pass.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Minimal|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Minimal|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Minimal|Win32'">Create</PrecompiledHeader>
@@ -340,14 +343,26 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Minimal|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Scene_file.cpp" />
-    <ClCompile Include="User_interface.cpp" />
-    <ClCompile Include="Wavefront_obj_file.cpp" />
+    <ClCompile Include="Scene_file.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Minimal|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Minimal|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="User_interface.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Minimal|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Minimal|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Wavefront_obj_file.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Minimal|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Minimal|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Primitives.cpp" />
     <ClCompile Include="Root_signature.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Shadow_map.cpp" />
-    <ClCompile Include="Text.cpp" />
+    <ClCompile Include="Text.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Minimal|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Minimal|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="util.cpp" />
     <ClCompile Include="Graphics.cpp" />

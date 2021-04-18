@@ -59,8 +59,6 @@ enum class Input_layout;
 class Mesh
 {
 public:
-    Mesh(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list, 
-        const std::string& filename);
     Mesh(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
         const Vertices& vertices, const std::vector<int>& indices, bool transparent = false);
 

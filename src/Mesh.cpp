@@ -15,17 +15,6 @@
 
 int Mesh::s_draw_calls = 0;
 
-Mesh::Mesh(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list, 
-    const std::string& filename)
-{
-    Vertices vertices;
-    std::vector<int> indices;
-
-    read_obj_file(filename, vertices, indices, Obj_flip_v::yes);
-
-    create_and_fill_vertex_buffers(vertices, indices, device, command_list, false);
-    create_and_fill_index_buffer(indices, device, command_list);
-}
 
 Mesh::Mesh(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
     const Vertices& vertices, const std::vector<int>& indices, bool transparent/* = false*/)

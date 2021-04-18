@@ -152,7 +152,9 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int cmd_show)
     
     std::string config_file(data_path + std::string("init.cfg"));
 
+#ifdef __cpp_exceptions
     try
+#endif
     {
 #ifndef NO_CFG_FILE
         Config config = read_config(config_file);
@@ -222,6 +224,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int cmd_show)
         return exit_code;
 
     }
+#ifdef __cpp_exceptions
     catch (std::bad_alloc&)
     {
         print("Tried to allocate more memory than is available.", "Fatal error.");
@@ -250,6 +253,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int cmd_show)
             (e.monitor_count == 1 ? "1.": "\nat least 1 and maximum " + 
                 std::to_string(e.monitor_count) + "."), "Error");
     }
+#endif
     return 1;
 }
 

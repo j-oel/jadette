@@ -364,6 +364,7 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
     m_root_param_index_of_values(root_param_index_of_values),
     m_triangles_count(0), m_vertices_count(0), m_selected_object_id(-1), m_object_selected(false)
 {
+#ifndef NO_SCENE_FILE
     set_default_scene_components_parameters(m);
 
     // Initialize COM, needed by Windows Imaging Component (WIC)
@@ -462,6 +463,10 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
     }
 
     init(device, command_list, swap_chain_buffer_count, descriptor_heap);
+#else
+    ignore_unused_variable(scene_file);
+    ignore_unused_variable(swap_chain_buffer_count);
+#endif
 }
 
 void Scene_impl::init(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,

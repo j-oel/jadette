@@ -11,6 +11,10 @@
 #include <directxmath.h>
 #include <directxpackedvector.h>
 #include <dxgi1_6.h>
+#ifndef __cpp_exceptions
+#undef _HAS_EXCEPTIONS
+#define _HAS_EXCEPTIONS 0 // This disables exceptions for the standard library.
+#endif
 #include <string>
 #include <vector>
 #include <memory>
