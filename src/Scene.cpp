@@ -338,65 +338,34 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
     int texture_start_index = texture_index_of_textures(swap_chain_buffer_count);
     int texture_index = texture_start_index;
 
-    std::exception_ptr exc = nullptr;
+    _configthreadlocale(_ENABLE_PER_THREAD_LOCALE);
 
-    auto read_file_thread_function = [&]()
-    {
-        _configthreadlocale(_ENABLE_PER_THREAD_LOCALE);
+    // It is assumed that we are in a separate thread. Then the preceding call makes us
+    // able to use a UTF-8 locale without setting the locale globally for the program.
+    // This is the only way I've found out to be able to do that. The reason why it is 
+    // undesireable to set it globally is if someone else in the future would like to 
+    // use Jadette and use it with a different locale.
 
-        // The reason to use a UTF-8 locale is basically to allow the scene file to be UTF-8
-        // encoded which is pretty standard for text files, and at same time be able to use
-        // the normal narrow string functions and file open functions in the standard library. 
-        // See https://utf8everywhere.org/ for more background. When that page was written 
-        // the UTF-8 support in Windows was likely less built out than what it is today. See 
-        // https://docs.microsoft.com/en-us/windows/uwp/design/globalizing/use-utf8-code-page
-        // that actually now recommends using UTF-8. However, it describes messing with manifests 
-        // and stuff. I realized that the following also works and it feels cleaner.
+    // The reason to use a UTF-8 locale is basically to allow the scene file to be UTF-8
+    // encoded which is pretty standard for text files, and at the same time be able to use
+    // the normal narrow string functions and file open functions in the standard library. 
+    // See https://utf8everywhere.org/ for more background. When that page was written 
+    // the UTF-8 support in Windows was likely less built out than what it is today. See 
+    // https://docs.microsoft.com/en-us/windows/uwp/design/globalizing/use-utf8-code-page
+    // that actually now recommends using UTF-8. However, it describes messing with manifests 
+    // and stuff. I realized that the following also works and it feels cleaner.
 
-        setlocale(LC_ALL, ".utf8");
+    setlocale(LC_ALL, ".utf8");
 
-        try
-        {
-            read_scene_file(scene_file, m, device, command_list, texture_index,
-                descriptor_heap, root_param_index_of_values);
-        }
-        catch (...)
-        {
-            exc = std::current_exception();
-        }
-
-    };
-
-
-    // The reason to do this in a thread is to be able to use a UTF-8 locale without
-    // setting the locale globally for the program. This is the only way I find out to
-    // be able to do that. The reason why it is undesireable to set it globally is
-    // if someone else in the future would like to use Jadette and use it with a
-    // different locale. The reasons for using UTF-8 is stated in the function.
-    std::thread th(read_file_thread_function);
-    th.join();
-
-    bool scene_error = false;
+    bool scene_error = true;
 
     try
     {
-        if (exc)
-        {
-            scene_error = true;
-
-            // Release all objects so that we can continue and show the screen without graphics
-            // driver errors/violations.
-            m.graphical_objects.clear();
-            m.static_objects.clear();
-            m.dynamic_objects.clear();
-            m.transparent_objects.clear();
-            m.alpha_cut_out_objects.clear();
-            m.two_sided_objects.clear();
-            m.rotating_objects.clear();
-            m.flying_objects.clear();
-            std::rethrow_exception(exc);
-        }
+        read_scene_file(scene_file, m, device, command_list, texture_index,
+            descriptor_heap, root_param_index_of_values);
+        scene_error = false;
     }
+
     catch (Read_error& e)
     {
         print("Error reading file: " + scene_file + " unrecognized token: " +
@@ -437,19 +406,32 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
             e.material + " referenced by " + e.object + " not defined", "Error");
     }
 
-    if (scene_error)
-        return;
-
-    m_materials_data = std::make_unique<Constant_buffer<Shader_material>>(device,
-        command_list, m.materials, descriptor_heap,
-        descriptor_start_index_of_materials(swap_chain_buffer_count));
-
     for (UINT i = texture_index; i < texture_start_index + max_textures; ++i)
     {
         // On Tier 1 hardware, all descriptors must be set, even if not used,
         // hence set them to null descriptors.
         create_null_descriptor(device, descriptor_heap, i);
     }
+
+    if (scene_error)
+    {
+        // Release all objects so that we can continue and show the screen without graphics
+        // driver errors/violations.
+        m.graphical_objects.clear();
+        m.static_objects.clear();
+        m.dynamic_objects.clear();
+        m.transparent_objects.clear();
+        m.alpha_cut_out_objects.clear();
+        m.two_sided_objects.clear();
+        m.rotating_objects.clear();
+        m.flying_objects.clear();
+
+        return;
+    }
+
+    m_materials_data = std::make_unique<Constant_buffer<Shader_material>>(device,
+        command_list, m.materials, descriptor_heap,
+        descriptor_start_index_of_materials(swap_chain_buffer_count));
 
     auto shadow_casting_light_is_less_than =
         [](const Light& l1, const Light& l2) -> bool { return l1.position.w > l2.position.w; };
@@ -743,15 +725,17 @@ void Scene_impl::set_lights_data_shader_constant(ID3D12GraphicsCommandList& comm
 void Scene_impl::set_texture_shader_constant(ID3D12GraphicsCommandList& command_list,
     int root_param_index_of_textures) const
 {
-    command_list.SetGraphicsRootDescriptorTable(root_param_index_of_textures,
-        m_texture_gpu_descriptor_handle);
+    if (!m.graphical_objects.empty())
+        command_list.SetGraphicsRootDescriptorTable(root_param_index_of_textures,
+            m_texture_gpu_descriptor_handle);
 }
 
 void Scene_impl::set_material_shader_constant(ID3D12GraphicsCommandList& command_list,
     int root_param_index_of_materials) const
 {
-    command_list.SetGraphicsRootDescriptorTable(root_param_index_of_materials,
-        m_materials_data->gpu_handle());
+    if (m_materials_data)
+        command_list.SetGraphicsRootDescriptorTable(root_param_index_of_materials,
+            m_materials_data->gpu_handle());
 }
 
 void Scene_impl::manipulate_object(DirectX::XMFLOAT3& delta_pos, DirectX::XMFLOAT4& delta_rotation)
