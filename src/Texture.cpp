@@ -28,8 +28,8 @@ namespace
     }
 }
 
-Texture::Texture(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, const std::string& texture_filename,
+Texture::Texture(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
+    ID3D12DescriptorHeap& texture_descriptor_heap, const std::string& texture_filename,
     UINT texture_index) : m_texture_index(texture_index)
 {
     std::unique_ptr<uint8_t[]> decoded_data;
@@ -37,14 +37,14 @@ Texture::Texture(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command
 
     if (last_part_equals(texture_filename, "dds"))
     {
-        if (FAILED(LoadDDSTextureFromFile(device.Get(), widen(texture_filename).c_str(),
+        if (FAILED(LoadDDSTextureFromFile(&device, widen(texture_filename).c_str(),
             m_texture.ReleaseAndGetAddressOf(), decoded_data, subresource)))
             throw Texture_read_error(texture_filename);
     }
     else
     {
         D3D12_SUBRESOURCE_DATA data;
-        if (FAILED(LoadWICTextureFromFile(device.Get(), widen(texture_filename).c_str(),
+        if (FAILED(LoadWICTextureFromFile(&device, widen(texture_filename).c_str(),
             m_texture.ReleaseAndGetAddressOf(), decoded_data, data)))
             throw Texture_read_error(texture_filename);
         subresource.push_back(data);
@@ -61,7 +61,7 @@ Texture::Texture(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command
 
     D3D12_CLEAR_VALUE* clear_value = nullptr;
 
-    throw_if_failed(device->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE,
+    throw_if_failed(device.CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE,
             &desc, D3D12_RESOURCE_STATE_GENERIC_READ, clear_value,
             IID_PPV_ARGS(m_temp_upload_resource.GetAddressOf())));
 
@@ -76,13 +76,13 @@ Texture::Texture(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command
 
     UINT position = descriptor_position_in_descriptor_heap(device, texture_index);
     CD3DX12_CPU_DESCRIPTOR_HANDLE cpu_descriptor_handle(
-        texture_descriptor_heap->GetCPUDescriptorHandleForHeapStart(), position);
+        texture_descriptor_heap.GetCPUDescriptorHandleForHeapStart(), position);
 
     const D3D12_SHADER_RESOURCE_VIEW_DESC* value_for_default_descriptor = nullptr;
-    device->CreateShaderResourceView(m_texture.Get(), value_for_default_descriptor, 
+    device.CreateShaderResourceView(m_texture.Get(), value_for_default_descriptor, 
         cpu_descriptor_handle);
     m_texture_gpu_descriptor_handle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
-        texture_descriptor_heap->GetGPUDescriptorHandleForHeapStart(), position);
+        texture_descriptor_heap.GetGPUDescriptorHandleForHeapStart(), position);
 }
 
 void Texture::set_texture_for_shader(ID3D12GraphicsCommandList& command_list, 

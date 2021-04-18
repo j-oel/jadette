@@ -14,13 +14,13 @@ struct Scene_components;
 
 
 void read_scene_file(const std::string& file_name, Scene_components& sc,
-    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
-    int& texture_index, ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap);
+    ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
+    int& texture_index, ID3D12DescriptorHeap& texture_descriptor_heap);
 
 // Exposed for unit tests
 void read_scene_file_stream(std::istream& file, Scene_components& sc,
-    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
-    int& texture_index, ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap);
+    ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
+    int& texture_index, ID3D12DescriptorHeap& texture_descriptor_heap);
 
 
 struct Read_error

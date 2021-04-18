@@ -68,8 +68,8 @@ template <typename T>
 class Constant_buffer
 {
 public:
-    Constant_buffer(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
-        const std::vector<T>& data, ComPtr<ID3D12DescriptorHeap> descriptor_heap,
+    Constant_buffer(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
+        const std::vector<T>& data, ID3D12DescriptorHeap& descriptor_heap,
         UINT descriptor_index);
     void upload_new_data_to_gpu(ID3D12GraphicsCommandList& command_list,
         const std::vector<T>& data);
@@ -83,14 +83,14 @@ private:
 class Scene_impl
 {
 public:
-    Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
-        const std::string& scene_file, ComPtr<ID3D12DescriptorHeap> descriptor_heap,
+    Scene_impl(ID3D12Device& device, UINT swap_chain_buffer_count,
+        const std::string& scene_file, ID3D12DescriptorHeap& descriptor_heap,
         int root_param_index_of_values);
-    Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
-        ComPtr<ID3D12DescriptorHeap> descriptor_heap, int root_param_index_of_values);
+    Scene_impl(ID3D12Device& device, UINT swap_chain_buffer_count,
+        ID3D12DescriptorHeap& descriptor_heap, int root_param_index_of_values);
     ~Scene_impl();
-    void init(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
-        UINT swap_chain_buffer_count, ComPtr<ID3D12DescriptorHeap> descriptor_heap);
+    void init(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
+        UINT swap_chain_buffer_count, ID3D12DescriptorHeap& descriptor_heap);
     void update();
 
     void draw_static_objects(ID3D12GraphicsCommandList& command_list,
@@ -132,7 +132,7 @@ public:
 
     static constexpr UINT max_textures = 112;
 private:
-    void upload_resources_to_gpu(ComPtr<ID3D12Device> device,
+    void upload_resources_to_gpu(ID3D12Device& device,
         ID3D12GraphicsCommandList& command_list);
     void upload_static_instance_data(ID3D12GraphicsCommandList& command_list);
     void draw_objects(ID3D12GraphicsCommandList& command_list,
@@ -161,15 +161,15 @@ private:
 };
 
 
-Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count, const std::string& scene_file,
-    ComPtr<ID3D12DescriptorHeap> descriptor_heap, int root_param_index_of_values) :
+Scene::Scene(ID3D12Device& device, UINT swap_chain_buffer_count, const std::string& scene_file,
+    ID3D12DescriptorHeap& descriptor_heap, int root_param_index_of_values) :
     impl(new Scene_impl(device, swap_chain_buffer_count, scene_file, descriptor_heap,
         root_param_index_of_values))
 {
 }
 
-Scene::Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count, 
-    ComPtr<ID3D12DescriptorHeap> descriptor_heap, int root_param_index_of_values) :
+Scene::Scene(ID3D12Device& device, UINT swap_chain_buffer_count, 
+    ID3D12DescriptorHeap& descriptor_heap, int root_param_index_of_values) :
     impl(new Scene_impl(device, swap_chain_buffer_count, descriptor_heap,
         root_param_index_of_values))
 {
@@ -326,14 +326,14 @@ struct cmd_list_and_allocator
     ComPtr<ID3D12CommandAllocator> command_allocator;
 };
 
-cmd_list_and_allocator create_cmd_list_and_allocator(ComPtr<ID3D12Device> device)
+cmd_list_and_allocator create_cmd_list_and_allocator(ID3D12Device& device)
 {
     cmd_list_and_allocator c;
-    throw_if_failed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+    throw_if_failed(device.CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
         IID_PPV_ARGS(&c.command_allocator)));
 
     constexpr ID3D12PipelineState* initial_pipeline_state = nullptr;
-    throw_if_failed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
+    throw_if_failed(device.CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
         c.command_allocator.Get(), initial_pipeline_state, IID_PPV_ARGS(&c.command_list)));
     SET_DEBUG_NAME(c.command_list, L"Scene Upload Data Command List");
     return c;
@@ -347,8 +347,8 @@ void set_default_scene_components_parameters(Scene_components& sc)
     sc.initial_view_focus_point = { 0.0f, 0.0f, 0.0f };
 }
 
-void create_texture_null_descriptors(ComPtr<ID3D12Device> device, UINT max_textures,
-    ComPtr<ID3D12DescriptorHeap> descriptor_heap, UINT texture_index, UINT texture_start_index)
+void create_texture_null_descriptors(ID3D12Device& device, UINT max_textures,
+    ID3D12DescriptorHeap& descriptor_heap, UINT texture_index, UINT texture_start_index)
 {
     for (UINT i = texture_index; i < texture_start_index + max_textures; ++i)
     {
@@ -358,8 +358,8 @@ void create_texture_null_descriptors(ComPtr<ID3D12Device> device, UINT max_textu
     }
 }
 
-Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
-    const std::string& scene_file, ComPtr<ID3D12DescriptorHeap> descriptor_heap,
+Scene_impl::Scene_impl(ID3D12Device& device, UINT swap_chain_buffer_count,
+    const std::string& scene_file, ID3D12DescriptorHeap& descriptor_heap,
     int root_param_index_of_values) :
     m_root_param_index_of_values(root_param_index_of_values),
     m_triangles_count(0), m_vertices_count(0), m_selected_object_id(-1), m_object_selected(false)
@@ -464,13 +464,15 @@ Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count
 
     init(device, command_list, swap_chain_buffer_count, descriptor_heap);
 #else
+    ignore_unused_variable(descriptor_heap);
+    ignore_unused_variable(device);
     ignore_unused_variable(scene_file);
     ignore_unused_variable(swap_chain_buffer_count);
 #endif
 }
 
-void Scene_impl::init(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
-    UINT swap_chain_buffer_count, ComPtr<ID3D12DescriptorHeap> descriptor_heap)
+void Scene_impl::init(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
+    UINT swap_chain_buffer_count, ID3D12DescriptorHeap& descriptor_heap)
 {
     m_materials_data = std::make_unique<Constant_buffer<Shader_material>>(device,
         command_list, m.materials, descriptor_heap,
@@ -528,10 +530,10 @@ void Scene_impl::init(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& co
     int texture_start_index = texture_index_of_textures(swap_chain_buffer_count);
     UINT position = descriptor_position_in_descriptor_heap(device, texture_start_index);
     m_texture_gpu_descriptor_handle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
-        descriptor_heap->GetGPUDescriptorHandleForHeapStart(), position);
+        descriptor_heap.GetGPUDescriptorHandleForHeapStart(), position);
 }
 
-void create_tiny_scene(Scene_components& sc, ComPtr<ID3D12Device> device,
+void create_tiny_scene(Scene_components& sc, ID3D12Device& device,
     ID3D12GraphicsCommandList& command_list)
 {
     XMFLOAT4 position(0.0f, 0.0f, 0.0f, 5.0f);
@@ -562,8 +564,8 @@ void create_tiny_scene(Scene_components& sc, ComPtr<ID3D12Device> device,
     sc.shadow_casting_lights_count = 1;
 }
 
-Scene_impl::Scene_impl(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
-    ComPtr<ID3D12DescriptorHeap> descriptor_heap, int root_param_index_of_values) :
+Scene_impl::Scene_impl(ID3D12Device& device, UINT swap_chain_buffer_count,
+    ID3D12DescriptorHeap& descriptor_heap, int root_param_index_of_values) :
     m_root_param_index_of_values(root_param_index_of_values),
     m_triangles_count(0), m_vertices_count(0), m_selected_object_id(-1), m_object_selected(false)
 {
@@ -872,17 +874,17 @@ void Scene_impl::initial_view_focus_point(DirectX::XMFLOAT3& focus_point) const
     focus_point = m.initial_view_focus_point;
 }
 
-void Scene_impl::upload_resources_to_gpu(ComPtr<ID3D12Device> device,
+void Scene_impl::upload_resources_to_gpu(ID3D12Device& device,
     ID3D12GraphicsCommandList& command_list)
 {
     D3D12_COMMAND_QUEUE_DESC desc {};
     desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
     ComPtr<ID3D12CommandQueue> command_queue;
-    throw_if_failed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&command_queue)));
+    throw_if_failed(device.CreateCommandQueue(&desc, IID_PPV_ARGS(&command_queue)));
 
     ComPtr<ID3D12Fence> fence;
     enum Resources_uploaded { not_done, done };
-    throw_if_failed(device->CreateFence(Resources_uploaded::not_done, D3D12_FENCE_FLAG_NONE,
+    throw_if_failed(device.CreateFence(Resources_uploaded::not_done, D3D12_FENCE_FLAG_NONE,
         IID_PPV_ARGS(&fence)));
     constexpr BOOL manual_reset = FALSE;
     constexpr BOOL initial_state = FALSE;
@@ -903,9 +905,9 @@ void Scene_impl::upload_resources_to_gpu(ComPtr<ID3D12Device> device,
 }
 
 template <typename T>
-Constant_buffer<T>::Constant_buffer(ComPtr<ID3D12Device> device,
+Constant_buffer<T>::Constant_buffer(ID3D12Device& device,
     ID3D12GraphicsCommandList& command_list, const std::vector<T>& data,
-    ComPtr<ID3D12DescriptorHeap> descriptor_heap, UINT descriptor_index)
+    ID3D12DescriptorHeap& descriptor_heap, UINT descriptor_index)
 {
     if (data.empty())
         return;
@@ -924,12 +926,12 @@ Constant_buffer<T>::Constant_buffer(ComPtr<ID3D12Device> device,
 
     UINT position = descriptor_position_in_descriptor_heap(device, descriptor_index);
     CD3DX12_CPU_DESCRIPTOR_HANDLE destination_descriptor(
-        descriptor_heap->GetCPUDescriptorHandleForHeapStart(), position);
+        descriptor_heap.GetCPUDescriptorHandleForHeapStart(), position);
 
-    device->CreateConstantBufferView(&buffer_view_desc, destination_descriptor);
+    device.CreateConstantBufferView(&buffer_view_desc, destination_descriptor);
 
     m_constant_buffer_gpu_descriptor_handle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
-        descriptor_heap->GetGPUDescriptorHandleForHeapStart(), position);
+        descriptor_heap.GetGPUDescriptorHandleForHeapStart(), position);
 }
 
 template <typename T>

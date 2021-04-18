@@ -14,7 +14,7 @@
 using namespace DirectX;
 
 
-Mesh* new_primitive(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
+Mesh* new_primitive(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
     Primitive_type primitive_type)
 {
     switch (primitive_type)
@@ -27,7 +27,7 @@ Mesh* new_primitive(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& comm
     }
 }
 
-Graphical_object::Graphical_object(ComPtr<ID3D12Device> device,
+Graphical_object::Graphical_object(ID3D12Device& device,
     ID3D12GraphicsCommandList& command_list,
     Primitive_type primitive_type, int id, int material_id, int instances/* = 1*/) :
     m_mesh(new_primitive(device, command_list, primitive_type)),
@@ -38,7 +38,7 @@ Graphical_object::Graphical_object(ComPtr<ID3D12Device> device,
 {
 }
 
-Graphical_object::Graphical_object(ComPtr<ID3D12Device> device, std::shared_ptr<Mesh> mesh, 
+Graphical_object::Graphical_object(std::shared_ptr<Mesh> mesh, 
     const std::vector<std::shared_ptr<Texture>>& textures,
     int id, int material_id, int instances/* = 1*/,
     int triangle_index/* = 0*/) :

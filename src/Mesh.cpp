@@ -16,7 +16,7 @@
 int Mesh::s_draw_calls = 0;
 
 
-Mesh::Mesh(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
+Mesh::Mesh(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
     const Vertices& vertices, const std::vector<int>& indices, bool transparent/* = false*/)
     : m_transparent(transparent)
 {
@@ -97,7 +97,7 @@ DirectX::XMVECTOR Mesh::center(int triangle_index) const
 namespace
 {
     template <typename T>
-    void create_and_fill_vertex_buffer(ComPtr<ID3D12Device> device,
+    void create_and_fill_vertex_buffer(ID3D12Device& device,
         ID3D12GraphicsCommandList& command_list,
         ComPtr<ID3D12Resource>& destination_buffer,
         ComPtr<ID3D12Resource>& temp_upload_resource,
@@ -140,7 +140,7 @@ DirectX::XMVECTOR calculate_center_of_triangle(const Vertices& vertices,
 }
 
 void Mesh::create_and_fill_vertex_buffers(const Vertices& vertices,
-    const std::vector<int>& indices, ComPtr<ID3D12Device> device,
+    const std::vector<int>& indices, ID3D12Device& device,
     ID3D12GraphicsCommandList& command_list, bool transparent)
 {
     m_vertices_count = vertices.positions.size();
@@ -183,7 +183,7 @@ void Mesh::create_and_fill_vertex_buffers(const Vertices& vertices,
 }
 
 void Mesh::create_and_fill_index_buffer(const std::vector<int>& indices,
-    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list)
+    ID3D12Device& device, ID3D12GraphicsCommandList& command_list)
 {
     m_index_count = static_cast<UINT>(indices.size());
 
@@ -266,7 +266,7 @@ void calculate_and_add_tangent_and_bitangent(DirectX::XMVECTOR v[vertex_count_pe
 }
 
 template <typename T>
-void construct_instance_data(ComPtr<ID3D12Device> device,
+void construct_instance_data(ID3D12Device& device,
     ID3D12GraphicsCommandList& command_list, UINT instance_count,
     ComPtr<ID3D12Resource>& instance_vertex_buffer, ComPtr<ID3D12Resource>& upload_resource,
     D3D12_VERTEX_BUFFER_VIEW& instance_vertex_buffer_view, UINT& vertex_buffer_size,
@@ -283,8 +283,8 @@ void construct_instance_data(ComPtr<ID3D12Device> device,
     instance_vertex_buffer_view.StrideInBytes = sizeof(T);
 }
 
-Instance_data::Instance_data(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
-    UINT instance_count, ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index)
+Instance_data::Instance_data(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
+    UINT instance_count, ID3D12DescriptorHeap& texture_descriptor_heap, UINT texture_index)
 {
     if (instance_count == 0)
         return;
@@ -298,16 +298,16 @@ Instance_data::Instance_data(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandL
     UINT position = descriptor_position_in_descriptor_heap(device, texture_index);
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE destination_descriptor(
-        texture_descriptor_heap->GetCPUDescriptorHandleForHeapStart(), position);
+        texture_descriptor_heap.GetCPUDescriptorHandleForHeapStart(), position);
 
     D3D12_BUFFER_SRV srv = { 0, instance_count, sizeof(Per_instance_transform),
         D3D12_BUFFER_SRV_FLAG_NONE };
     D3D12_SHADER_RESOURCE_VIEW_DESC s = { DXGI_FORMAT_UNKNOWN, D3D12_SRV_DIMENSION_BUFFER,
                                           D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, srv };
-    device->CreateShaderResourceView(m_instance_vertex_buffer.Get(), &s, destination_descriptor);
+    device.CreateShaderResourceView(m_instance_vertex_buffer.Get(), &s, destination_descriptor);
 
     m_structured_buffer_gpu_descriptor_handle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
-        texture_descriptor_heap->GetGPUDescriptorHandleForHeapStart(), position);
+        texture_descriptor_heap.GetGPUDescriptorHandleForHeapStart(), position);
 }
 
 void Instance_data::upload_new_data_to_gpu(ID3D12GraphicsCommandList& command_list,

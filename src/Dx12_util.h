@@ -72,7 +72,7 @@ template <typename T> void copy_to_read_back_memory(ID3D12GraphicsCommandList& c
         value_that_means_copy_everything);
 }
 
-ComPtr<ID3D12GraphicsCommandList> create_command_list(ComPtr<ID3D12Device> device,
+ComPtr<ID3D12GraphicsCommandList> create_command_list(ID3D12Device& device,
     ComPtr<ID3D12CommandAllocator> command_allocator);
 
 void create_texture_descriptor_heap(ComPtr<ID3D12Device> device,
@@ -107,18 +107,18 @@ void upload_buffer_to_gpu(const T& source_data, size_t size,
     command_list.ResourceBarrier(1, &barrier);
 }
 
-inline void create_resource(ComPtr<ID3D12Device> device, UINT size,
+inline void create_resource(ID3D12Device& device, UINT size,
     ComPtr<ID3D12Resource>& resource, const D3D12_HEAP_PROPERTIES* properties,
     D3D12_RESOURCE_STATES initial_state)
 {
     D3D12_CLEAR_VALUE* clear_value = nullptr;
 
     auto desc = CD3DX12_RESOURCE_DESC::Buffer(size);
-    throw_if_failed(device->CreateCommittedResource(properties, D3D12_HEAP_FLAG_NONE, &desc,
+    throw_if_failed(device.CreateCommittedResource(properties, D3D12_HEAP_FLAG_NONE, &desc,
         initial_state, clear_value, IID_PPV_ARGS(resource.GetAddressOf())));
 }
 
-inline void create_upload_heap(ComPtr<ID3D12Device> device, UINT size,
+inline void create_upload_heap(ID3D12Device& device, UINT size,
     ComPtr<ID3D12Resource>& upload_resource)
 {
     auto heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
@@ -126,7 +126,7 @@ inline void create_upload_heap(ComPtr<ID3D12Device> device, UINT size,
         D3D12_RESOURCE_STATE_GENERIC_READ);
 }
 
-inline void create_gpu_buffer(ComPtr<ID3D12Device> device, UINT size,
+inline void create_gpu_buffer(ID3D12Device& device, UINT size,
     ComPtr<ID3D12Resource>& resource)
 {
     auto heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
@@ -134,7 +134,7 @@ inline void create_gpu_buffer(ComPtr<ID3D12Device> device, UINT size,
 }
 
 template <typename T, typename View_type>
-void create_and_fill_buffer(ComPtr<ID3D12Device> device,
+void create_and_fill_buffer(ID3D12Device& device,
     ID3D12GraphicsCommandList& command_list,
     ComPtr<ID3D12Resource>& destination_buffer,
     ComPtr<ID3D12Resource>& temp_upload_resource,
@@ -166,7 +166,7 @@ void upload_new_data(ID3D12GraphicsCommandList& command_list,
         upload_resource, command_list, before_state);
 }
 
-UINT descriptor_position_in_descriptor_heap(ComPtr<ID3D12Device> device, UINT descriptor_index);
+UINT descriptor_position_in_descriptor_heap(ID3D12Device& device, UINT descriptor_index);
 
-void create_null_descriptor(ComPtr<ID3D12Device> device,
-    ComPtr<ID3D12DescriptorHeap> descriptor_heap, UINT descriptor_index);
+void create_null_descriptor(ID3D12Device& device,
+    ID3D12DescriptorHeap& descriptor_heap, UINT descriptor_index);

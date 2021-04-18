@@ -25,9 +25,9 @@ void throw_if_file_not_openable(const std::string& file_name)
 }
 
 
-void read_scene_file(const std::string& file_name, Scene_components& sc, ComPtr<ID3D12Device> device,
+void read_scene_file(const std::string& file_name, Scene_components& sc, ID3D12Device& device,
     ID3D12GraphicsCommandList& command_list, int& texture_index,
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap)
+    ID3D12DescriptorHeap& texture_descriptor_heap)
 {
     using std::ifstream;
     ifstream file(file_name);
@@ -41,8 +41,8 @@ void read_scene_file(const std::string& file_name, Scene_components& sc, ComPtr<
 // Only performs basic error checking for the moment. Not very robust.
 // You should ensure that the scene file is valid.
 void read_scene_file_stream(std::istream& file, Scene_components& sc,
-    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
-    int& texture_index, ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap)
+    ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
+    int& texture_index, ID3D12DescriptorHeap& texture_descriptor_heap)
 {
     using std::map;
     using std::vector;
@@ -101,7 +101,7 @@ void read_scene_file_stream(std::istream& file, Scene_components& sc,
         Per_instance_transform transform = { convert_float4_to_half4(position),
         convert_vector_to_half4(DirectX::XMQuaternionIdentity()) };
         sc.static_model_transforms.push_back(transform);
-        auto object = std::make_shared<Graphical_object>(device, mesh, used_textures,
+        auto object = std::make_shared<Graphical_object>(mesh, used_textures,
             object_id++, material_id, instances, triangle_start_index);
 
         sc.graphical_objects.push_back(object);

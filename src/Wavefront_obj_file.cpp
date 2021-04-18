@@ -262,7 +262,7 @@ void read_obj_file(const string& filename, Vertices& vertices, vector<int>& indi
 }
 
 void create_one_model_per_triangle(std::shared_ptr<Model_collection> collection,
-    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list,
+    ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
     const Vertices& vertices, const vector<int>& indices, const string& material)
 {
     auto mesh = std::make_shared<Mesh>(device, command_list, vertices, indices, true);
@@ -275,7 +275,7 @@ void create_one_model_per_triangle(std::shared_ptr<Model_collection> collection,
 }
 
 std::shared_ptr<Model_collection> read_obj_file(const string& filename, 
-    ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list, Obj_flip_v flip_v)
+    ID3D12Device& device, ID3D12GraphicsCommandList& command_list, Obj_flip_v flip_v)
 {
     using namespace Material_settings;
     std::ifstream file(filename);

@@ -22,8 +22,8 @@ namespace
     constexpr float fov = 90.0f;
 }
 
-Shadow_map::Shadow_map(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
-    ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index,
+Shadow_map::Shadow_map(ID3D12Device& device, UINT swap_chain_buffer_count,
+    ID3D12DescriptorHeap& texture_descriptor_heap, UINT texture_index,
     UINT texture_index_increment,
     Bit_depth bit_depth/* = Bit_depth::bpp16*/, int size/* = 1024*/) :
     m_view(size, size, XMVectorSet(0.0f, 0.0f, 1.0f, 1.0f), XMVectorZero(), near_z, far_z, fov),

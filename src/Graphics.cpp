@@ -143,9 +143,9 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
             config.swap_chain_buffer_count)),
     m_device(m_dx12_display->device()),
     m_textures_count(create_texture_descriptor_heap()),
-    m_depth_stencil(1, Depth_stencil(m_device, config.width, config.height,
+    m_depth_stencil(1, Depth_stencil(*m_device.Get(), config.width, config.height,
         Bit_depth::bpp16, D3D12_RESOURCE_STATE_DEPTH_WRITE,
-        m_texture_descriptor_heap, texture_index_of_depth_buffer())),
+        *m_texture_descriptor_heap.Get(), texture_index_of_depth_buffer())),
     m_root_signature(m_device, &m_render_settings),
     m_depth_pass(m_device, m_depth_stencil[0].dsv_format(), &m_root_signature,
         config.backface_culling),
@@ -153,7 +153,7 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
         XMVectorZero(), 0.1f, 4000.0f, config.fov),
     m_input(input),
 #ifndef NO_UI
-    m_user_interface(m_dx12_display, &m_root_signature, m_texture_descriptor_heap,
+    m_user_interface(m_dx12_display, &m_root_signature, *m_texture_descriptor_heap.Get(),
         texture_index_of_depth_buffer(), input, window, config),
 #endif
     m_render_settings(texture_mapping_enabled | normal_mapping_enabled | shadow_mapping_enabled),
@@ -167,9 +167,9 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     create_main_command_list();
     for (UINT i = 1; i < m_dx12_display->swap_chain_buffer_count(); ++i)
     {
-        m_depth_stencil.push_back(Depth_stencil(m_device, config.width, config.height,
+        m_depth_stencil.push_back(Depth_stencil(*m_device.Get(), config.width, config.height,
             Bit_depth::bpp16, D3D12_RESOURCE_STATE_DEPTH_WRITE,
-            m_texture_descriptor_heap, texture_index_of_depth_buffer()));
+            *m_texture_descriptor_heap.Get(), texture_index_of_depth_buffer()));
     }
 
     for (UINT i = 0; i < m_dx12_display->swap_chain_buffer_count(); ++i)
@@ -182,11 +182,11 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
     auto load_scene = [=]()
     {
         auto swap_chain_buffer_count = m_dx12_display->swap_chain_buffer_count();
-        m_scene = std::make_unique<Scene>(m_device, swap_chain_buffer_count,
+        m_scene = std::make_unique<Scene>(*m_device.Get(), swap_chain_buffer_count,
 #ifndef NO_SCENE_FILE
             data_path + config.scene_file, 
 #endif
-            m_texture_descriptor_heap,
+            *m_texture_descriptor_heap.Get(),
             m_root_signature.m_root_param_index_of_values);
 
         DirectX::XMFLOAT3 eye_pos;
@@ -420,7 +420,7 @@ void Graphics_impl::create_pipeline_states(const Config& config)
 
 ComPtr<ID3D12GraphicsCommandList> Graphics_impl::create_main_command_list()
 {
-    m_command_list = create_command_list(m_device, m_dx12_display->command_allocator());
+    m_command_list = create_command_list(*m_device.Get(), m_dx12_display->command_allocator());
     SET_DEBUG_NAME(m_command_list, L"Main Command List");
     return m_command_list;
 }

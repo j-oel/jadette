@@ -12,7 +12,7 @@
 class Cube : public Mesh
 {
 public:
-    Cube(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list);
+    Cube(ID3D12Device& device, ID3D12GraphicsCommandList& command_list);
 
 private:
 
@@ -21,5 +21,5 @@ private:
 class Plane : public Mesh
 {
 public:
-    Plane(ComPtr<ID3D12Device> device, ID3D12GraphicsCommandList& command_list);
+    Plane(ID3D12Device& device, ID3D12GraphicsCommandList& command_list);
 };

@@ -28,7 +28,7 @@ class User_interface
 {
 public:
     User_interface(std::shared_ptr<Dx12_display> dx12_display, Root_signature* root_signature,
-        ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, UINT texture_index,
+        ID3D12DescriptorHeap& texture_descriptor_heap, UINT texture_index,
         Input& input, HWND window, const Config& config);
     void update(UINT back_buf_index, Scene& scene, View& view);
     void render_2d_text(size_t objects_count, int triangles_count, size_t vertices_count, 
@@ -49,7 +49,7 @@ private:
     void object_id_pass(UINT back_buf_index, Scene& scene, View& view);
 
     std::shared_ptr<Dx12_display> m_dx12_display;
-    ComPtr<ID3D12DescriptorHeap> m_texture_descriptor_heap;
+    ID3D12DescriptorHeap& m_texture_descriptor_heap;
     ComPtr<ID3D12GraphicsCommandList> m_command_list;
     ComPtr<ID3D12CommandAllocator> m_command_allocator;
 

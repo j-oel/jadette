@@ -37,10 +37,10 @@ namespace DirectX
 class Scene
 {
 public:
-    Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count, const std::string& scene_file,
-        ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_values);
-    Scene(ComPtr<ID3D12Device> device, UINT swap_chain_buffer_count,
-        ComPtr<ID3D12DescriptorHeap> texture_descriptor_heap, int root_param_index_of_values);
+    Scene(ID3D12Device& device, UINT swap_chain_buffer_count, const std::string& scene_file,
+        ID3D12DescriptorHeap& texture_descriptor_heap, int root_param_index_of_values);
+    Scene(ID3D12Device& device, UINT swap_chain_buffer_count,
+        ID3D12DescriptorHeap& texture_descriptor_heap, int root_param_index_of_values);
     ~Scene();
     void update();
 
