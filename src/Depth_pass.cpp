@@ -32,13 +32,6 @@ void Depth_pass::create_pipeline_state(ComPtr<ID3D12Device> device,
 {
     UINT render_targets_count = 0;
 
-    const char* vertex_shader_entry = alpha_cut_out ?
-        "depths_alpha_cut_out_vertex_shader_srv_instance_data" :
-        "depths_vertex_shader_srv_instance_data";
-
-    const char* pixel_shader_entry = alpha_cut_out ? "pixel_shader_depths_alpha_cut_out"
-        : nullptr;
-
     Input_layout input_layout = alpha_cut_out ? Input_layout::position_normal :
         Input_layout::position;
 
@@ -63,9 +56,21 @@ void Depth_pass::create_pipeline_state(ComPtr<ID3D12Device> device,
     }
     else
 #endif
+#if !defined(NO_UI)
+    {
+        const char* vertex_shader_entry = alpha_cut_out ?
+            "depths_alpha_cut_out_vertex_shader_srv_instance_data" :
+            "depths_vertex_shader_srv_instance_data";
+
+        const char* pixel_shader_entry = alpha_cut_out ? "pixel_shader_depths_alpha_cut_out"
+                                                       : nullptr;
+
         ::create_pipeline_state(device, pipeline_state, m_root_signature->get(),
             vertex_shader_entry, pixel_shader_entry,
             m_dsv_format, render_targets_count, input_layout, backface_culling);
+    }
+#endif
+
 
     SET_DEBUG_NAME(pipeline_state, debug_name);
 }

@@ -165,22 +165,21 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
         m_depth_stencil.push_back(Depth_stencil(*m_device.Get(), config.width, config.height,
             Bit_depth::bpp16, D3D12_RESOURCE_STATE_DEPTH_WRITE,
             *m_texture_descriptor_heap.Get(), texture_index_of_depth_buffer()));
-    }
-
-    for (UINT i = 0; i < m_dx12_display->swap_chain_buffer_count(); ++i)
-    {
-        m_depth_stencil[i].set_debug_names((std::wstring(L"DSV Heap ") + 
+    
+        #ifdef _DEBUG
+        m_depth_stencil[i].set_debug_names((std::wstring(L"DSV Heap ") +
             std::to_wstring(i)).c_str(), (std::wstring(L"Depth Buffer ") +
                 std::to_wstring(i)).c_str());
+        #endif
     }
 
     auto load_scene = [=]()
     {
         auto swap_chain_buffer_count = m_dx12_display->swap_chain_buffer_count();
         m_scene = std::make_unique<Scene>(*m_device.Get(), swap_chain_buffer_count,
-#ifndef NO_SCENE_FILE
+        #ifndef NO_SCENE_FILE
             data_path + config.scene_file, 
-#endif
+        #endif
             *m_texture_descriptor_heap.Get(),
             m_root_signature.m_root_param_index_of_values);
 
@@ -201,8 +200,13 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
         m_shaders_compiled = true;
     };
 
+#ifndef NO_SCENE_FILE
     m_scene_loading_thread = std::thread(load_scene);
     m_shader_loading_thread = std::thread(load_shaders);
+#else
+    load_scene();
+    load_shaders();
+#endif
 }
 
 Graphics_impl::~Graphics_impl()
@@ -216,8 +220,10 @@ Graphics_impl::~Graphics_impl()
 
 void Graphics_impl::finish_init()
 {
+#ifndef NO_SCENE_FILE
     m_scene_loading_thread.join();
     m_shader_loading_thread.join();
+#endif
     m_init_done = true;
 }
 
@@ -281,11 +287,11 @@ void Graphics_impl::render_loading_message()
     
     m_dx12_display->execute_command_list(m_command_list);
     m_user_interface.render_2d_text(message);
-#endif
 
     using namespace std::chrono_literals;
     std::this_thread::sleep_for(30ms); // It would be wasteful to render this with full frame rate,
                                        // hence sleep for a while.
+#endif
 }
 
 void Graphics_impl::render_info_text()
@@ -350,13 +356,7 @@ void Graphics_impl::create_pipeline_state(ComPtr<ID3D12PipelineState>& pipeline_
     auto dsv_format = m_depth_stencil[0].dsv_format();
 
     Input_layout input_layout = m_use_vertex_colors ? Input_layout::position_normal_tangents_color
-                                                    : Input_layout::position_normal_tangents;
-    
-    const char* vertex_shader = m_use_vertex_colors ?
-        "vertex_shader_srv_instance_data_vertex_colors" :
-        "vertex_shader_srv_instance_data";
-    const char* pixel_shader = m_use_vertex_colors ? "pixel_shader_vertex_colors"
-                                                   : "pixel_shader_no_vertex_colors";
+        : Input_layout::position_normal_tangents;
 
     // Don't use pre-compiled shaders in debug mode to lower turn-around time
     // when the shaders have been changed. Also decreases time for full rebuild.
@@ -382,9 +382,19 @@ void Graphics_impl::create_pipeline_state(ComPtr<ID3D12PipelineState>& pipeline_
     }
     else
 #endif
+#if !defined(NO_UI)
+    {
+        const char* vertex_shader = m_use_vertex_colors ?
+            "vertex_shader_srv_instance_data_vertex_colors" :
+            "vertex_shader_srv_instance_data";
+        const char* pixel_shader = m_use_vertex_colors ? "pixel_shader_vertex_colors"
+                                                       : "pixel_shader_no_vertex_colors";
+
         ::create_pipeline_state(m_device, pipeline_state, m_root_signature.get(),
             vertex_shader, pixel_shader, dsv_format, render_targets_count, input_layout,
             backface_culling, alpha_blending, depth_write);
+    }
+#endif
     SET_DEBUG_NAME(pipeline_state, debug_name);
 }
 

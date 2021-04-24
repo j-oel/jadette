@@ -35,9 +35,12 @@ Shadow_map::Shadow_map(ID3D12Device& device, UINT swap_chain_buffer_count,
         m_depth_stencil.push_back(Depth_stencil(device, size, size, bit_depth,
           D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, texture_descriptor_heap,
             texture_index + i * texture_index_increment));
+
+        #ifdef _DEBUG
         m_depth_stencil[i].set_debug_names((std::wstring(L"Shadow DSV Heap ") +
             std::to_wstring(i)).c_str(),
             (std::wstring(L"Shadow Buffer ") + std::to_wstring(i)).c_str());
+        #endif
     }
 }
 

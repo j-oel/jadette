@@ -9,8 +9,10 @@
 #include "Texture.h"
 #include "util.h"
 #include "Dx12_util.h"
+#ifndef NO_SCENE_FILE
 #include "3rdparty/MS/WICTextureLoader12.h"
 #include "3rdparty/MS/DDSTextureLoader12.h"
+#endif
 
 
 using namespace DirectX;
@@ -35,6 +37,8 @@ Texture::Texture(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
     std::unique_ptr<uint8_t[]> decoded_data;
     std::vector<D3D12_SUBRESOURCE_DATA> subresource;
 
+    #ifndef NO_SCENE_FILE // If we're not using a scene file we're not using any
+                          // texture files either.
     if (last_part_equals(texture_filename, "dds"))
     {
         if (FAILED(LoadDDSTextureFromFile(&device, widen(texture_filename).c_str(),
@@ -49,6 +53,9 @@ Texture::Texture(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
             throw Texture_read_error(texture_filename);
         subresource.push_back(data);
     }
+    #else
+    ignore_unused_variable(texture_filename);
+    #endif
 
     const int index_of_first_subresource = 0;
     const int subresource_count = static_cast<int>(subresource.size());

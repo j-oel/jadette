@@ -149,8 +149,10 @@ BOOL CALLBACK monitor_enum_proc(HMONITOR h_monitor, HDC, LPRECT monitor_rect, LP
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int cmd_show)
 {
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-    
+         
+#ifndef NO_CFG_FILE
     std::string config_file(data_path + std::string("init.cfg"));
+#endif
 
 #ifdef __cpp_exceptions
     try
