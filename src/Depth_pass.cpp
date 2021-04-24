@@ -13,11 +13,7 @@
 #include "Scene.h"
 #include "Commands.h"
 
-#if defined(_DEBUG)
-#include "build/d-depths_vertex_shader_srv_instance_data.h"
-#include "build/d-depths_alpha_cut_out_vertex_shader_srv_instance_data.h"
-#include "build/d-pixel_shader_depths_alpha_cut_out.h"
-#else
+#ifndef _DEBUG
 #include "build/depths_vertex_shader_srv_instance_data.h"
 #include "build/depths_alpha_cut_out_vertex_shader_srv_instance_data.h"
 #include "build/pixel_shader_depths_alpha_cut_out.h"
@@ -36,17 +32,6 @@ void Depth_pass::create_pipeline_state(ComPtr<ID3D12Device> device,
 {
     UINT render_targets_count = 0;
 
-    auto compiled_pixel_shader =
-        CD3DX12_SHADER_BYTECODE(g_pixel_shader_depths_alpha_cut_out,
-            _countof(g_pixel_shader_depths_alpha_cut_out));
-    CD3DX12_SHADER_BYTECODE compiled_empty_pixel_shader = { 0, 0 };
-
-    auto compiled_vertex_shader = alpha_cut_out? 
-        CD3DX12_SHADER_BYTECODE(g_depths_alpha_cut_out_vertex_shader_srv_instance_data,
-            _countof(g_depths_alpha_cut_out_vertex_shader_srv_instance_data)) :
-        CD3DX12_SHADER_BYTECODE(g_depths_vertex_shader_srv_instance_data,
-            _countof(g_depths_vertex_shader_srv_instance_data));
-
     const char* vertex_shader_entry = alpha_cut_out ?
         "depths_alpha_cut_out_vertex_shader_srv_instance_data" :
         "depths_vertex_shader_srv_instance_data";
@@ -57,15 +42,30 @@ void Depth_pass::create_pipeline_state(ComPtr<ID3D12Device> device,
     Input_layout input_layout = alpha_cut_out ? Input_layout::position_normal :
         Input_layout::position;
 
-    if (pipeline_state)
+#ifndef _DEBUG
+    if (!pipeline_state)
+    {
+        auto compiled_pixel_shader =
+            CD3DX12_SHADER_BYTECODE(g_pixel_shader_depths_alpha_cut_out,
+                _countof(g_pixel_shader_depths_alpha_cut_out));
+        CD3DX12_SHADER_BYTECODE compiled_empty_pixel_shader = { 0, 0 };
+
+        auto compiled_vertex_shader = alpha_cut_out ?
+            CD3DX12_SHADER_BYTECODE(g_depths_alpha_cut_out_vertex_shader_srv_instance_data,
+                _countof(g_depths_alpha_cut_out_vertex_shader_srv_instance_data)) :
+            CD3DX12_SHADER_BYTECODE(g_depths_vertex_shader_srv_instance_data,
+                _countof(g_depths_vertex_shader_srv_instance_data));
+
+        ::create_pipeline_state(device, pipeline_state, m_root_signature->get(),
+            compiled_vertex_shader, alpha_cut_out ? compiled_pixel_shader :
+            compiled_empty_pixel_shader, m_dsv_format, render_targets_count, input_layout,
+            backface_culling);
+    }
+    else
+#endif
         ::create_pipeline_state(device, pipeline_state, m_root_signature->get(),
             vertex_shader_entry, pixel_shader_entry,
             m_dsv_format, render_targets_count, input_layout, backface_culling);
-    else
-        ::create_pipeline_state(device, pipeline_state, m_root_signature->get(),
-            compiled_vertex_shader, alpha_cut_out? compiled_pixel_shader :
-            compiled_empty_pixel_shader, m_dsv_format, render_targets_count, input_layout,
-            backface_culling);
 
     SET_DEBUG_NAME(pipeline_state, debug_name);
 }

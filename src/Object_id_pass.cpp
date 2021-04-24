@@ -14,11 +14,7 @@
 #include "Commands.h"
 #include "Dx12_util.h"
 
-#if defined(_DEBUG)
-#include "build/d-object_ids_vertex_shader_srv_instance_data.h"
-#include "build/d-object_ids_vertex_shader_srv_instance_data_static_objects.h"
-#include "build/d-pixel_shader_object_ids.h"
-#else
+#ifndef _DEBUG
 #include "build/object_ids_vertex_shader_srv_instance_data.h"
 #include "build/object_ids_vertex_shader_srv_instance_data_static_objects.h"
 #include "build/pixel_shader_object_ids.h"
@@ -48,30 +44,34 @@ void Object_id_pass::create_pipeline_state(ComPtr<ID3D12Device> device,
     ComPtr<ID3D12PipelineState>& pipeline_state, bool static_objects,
     const wchar_t* debug_name, Backface_culling backface_culling)
 {
-    auto compiled_vertex_shader = static_objects ?
-        CD3DX12_SHADER_BYTECODE(g_object_ids_vertex_shader_srv_instance_data_static_objects,
-            _countof(g_object_ids_vertex_shader_srv_instance_data_static_objects)) :
-        CD3DX12_SHADER_BYTECODE(g_object_ids_vertex_shader_srv_instance_data,
-            _countof(g_object_ids_vertex_shader_srv_instance_data));
-
-    auto compiled_pixel_shader =
-        CD3DX12_SHADER_BYTECODE(g_pixel_shader_object_ids,
-            _countof(g_pixel_shader_object_ids));
-
     const char* vertex_shader_entry = static_objects ?
         "object_ids_vertex_shader_srv_instance_data_static_objects" :
         "object_ids_vertex_shader_srv_instance_data";
 
     UINT render_targets_count = 1;
 
-    if (pipeline_state)
-        ::create_pipeline_state(device, pipeline_state, m_root_signature->get(),
-            vertex_shader_entry, "pixel_shader_object_ids",
-            m_dsv_format, render_targets_count, Input_layout::position, backface_culling,
-            Alpha_blending::disabled, Depth_write::enabled, m_rtv_format);
-    else
+#ifndef _DEBUG
+    if (!pipeline_state)
+    {
+        auto compiled_vertex_shader = static_objects ?
+            CD3DX12_SHADER_BYTECODE(g_object_ids_vertex_shader_srv_instance_data_static_objects,
+                _countof(g_object_ids_vertex_shader_srv_instance_data_static_objects)) :
+            CD3DX12_SHADER_BYTECODE(g_object_ids_vertex_shader_srv_instance_data,
+                _countof(g_object_ids_vertex_shader_srv_instance_data));
+
+        auto compiled_pixel_shader =
+            CD3DX12_SHADER_BYTECODE(g_pixel_shader_object_ids,
+                _countof(g_pixel_shader_object_ids));
+
         ::create_pipeline_state(device, pipeline_state, m_root_signature->get(),
             compiled_vertex_shader, compiled_pixel_shader,
+            m_dsv_format, render_targets_count, Input_layout::position, backface_culling,
+            Alpha_blending::disabled, Depth_write::enabled, m_rtv_format);
+    }
+    else
+#endif
+        ::create_pipeline_state(device, pipeline_state, m_root_signature->get(),
+            vertex_shader_entry, "pixel_shader_object_ids",
             m_dsv_format, render_targets_count, Input_layout::position, backface_culling,
             Alpha_blending::disabled, Depth_write::enabled, m_rtv_format);
 

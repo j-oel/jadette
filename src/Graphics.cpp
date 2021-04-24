@@ -22,12 +22,7 @@
 #include "User_interface.h"
 
 
-#if defined(_DEBUG)
-#include "build/d-pixel_shader_vertex_colors.h"
-#include "build/d-pixel_shader_no_vertex_colors.h"
-#include "build/d-vertex_shader_srv_instance_data.h"
-#include "build/d-vertex_shader_srv_instance_data_vertex_colors.h"
-#else
+#ifndef _DEBUG
 #include "build/pixel_shader_vertex_colors.h"
 #include "build/pixel_shader_no_vertex_colors.h"
 #include "build/vertex_shader_srv_instance_data.h"
@@ -363,6 +358,9 @@ void Graphics_impl::create_pipeline_state(ComPtr<ID3D12PipelineState>& pipeline_
     const char* pixel_shader = m_use_vertex_colors ? "pixel_shader_vertex_colors"
                                                    : "pixel_shader_no_vertex_colors";
 
+    // Don't use pre-compiled shaders in debug mode to lower turn-around time
+    // when the shaders have been changed. Also decreases time for full rebuild.
+#ifndef _DEBUG
     if (!pipeline_state)
     {
         auto compiled_vertex_shader = m_use_vertex_colors ?
@@ -383,6 +381,7 @@ void Graphics_impl::create_pipeline_state(ComPtr<ID3D12PipelineState>& pipeline_
             backface_culling, alpha_blending, depth_write);
     }
     else
+#endif
         ::create_pipeline_state(m_device, pipeline_state, m_root_signature.get(),
             vertex_shader, pixel_shader, dsv_format, render_targets_count, input_layout,
             backface_culling, alpha_blending, depth_write);
