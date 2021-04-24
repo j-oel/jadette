@@ -171,9 +171,8 @@ struct Per_instance_transform
 class Instance_data
 {
 public:
-    Instance_data(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
-        UINT instance_count, ID3D12DescriptorHeap& texture_descriptor_heap,
-        UINT texture_index);
+    Instance_data(ID3D12Device& device, UINT instance_count, 
+        ID3D12DescriptorHeap& texture_descriptor_heap, UINT texture_index);
     void upload_new_data_to_gpu(ID3D12GraphicsCommandList& command_list,
         const std::vector<Per_instance_transform>& instance_data);
     D3D12_GPU_DESCRIPTOR_HANDLE srv_gpu_handle() const 

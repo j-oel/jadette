@@ -62,3 +62,27 @@ void create_null_descriptor(ID3D12Device& device,
 
     device.CreateShaderResourceView(nullptr, &s, destination_descriptor);
 }
+
+void upload_buffer_to_gpu(const void* source_data, size_t size,
+    ComPtr<ID3D12Resource>& destination_buffer,
+    ComPtr<ID3D12Resource>& temp_upload_resource,
+    ID3D12GraphicsCommandList& command_list,
+    D3D12_RESOURCE_STATES after_state)
+{
+    char* temp_upload_resource_data = nullptr;
+    const size_t begin = 0;
+    const size_t end = 0;
+    const CD3DX12_RANGE empty_cpu_read_range(begin, end);
+    const UINT subresource_index = 0;
+    throw_if_failed(temp_upload_resource->Map(subresource_index, &empty_cpu_read_range,
+        bit_cast<void**>(&temp_upload_resource_data)));
+    memcpy(temp_upload_resource_data, source_data, size);
+    const D3D12_RANGE* value_that_means_everything_might_have_changed = nullptr;
+    temp_upload_resource->Unmap(subresource_index,
+        value_that_means_everything_might_have_changed);
+
+    command_list.CopyResource(destination_buffer.Get(), temp_upload_resource.Get());
+    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(destination_buffer.Get(),
+        D3D12_RESOURCE_STATE_COPY_DEST, after_state);
+    command_list.ResourceBarrier(1, &barrier);
+}

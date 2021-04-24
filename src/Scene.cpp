@@ -503,7 +503,7 @@ void Scene_impl::init(ID3D12Device& device, ID3D12GraphicsCommandList& command_l
 
     for (UINT i = 0; i < swap_chain_buffer_count; ++i)
     {
-        m_dynamic_instance_data.push_back(std::make_unique<Instance_data>(device, command_list,
+        m_dynamic_instance_data.push_back(std::make_unique<Instance_data>(device,
             static_cast<UINT>(m.dynamic_objects.size()), descriptor_heap,
             descriptor_start_index_of_dynamic_instance_data() + i));
 
@@ -512,7 +512,7 @@ void Scene_impl::init(ID3D12Device& device, ID3D12GraphicsCommandList& command_l
             descriptor_start_index_of_lights_data(swap_chain_buffer_count) + i));
     }
 
-    m_static_instance_data = std::make_unique<Instance_data>(device, command_list,
+    m_static_instance_data = std::make_unique<Instance_data>(device,
         // It's graphical_objects here because every graphical_object has a an entry in
         // m_static_model_transforms. This is mainly (only?) because the fly_around_in_circle
         // function requires that currently. This is all quite messy and should be fixed.
@@ -921,7 +921,7 @@ Constant_buffer<T>::Constant_buffer(ID3D12Device& device,
     D3D12_CONSTANT_BUFFER_VIEW_DESC buffer_view_desc {};
 
     create_and_fill_buffer(device, command_list, m_constant_buffer, m_upload_resource, 
-        data, data_size, buffer_view_desc, view_size,
+        data.data(), data_size, buffer_view_desc, view_size,
         D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
     UINT position = descriptor_position_in_descriptor_heap(device, descriptor_index);
@@ -938,6 +938,6 @@ template <typename T>
 void Constant_buffer<T>::upload_new_data_to_gpu(ID3D12GraphicsCommandList& command_list,
     const std::vector<T>& data)
 {
-    upload_new_data(command_list, data, m_constant_buffer, m_upload_resource,
+    upload_new_data(command_list, data.data(), m_constant_buffer, m_upload_resource,
         data.size() * sizeof(T), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 }
