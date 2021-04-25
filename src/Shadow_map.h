@@ -8,7 +8,6 @@
 #pragma once
 
 #include "Depth_stencil.h"
-#include "Depth_pass.h"
 #include "View.h"
 
 
@@ -16,6 +15,7 @@ using Microsoft::WRL::ComPtr;
 
 
 class Scene;
+class Depth_pass;
 
 struct Light
 {

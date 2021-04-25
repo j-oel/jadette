@@ -38,6 +38,8 @@ constexpr int size_in_words_of_XMMATRIX = size_of_xmmatrix / bytes_per_word;
 constexpr int size_in_words_of_XMVECTOR = size_of_xmvector / bytes_per_word;
 constexpr auto data_path = "../data/";
 
+enum class Texture_mapping { enabled, disabled };
+enum class Backface_culling { enabled, disabled };
 
 class Time_impl;
 

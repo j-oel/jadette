@@ -7,9 +7,6 @@
 
 #pragma once
 
-#include "dx12min.h"
-#include <directxmath.h>
-#include <directxpackedvector.h>
 
 using Microsoft::WRL::ComPtr;
 

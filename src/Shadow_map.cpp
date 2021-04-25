@@ -7,10 +7,10 @@
 
 #include "pch.h"
 #include "Shadow_map.h"
-#include "Scene.h"
 #include "Commands.h"
 #include "util.h"
 #include "View.h"
+#include "Depth_pass.h"
 
 
 using namespace DirectX;

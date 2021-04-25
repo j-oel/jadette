@@ -10,8 +10,8 @@
 #include "Depth_stencil.h"
 #include "util.h"
 #include "View.h"
-#include "Scene.h"
 #include "Commands.h"
+#include "Root_signature.h"
 
 #ifndef _DEBUG
 #include "build/depths_vertex_shader_srv_instance_data.h"

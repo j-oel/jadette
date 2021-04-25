@@ -10,9 +10,9 @@
 #include "Depth_stencil.h"
 #include "util.h"
 #include "View.h"
-#include "Scene.h"
 #include "Commands.h"
 #include "Dx12_util.h"
+#include "Root_signature.h"
 
 #ifndef _DEBUG
 #include "build/object_ids_vertex_shader_srv_instance_data.h"

@@ -94,16 +94,16 @@ public:
     void update();
 
     void draw_static_objects(ID3D12GraphicsCommandList& command_list,
-        Texture_mapping texture_mapping, const Input_layout& input_layout) const;
+        Texture_mapping texture_mapping, Input_layout input_layout) const;
     void draw_dynamic_objects(ID3D12GraphicsCommandList& command_list,
-        Texture_mapping texture_mapping, const Input_layout& input_layout) const;
+        Texture_mapping texture_mapping, Input_layout input_layout) const;
     void sort_transparent_objects_back_to_front(const View& view);
     void draw_transparent_objects(ID3D12GraphicsCommandList& command_list,
-        Texture_mapping texture_mapping, const Input_layout& input_layout) const;
+        Texture_mapping texture_mapping, Input_layout input_layout) const;
     void draw_alpha_cut_out_objects(ID3D12GraphicsCommandList& command_list,
-        Texture_mapping texture_mapping, const Input_layout& input_layout) const;
+        Texture_mapping texture_mapping, Input_layout input_layout) const;
     void draw_two_sided_objects(ID3D12GraphicsCommandList& command_list,
-        Texture_mapping texture_mapping, const Input_layout& input_layout) const;
+        Texture_mapping texture_mapping, Input_layout input_layout) const;
     void upload_data_to_gpu(ID3D12GraphicsCommandList& command_list, UINT back_buf_index);
     void generate_shadow_maps(UINT back_buf_index,
         Depth_pass& depth_pass, ID3D12GraphicsCommandList& command_list, Scene& scene);
@@ -137,7 +137,7 @@ private:
     void upload_static_instance_data(ID3D12GraphicsCommandList& command_list);
     void draw_objects(ID3D12GraphicsCommandList& command_list,
         const std::vector<std::shared_ptr<Graphical_object> >& objects,
-        Texture_mapping texture_mapping, const Input_layout& input_layout,
+        Texture_mapping texture_mapping, Input_layout input_layout,
         bool dynamic) const;
 
     Scene_components m;
@@ -186,13 +186,13 @@ void Scene::update()
 }
 
 void Scene::draw_static_objects(ID3D12GraphicsCommandList& command_list,
-    Texture_mapping texture_mapping, const Input_layout& input_layout) const
+    Texture_mapping texture_mapping, Input_layout input_layout) const
 {
     impl->draw_static_objects(command_list, texture_mapping, input_layout);
 }
 
 void Scene::draw_dynamic_objects(ID3D12GraphicsCommandList& command_list,
-    Texture_mapping texture_mapping, const Input_layout& input_layout) const
+    Texture_mapping texture_mapping, Input_layout input_layout) const
 {
     impl->draw_dynamic_objects(command_list, texture_mapping, input_layout);
 }
@@ -203,19 +203,19 @@ void Scene::sort_transparent_objects_back_to_front(const View& view)
 }
 
 void Scene::draw_transparent_objects(ID3D12GraphicsCommandList& command_list,
-    Texture_mapping texture_mapping, const Input_layout& input_layout) const
+    Texture_mapping texture_mapping, Input_layout input_layout) const
 {
     impl->draw_transparent_objects(command_list, texture_mapping, input_layout);
 }
 
 void Scene::draw_alpha_cut_out_objects(ID3D12GraphicsCommandList& command_list,
-    Texture_mapping texture_mapping, const Input_layout& input_layout) const
+    Texture_mapping texture_mapping, Input_layout input_layout) const
 {
     impl->draw_alpha_cut_out_objects(command_list, texture_mapping, input_layout);
 }
 
 void Scene::draw_two_sided_objects(ID3D12GraphicsCommandList& command_list,
-    Texture_mapping texture_mapping, const Input_layout& input_layout) const
+    Texture_mapping texture_mapping, Input_layout input_layout) const
 {
     impl->draw_two_sided_objects(command_list, texture_mapping, input_layout);
 }
@@ -652,7 +652,7 @@ void Scene_impl::update()
 
 void Scene_impl::draw_objects(ID3D12GraphicsCommandList& command_list,
     const std::vector<std::shared_ptr<Graphical_object> >& objects,
-    Texture_mapping texture_mapping, const Input_layout& input_layout, bool dynamic) const
+    Texture_mapping texture_mapping, Input_layout input_layout, bool dynamic) const
 {
     command_list.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -684,13 +684,13 @@ void Scene_impl::draw_objects(ID3D12GraphicsCommandList& command_list,
 }
 
 void Scene_impl::draw_static_objects(ID3D12GraphicsCommandList& command_list,
-    Texture_mapping texture_mapping, const Input_layout& input_layout) const
+    Texture_mapping texture_mapping, Input_layout input_layout) const
 {
     draw_objects(command_list, m.static_objects, texture_mapping, input_layout, false);
 }
 
 void Scene_impl::draw_dynamic_objects(ID3D12GraphicsCommandList& command_list,
-    Texture_mapping texture_mapping, const Input_layout& input_layout) const
+    Texture_mapping texture_mapping, Input_layout input_layout) const
 {
     draw_objects(command_list, m.dynamic_objects, texture_mapping, input_layout, true);
 }
@@ -737,19 +737,19 @@ void Scene_impl::sort_transparent_objects_back_to_front(const View& view)
 }
 
 void Scene_impl::draw_transparent_objects(ID3D12GraphicsCommandList& command_list,
-    Texture_mapping texture_mapping, const Input_layout& input_layout) const
+    Texture_mapping texture_mapping, Input_layout input_layout) const
 {
     draw_objects(command_list, m.transparent_objects, texture_mapping, input_layout, false);
 }
 
 void Scene_impl::draw_alpha_cut_out_objects(ID3D12GraphicsCommandList& command_list,
-    Texture_mapping texture_mapping, const Input_layout& input_layout) const
+    Texture_mapping texture_mapping, Input_layout input_layout) const
 {
     draw_objects(command_list, m.alpha_cut_out_objects, texture_mapping, input_layout, false);
 }
 
 void Scene_impl::draw_two_sided_objects(ID3D12GraphicsCommandList& command_list,
-    Texture_mapping texture_mapping, const Input_layout& input_layout) const
+    Texture_mapping texture_mapping, Input_layout input_layout) const
 {
     draw_objects(command_list, m.two_sided_objects, texture_mapping, input_layout, false);
 }

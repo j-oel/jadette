@@ -12,7 +12,6 @@
 #include "Object_id_pass.h"
 #include "Dx12_display.h"
 #include "View_controller.h"
-#include "Graphics.h"
 
 #ifndef NO_TEXT
 #include "Text.h"
@@ -23,6 +22,7 @@ class User_action;
 class Input;
 class Scene;
 class View;
+struct Config;
 
 class User_interface
 {

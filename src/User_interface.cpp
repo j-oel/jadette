@@ -13,6 +13,7 @@
 #include "View_controller.h"
 #include "Input.h"
 #include "Scene.h"
+#include "Graphics.h" // For Config
 
 #include <iomanip>
 

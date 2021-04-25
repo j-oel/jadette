@@ -8,9 +8,6 @@
 #pragma once
 
 #include "Mesh.h"
-#include <string>
-#include <map>
-#include <vector>
 
 
 struct Material
@@ -57,8 +54,4 @@ bool read_obj_file(std::istream& file, Vertices& vertices, std::vector<int>& ind
     std::vector<DirectX::PackedVector::XMHALF4>& input_bitangents,
     std::vector<DirectX::PackedVector::XMHALF4>& input_colors, std::string& material,
     std::map<std::string, Material>* materials, Obj_flip_v flip_v);
-
-
-
-
 

@@ -7,8 +7,6 @@
 
 #pragma once
 
-#include "Root_signature.h"
-
 
 using Microsoft::WRL::ComPtr;
 
@@ -16,8 +14,9 @@ using Microsoft::WRL::ComPtr;
 class Scene;
 class View;
 class Depth_stencil;
+class Root_signature;
 class Read_back_depth_stencil;
-
+enum class Backface_culling;
 
 class Object_id_pass
 {
