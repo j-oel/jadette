@@ -23,10 +23,14 @@ namespace
         {
             if (error_messages)
                 OutputDebugStringA(static_cast<LPCSTR>(error_messages->GetBufferPointer()));
+            #ifdef __cpp_exceptions
             if (shader.empty())
                 throw Root_signature_serialization_error();
             else
                 throw Shader_compilation_error(shader);
+            #else
+            ignore_unused_variable(shader);
+            #endif
         }
     }
 }

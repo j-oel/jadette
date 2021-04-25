@@ -69,6 +69,7 @@ struct com_exception
 
 inline void throw_if_failed(HRESULT hr)
 {
+#ifdef __cpp_exceptions
     if (FAILED(hr))
     {
         if (hr == E_OUTOFMEMORY)
@@ -76,6 +77,9 @@ inline void throw_if_failed(HRESULT hr)
         else
             throw com_exception(hr);
     }
+#else
+    ignore_unused_variable(hr);
+#endif
 }
 
 void log(const std::string& text);
