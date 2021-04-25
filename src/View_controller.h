@@ -11,6 +11,7 @@
 class Input;
 class View;
 
+// Control a view with input from the user.
 class View_controller
 {
 public:

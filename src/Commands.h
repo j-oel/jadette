@@ -18,7 +18,10 @@ enum class Input_layout;
 
 using Microsoft::WRL::ComPtr;
 
-
+//
+// The purpose of this class is to enable the expression of recording rendering commands
+// in a command list in a very concise and non-noisy way.
+//
 class Commands
 {
 public:

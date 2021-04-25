@@ -13,6 +13,9 @@ using Microsoft::WRL::ComPtr;
 struct Scene_components;
 
 
+// Reads a scene file, resulting in a filled Scene_components argument
+// and also a populated command list, used to upload the data to the GPU.
+// Might throw any of the exceptions defined further down.
 void read_scene_file(const std::string& file_name, Scene_components& sc,
     ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
     int& texture_index, ID3D12DescriptorHeap& texture_descriptor_heap);

@@ -16,8 +16,8 @@ namespace
     void set_formats(Bit_depth bit_depth, DXGI_FORMAT& m_dsv_format, DXGI_FORMAT& srv_format,
         DXGI_FORMAT& resource_format)
     {
-        // The resource_format has to be typeless, because the DSV needs a "D" format and the SRV needs
-        // an "R" format and a "D" format cannot be cast to an "R" format.
+        // The resource_format has to be typeless, because the DSV needs a "D" format and the SRV
+        // needs an "R" format and a "D" format cannot be cast to an "R" format.
         if (bit_depth == Bit_depth::bpp16)
         {
             m_dsv_format = DXGI_FORMAT_D16_UNORM;

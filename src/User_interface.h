@@ -18,7 +18,7 @@
 #endif
 
 
-class User_action;
+struct User_action;
 class Input;
 class Scene;
 class View;

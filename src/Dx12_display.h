@@ -14,13 +14,12 @@
 
 using Microsoft::WRL::ComPtr;
 
-
-// This class is responsible for the foundational low level details of showing graphics on the screen
-// with DirectX 12. That is, at construction; creating the device, swap chain with accompanying render
-// targets, command queue etc, and then, when the appropriate functions are called, handle the
-// synchronization and present.
-
-
+//
+// This class is responsible for the foundational low level details of showing graphics on
+// the screen with DirectX 12. That is, at construction; creating the device, swap chain with 
+// accompanying render targets, command queue etc, and then, when the appropriate functions
+// are called, handle the synchronization and present.
+//
 class Dx12_display
 {
 public:
@@ -38,7 +37,7 @@ public:
 
     void wait_for_gpu_finished_before_exit();
 
-    // These functions only exists because they are needed for the 2d text drawing.
+    // These functions only exist because they are needed for the 2d text drawing.
     ComPtr<ID3D12CommandQueue> command_queue() { return m_command_queue; }
     ComPtr<ID3D12Resource>* render_targets() { return m_render_targets; }
     UINT swap_chain_buffer_count() { return m_swap_chain_buffer_count; }

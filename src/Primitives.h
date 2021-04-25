@@ -9,6 +9,7 @@
 
 #include "Mesh.h"
 
+// A unit cube centered in origo.
 class Cube : public Mesh
 {
 public:
@@ -18,6 +19,7 @@ private:
 
 };
 
+// A unit plane centered in origo, through y = 0, facing upwards.
 class Plane : public Mesh
 {
 public:

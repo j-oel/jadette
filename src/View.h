@@ -8,7 +8,11 @@
 #pragma once
 
 
-
+// Represents a position in 3D space from where the scene can be rendered, along with
+// all the other parameters that are needed, such as the direction, the field of view etc.
+// In a lot of engines this is called a camera. I dislike that terminology however, since for a
+// first person experience there is no camera. This class is also used for shadow mapping,
+// which is also a context where there is no camera.
 class View
 {
 public:

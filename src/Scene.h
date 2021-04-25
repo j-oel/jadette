@@ -34,6 +34,10 @@ namespace DirectX
     struct XMFLOAT4;
 }
 
+// This class is the public interface of the scene, i.e. it contains all the operations
+// that can be performed on the scene "from the outside". It uses the pimpl idiom so that
+// the implementation details of the data representation of a scene can be hid from its users.
+// Among other things to speed up compilation times.
 class Scene
 {
 public:

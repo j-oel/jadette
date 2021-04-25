@@ -37,7 +37,7 @@ enum class Obj_flip_v { yes, no };
 
 // Read Wavefront .obj files.
 // See https://en.wikipedia.org/wiki/Wavefront_.obj_file
-
+//
 void read_obj_file(const std::string& filename, Vertices& vertices, std::vector<int>& indices,
     Obj_flip_v flip_v);
 

@@ -34,6 +34,8 @@ struct Shader_material
     UINT material_settings;
 };
 
+// The purpose of this class is both to be the interface for the functions that read data from
+// a file into a scene object, and also to be the definition of that part of the scene object.
 struct Scene_components
 {
     std::vector<std::shared_ptr<Graphical_object> > graphical_objects;

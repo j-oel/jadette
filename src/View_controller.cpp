@@ -70,7 +70,7 @@ void View_controller::switch_to_edit_mode()
     m_edit_mode = true;
     ShowCursor(TRUE);
     m_input.mouse_wheel_roll(0); // Reset any mouse wheel movement that has been performed
-                                 // when in edit (first person view) mode.
+                                 // when in non edit (first person view) mode.
 }
 
 

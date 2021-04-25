@@ -9,6 +9,7 @@
 #include <wtypes.h>
 
 
+// Keyboard and mouse input.
 class Input
 {
 public:

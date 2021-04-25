@@ -87,10 +87,8 @@ float estimate_object_screen_space_radius(const std::vector<int>& object_ids_on_
 }
 
 
-// class used instead of struct to avoid warning at forward declaration point
-class User_action
+struct User_action
 {
-public:
     bool select_object;
     bool move_object;
     bool zoom_object;
