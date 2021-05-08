@@ -86,6 +86,8 @@ void Text::draw(std::wstring text, float x, float y, UINT back_buf_index)
     m_d2d_device_context->BeginDraw();
     float width = m_scaling * m_font_size * text.size();
     float height = m_scaling * m_font_size;
+    x *= m_scaling;
+    y *= m_scaling;
     D2D1_RECT_F layout = D2D1::RectF(x, y, x + width, y + height);
     m_d2d_device_context->DrawTextW(text.c_str(), static_cast<UINT32>(text.size()), m_text_format.Get(),
         layout, m_brush.Get());
