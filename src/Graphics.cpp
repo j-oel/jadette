@@ -59,6 +59,8 @@ private:
     ComPtr<ID3D12GraphicsCommandList> create_main_command_list();
     void update_user_interface();
     void reload_shaders_if_requested();
+    bool shadow_mapping_is_enabled();
+    bool early_z_pass_is_enabled();
 
     Config m_config;
     std::shared_ptr<Dx12_display> m_dx12_display;
@@ -461,6 +463,16 @@ Commands Graphics_impl::commands()
     return c;
 }
 
+bool Graphics_impl::shadow_mapping_is_enabled()
+{
+    return m_render_settings & shadow_mapping_enabled;
+}
+
+bool Graphics_impl::early_z_pass_is_enabled()
+{
+    return m_render_settings & early_z_pass_enabled;
+}
+
 // This is the central function that defines the main rendering algorithm,
 // i.e. on a fairly high level what is done to render a frame, and in what order.
 // The goal is that this should look as close as possible to pseudo code.
@@ -471,9 +483,9 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     c.set_descriptor_heap(m_texture_descriptor_heap);
     c.set_root_signature();
     c.set_shader_constants();
-    if (m_render_settings & shadow_mapping_enabled)
+    if (shadow_mapping_is_enabled())
         c.generate_shadow_maps();
-    if (m_render_settings & early_z_pass_enabled)
+    if (early_z_pass_is_enabled())
         c.early_z_pass();
     else
         c.clear_depth_stencil();
@@ -482,7 +494,7 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
     c.set_shadow_map_for_shader();
     m_scene->sort_transparent_objects_back_to_front(m_view);
 
-    if (m_render_settings & early_z_pass_enabled)
+    if (early_z_pass_is_enabled())
     {
         c.draw_dynamic_objects(m_pipeline_state_early_z);
         c.draw_static_objects(m_pipeline_state_early_z);
