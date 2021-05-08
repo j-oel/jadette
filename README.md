@@ -39,6 +39,12 @@ This screenshot is from my standard test scene that is included in this reposito
 <img src="https://raw.githubusercontent.com/j-oel/jadette-media/master/screenshots/jadette-standard-scene1.jpg" 
 width="800" alt="Jadette Standard Scene screenshot 1">
 
+
+## Demo Video
+
+[![Watch the demo video](https://raw.githubusercontent.com/j-oel/jadette-media/master/other/video.png)](https://vimeo.com/546210373)
+
+
 ## How to navigate the code
 
 When I explore a new code base I like to start at the main function and drill my way down. I think this gives a good overview, but in some code bases there might be a lot of layers and what is the most interesting parts might not be immediately obvious, so it sometimes takes some time to find them. However, in the case of Jadette, this should be a pretty good exploration strategy for most people; the main function is located in the file [main.cpp](https://github.com/j-oel/jadette/blob/master/src/main.cpp). Nevertheless, If you're not so interested in Win32 specifics you could go directly to [Graphics.cpp](https://github.com/j-oel/jadette/blob/master/src/Graphics.cpp), which is where the high level graphics is controlled from. The functions *update* and *render* are central and good places to start further drill down from.
