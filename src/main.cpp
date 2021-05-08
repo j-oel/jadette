@@ -146,6 +146,8 @@ BOOL CALLBACK monitor_enum_proc(HMONITOR h_monitor, HDC, LPRECT monitor_rect, LP
     return TRUE;
 }
 
+constexpr DWORD windowed_window_style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int cmd_show)
 {
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -168,7 +170,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int cmd_show)
 
         BOOL use_menu = FALSE;
         RECT window_rect;
-        DWORD window_style = WS_POPUP;
+        DWORD window_style = WS_POPUP; // To not have any titlebar in fullscreen
         int position_x = 0;
         int position_y = 0;
         RECT& monitor_rect = monitors.at(static_cast<size_t>(config.monitor) - 1).rect;
@@ -183,7 +185,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int cmd_show)
         else
         {
             window_rect = { 0, 0, config.width, config.height };
-            window_style = WS_TILEDWINDOW;
+            window_style = windowed_window_style;
             AdjustWindowRect(&window_rect, window_style, use_menu);
             position_x = 100 + monitor_rect.left;
             position_y = 30 + monitor_rect.top;
@@ -266,7 +268,7 @@ void scaling_changed(HWND window, uint16_t dpi, Engine* engine, Config* config)
     RECT window_rect = { 0, 0, config->width, config->height };
     if (!config->borderless_windowed_fullscreen)
     {
-        const DWORD window_style = WS_TILEDWINDOW;
+        const DWORD window_style = windowed_window_style;
         const BOOL use_menu = FALSE;
         const DWORD ex_style = 0;
         AdjustWindowRectExForDpi(&window_rect, window_style, use_menu, ex_style, dpi);
