@@ -1,6 +1,6 @@
 # Jadette - a DirectX 12 3D Engine.
 
-The name Jadette can be interpreted as an acronym for Joel's Awesame DirEctx 
+The name Jadette can be interpreted as an acronym for Joel's Awesome DirEctx 
 Twelve Three d Engine. It's maybe not exceptionally awesome yet,
 but I thought that it could be good with some anticipation for the future. ;)
 
