@@ -34,7 +34,7 @@ public:
     void reload_shaders(ComPtr<ID3D12Device> device, bool backface_culling);
 private:
     void create_pipeline_state(ComPtr<ID3D12Device> device,
-        ComPtr<ID3D12PipelineState>& pipeline_state, bool static_objects,
+        ComPtr<ID3D12PipelineState>& pipeline_state, bool alpha_cut_out, 
         const wchar_t* debug_name, Backface_culling backface_culling);
     void create_pipeline_states(ComPtr<ID3D12Device> device, bool backface_culling);
     void create_render_target(ComPtr<ID3D12Device> device);
@@ -46,8 +46,8 @@ private:
     ComPtr<ID3D12Resource> m_render_target_read_back_buffer;
     ComPtr<ID3D12DescriptorHeap> m_render_target_view_heap;
     D3D12_CPU_DESCRIPTOR_HANDLE m_render_target_view;
-    ComPtr<ID3D12PipelineState> m_pipeline_state_dynamic_objects;
-    ComPtr<ID3D12PipelineState> m_pipeline_state_static_objects;
+    ComPtr<ID3D12PipelineState> m_pipeline_state;
+    ComPtr<ID3D12PipelineState> m_pipeline_state_alpha_cut_out;
     ComPtr<ID3D12PipelineState> m_pipeline_state_two_sided_objects;
     Root_signature* m_root_signature;
     DXGI_FORMAT m_dsv_format;

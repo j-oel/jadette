@@ -38,7 +38,7 @@ namespace
 Root_signature::Root_signature(ComPtr<ID3D12Device> device, UINT* render_settings) :
     m_render_settings(render_settings)
 {
-    constexpr int root_parameters_count = 8;
+    constexpr int root_parameters_count = 9;
     CD3DX12_ROOT_PARAMETER1 root_parameters[root_parameters_count]{};
 
     constexpr int values_count = 4; // Needs to be a multiple of 4, because constant buffers are
@@ -61,7 +61,7 @@ Root_signature::Root_signature(ComPtr<ID3D12Device> device, UINT* render_setting
 
     UINT base_register = 0;
     CD3DX12_DESCRIPTOR_RANGE1 descriptor_range1, descriptor_range2, descriptor_range3,
-        descriptor_range4, descriptor_range5;
+        descriptor_range4, descriptor_range5, descriptor_range6;
     UINT register_space_for_textures = 1;
     init_descriptor_table(root_parameters[m_root_param_index_of_textures],
         descriptor_range1, base_register, D3D12_DESCRIPTOR_RANGE_FLAG_NONE,
@@ -71,10 +71,14 @@ Root_signature::Root_signature(ComPtr<ID3D12Device> device, UINT* render_setting
         descriptor_range2, ++base_register, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE,
         register_space_for_shadow_map,
         Shadow_map::max_shadow_maps_count);
-    init_descriptor_table(root_parameters[m_root_param_index_of_instance_data],
+    init_descriptor_table(root_parameters[m_root_param_index_of_static_instance_data],
         descriptor_range3, ++base_register);
+    init_descriptor_table(root_parameters[m_root_param_index_of_dynamic_instance_data],
+        descriptor_range4, ++base_register);
 
-    root_parameters[m_root_param_index_of_instance_data].ShaderVisibility =
+    root_parameters[m_root_param_index_of_static_instance_data].ShaderVisibility =
+        D3D12_SHADER_VISIBILITY_VERTEX;
+    root_parameters[m_root_param_index_of_dynamic_instance_data].ShaderVisibility =
         D3D12_SHADER_VISIBILITY_VERTEX;
 
     constexpr int total_srv_count = Scene::max_textures + Shadow_map::max_shadow_maps_count;
@@ -84,15 +88,15 @@ Root_signature::Root_signature(ComPtr<ID3D12Device> device, UINT* render_setting
 
     constexpr UINT descriptors_count = 1;
     base_register = 3;
-    descriptor_range4.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, descriptors_count, base_register);
+    descriptor_range5.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, descriptors_count, base_register);
     constexpr UINT descriptor_range_count = 1;
     root_parameters[m_root_param_index_of_lights_data].InitAsDescriptorTable(descriptor_range_count,
-        &descriptor_range4, D3D12_SHADER_VISIBILITY_PIXEL);
+        &descriptor_range5, D3D12_SHADER_VISIBILITY_PIXEL);
 
     base_register = 4;
-    descriptor_range5.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, descriptors_count, base_register);
+    descriptor_range6.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, descriptors_count, base_register);
     root_parameters[m_root_param_index_of_materials].InitAsDescriptorTable(descriptor_range_count,
-        &descriptor_range5, D3D12_SHADER_VISIBILITY_PIXEL);
+        &descriptor_range6, D3D12_SHADER_VISIBILITY_PIXEL);
 
     UINT sampler_shader_register = 0;
     CD3DX12_STATIC_SAMPLER_DESC texture_sampler_description(sampler_shader_register);
@@ -138,6 +142,11 @@ void Root_signature::set_constants(ID3D12GraphicsCommandList& command_list,
     auto ambient = scene->ambient_light();
     command_list.SetGraphicsRoot32BitConstants(m_root_param_index_of_vectors,
         size_in_words_of_XMVECTOR, &ambient, offset);
+
+    scene->set_static_instance_data_shader_constant(command_list,
+        m_root_param_index_of_static_instance_data);
+    scene->set_dynamic_instance_data_shader_constant(command_list, back_buf_index,
+        m_root_param_index_of_dynamic_instance_data);
 
     scene->set_lights_data_shader_constant(command_list, back_buf_index,
         m_root_param_index_of_lights_data);

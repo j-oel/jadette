@@ -16,7 +16,8 @@
 
 #ifndef _DEBUG
 #include "build/object_ids_vertex_shader_srv_instance_data.h"
-#include "build/object_ids_vertex_shader_srv_instance_data_static_objects.h"
+#include "build/object_ids_alpha_cut_out_vertex_shader_srv_instance_data.h"
+#include "build/pixel_shader_object_ids_alpha_cut_out.h"
 #include "build/pixel_shader_object_ids.h"
 #endif
 
@@ -41,54 +42,61 @@ Object_id_pass::Object_id_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_form
 }
 
 void Object_id_pass::create_pipeline_state(ComPtr<ID3D12Device> device,
-    ComPtr<ID3D12PipelineState>& pipeline_state, bool static_objects,
+    ComPtr<ID3D12PipelineState>& pipeline_state, bool alpha_cut_out,
     const wchar_t* debug_name, Backface_culling backface_culling)
 {
-    const char* vertex_shader_entry = static_objects ?
-        "object_ids_vertex_shader_srv_instance_data_static_objects" :
-        "object_ids_vertex_shader_srv_instance_data";
-
     UINT render_targets_count = 1;
 
 #ifndef _DEBUG
     if (!pipeline_state)
     {
-        auto compiled_vertex_shader = static_objects ?
-            CD3DX12_SHADER_BYTECODE(g_object_ids_vertex_shader_srv_instance_data_static_objects,
-                _countof(g_object_ids_vertex_shader_srv_instance_data_static_objects)) :
+        auto compiled_vertex_shader = alpha_cut_out ?
+            CD3DX12_SHADER_BYTECODE(g_object_ids_alpha_cut_out_vertex_shader_srv_instance_data,
+                _countof(g_object_ids_alpha_cut_out_vertex_shader_srv_instance_data)) :
             CD3DX12_SHADER_BYTECODE(g_object_ids_vertex_shader_srv_instance_data,
                 _countof(g_object_ids_vertex_shader_srv_instance_data));
 
-        auto compiled_pixel_shader =
+        auto compiled_pixel_shader = alpha_cut_out ?
+            CD3DX12_SHADER_BYTECODE(g_pixel_shader_object_ids_alpha_cut_out,
+                _countof(g_pixel_shader_object_ids_alpha_cut_out)) :
             CD3DX12_SHADER_BYTECODE(g_pixel_shader_object_ids,
                 _countof(g_pixel_shader_object_ids));
 
         ::create_pipeline_state(device, pipeline_state, m_root_signature->get(),
-            compiled_vertex_shader, compiled_pixel_shader,
-            m_dsv_format, render_targets_count, Input_layout::position, backface_culling,
-            Alpha_blending::disabled, Depth_write::enabled, m_rtv_format);
+            compiled_vertex_shader, compiled_pixel_shader, m_dsv_format, render_targets_count,
+            alpha_cut_out ? Input_layout::position_normal : Input_layout::position,
+            backface_culling, Alpha_blending::disabled, Depth_write::enabled, m_rtv_format);
     }
     else
 #endif
+    {
+        const char* vertex_shader_entry = alpha_cut_out ?
+            "object_ids_alpha_cut_out_vertex_shader_srv_instance_data" :
+            "object_ids_vertex_shader_srv_instance_data";
+
+        const char* pixel_shader_entry = alpha_cut_out ? "pixel_shader_object_ids_alpha_cut_out"
+            : "pixel_shader_object_ids";
+
         ::create_pipeline_state(device, pipeline_state, m_root_signature->get(),
-            vertex_shader_entry, "pixel_shader_object_ids",
-            m_dsv_format, render_targets_count, Input_layout::position, backface_culling,
-            Alpha_blending::disabled, Depth_write::enabled, m_rtv_format);
+            vertex_shader_entry, pixel_shader_entry,
+            m_dsv_format, render_targets_count, 
+            alpha_cut_out ? Input_layout::position_normal : Input_layout::position,
+            backface_culling, Alpha_blending::disabled, Depth_write::enabled, m_rtv_format);
+    }
 
     SET_DEBUG_NAME(pipeline_state, debug_name);
 }
 
 void Object_id_pass::create_pipeline_states(ComPtr<ID3D12Device> device, bool backface_culling)
 {
-    create_pipeline_state(device, m_pipeline_state_dynamic_objects, false,
+    create_pipeline_state(device, m_pipeline_state, false,
         L"Object Id Pipeline State Object Dynamic Objects", backface_culling ?
         Backface_culling::enabled : Backface_culling::disabled);
 
-    create_pipeline_state(device, m_pipeline_state_static_objects, true,
-        L"Object Id Pipeline State Object Static Objects", backface_culling ?
-        Backface_culling::enabled : Backface_culling::disabled);
+    create_pipeline_state(device, m_pipeline_state_alpha_cut_out, true,
+        L"Object Id Pipeline State Object Alpha Cut Out Objects", Backface_culling::disabled);
 
-    create_pipeline_state(device, m_pipeline_state_two_sided_objects, true,
+    create_pipeline_state(device, m_pipeline_state_two_sided_objects, false,
         L"Object Id Pipeline State Object Two Sided Objects", Backface_culling::disabled);
 }
 
@@ -124,12 +132,12 @@ void Object_id_pass::record_commands(UINT back_buf_index, Scene& scene, const Vi
     set_and_clear_render_target(command_list, depth_stencil);
 
     Commands c(command_list, back_buf_index, &depth_stencil, Texture_mapping::disabled,
-        Input_layout::position, &view, &scene, nullptr, m_root_signature,
-        m_root_signature->m_root_param_index_of_instance_data);
+        Input_layout::position, &view, &scene, nullptr, m_root_signature);
     c.set_root_signature();
     c.set_shader_constants();
-    c.simple_render_pass(m_pipeline_state_dynamic_objects, m_pipeline_state_static_objects,
-        m_pipeline_state_two_sided_objects);
+    c.simple_render_pass(m_pipeline_state, m_pipeline_state_two_sided_objects);
+    c.set_input_layout(Input_layout::position_normal);
+    c.draw_alpha_cut_out_objects(m_pipeline_state_alpha_cut_out);
 
     barrier_transition(command_list, D3D12_RESOURCE_STATE_COPY_SOURCE);
 

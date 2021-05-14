@@ -79,12 +79,11 @@ SCENARIO("The scene parser works")
             THEN("the object is available")
             {
                 REQUIRE(sc.graphical_objects.size() == 1);
-                REQUIRE(sc.static_objects.size() == 1);
+                REQUIRE(sc.regular_objects.size() == 1);
             }
 
             THEN("the other vectors are empty")
             {
-                REQUIRE(sc.dynamic_objects.empty());
                 REQUIRE(sc.flying_objects.empty());
                 REQUIRE(sc.rotating_objects.empty());
                 REQUIRE(sc.transparent_objects.empty());
@@ -112,8 +111,7 @@ SCENARIO("The scene parser works")
             THEN("the objects are available")
             {
                 REQUIRE(sc.graphical_objects.size() == 2);
-                REQUIRE(sc.static_objects.size() == 1);
-                REQUIRE(sc.dynamic_objects.size() == 1);
+                REQUIRE(sc.regular_objects.size() == 2);
             }
 
             THEN("the other vectors are empty")
@@ -153,8 +151,7 @@ SCENARIO("The scene parser works")
             THEN("the objects are available")
             {
                 REQUIRE(sc.graphical_objects.size() == 202);
-                REQUIRE(sc.static_objects.size() == 1);
-                REQUIRE(sc.dynamic_objects.size() == 201);
+                REQUIRE(sc.regular_objects.size() == 202);
                 REQUIRE(sc.flying_objects.size() == 2);
                 REQUIRE(sc.rotating_objects.size() == 1);
             }

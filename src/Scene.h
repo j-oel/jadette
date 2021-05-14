@@ -17,9 +17,14 @@ enum class Input_layout;
 
 constexpr UINT value_offset_for_object_id() { return 0; }
 
-constexpr UINT value_offset_for_material_id()
+constexpr UINT value_offset_for_dynamic_transform_ref()
 {
     return value_offset_for_object_id() + 1;
+}
+
+constexpr UINT value_offset_for_material_id()
+{
+    return value_offset_for_dynamic_transform_ref() + 1;
 }
 
 constexpr UINT texture_index_of_depth_buffer() { return 0; }
@@ -48,9 +53,7 @@ public:
     ~Scene();
     void update();
 
-    void draw_static_objects(ID3D12GraphicsCommandList& command_list, 
-        Texture_mapping texture_mapping, Input_layout input_layout) const;
-    void draw_dynamic_objects(ID3D12GraphicsCommandList& command_list, 
+    void draw_regular_objects(ID3D12GraphicsCommandList& command_list,
         Texture_mapping texture_mapping, Input_layout input_layout) const;
     void sort_transparent_objects_back_to_front(const View& view);
     void draw_transparent_objects(ID3D12GraphicsCommandList& command_list,
@@ -85,7 +88,7 @@ public:
     void initial_view_focus_point(DirectX::XMFLOAT3& focus_point) const;
     DirectX::XMFLOAT4 ambient_light() const;
 
-    static constexpr UINT max_textures = 112;
+    static constexpr UINT max_textures = 111;
 private:
     Scene_impl* impl;
 };

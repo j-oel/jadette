@@ -39,8 +39,7 @@ struct Shader_material
 struct Scene_components
 {
     std::vector<std::shared_ptr<Graphical_object> > graphical_objects;
-    std::vector<std::shared_ptr<Graphical_object> > static_objects;
-    std::vector<std::shared_ptr<Graphical_object> > dynamic_objects;
+    std::vector<std::shared_ptr<Graphical_object> > regular_objects;
     std::vector<std::shared_ptr<Graphical_object> > transparent_objects;
     std::vector<std::shared_ptr<Graphical_object> > alpha_cut_out_objects;
     std::vector<std::shared_ptr<Graphical_object> > two_sided_objects;

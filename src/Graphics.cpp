@@ -457,8 +457,7 @@ Commands Graphics_impl::commands()
         &m_depth_stencil[m_dx12_display->back_buf_index()], Texture_mapping::enabled,
         m_use_vertex_colors ? Input_layout::position_normal_tangents_color
                             : Input_layout::position_normal_tangents,
-        &m_view, m_scene.get(), &m_depth_pass,
-        &m_root_signature, m_root_signature.m_root_param_index_of_instance_data);
+        &m_view, m_scene.get(), &m_depth_pass, &m_root_signature);
 
     return c;
 }
@@ -496,16 +495,14 @@ void Graphics_impl::record_frame_rendering_commands_in_command_list()
 
     if (early_z_pass_is_enabled())
     {
-        c.draw_dynamic_objects(m_pipeline_state_early_z);
-        c.draw_static_objects(m_pipeline_state_early_z);
+        c.draw_regular_objects(m_pipeline_state_early_z);
         c.draw_two_sided_objects(m_pipeline_state_two_sided_early_z);
         c.draw_alpha_cut_out_objects(m_pipeline_state_alpha_cut_out_early_z);
         c.draw_transparent_objects(m_pipeline_state_transparency);
     }
     else
     {
-        c.draw_dynamic_objects(m_pipeline_state);
-        c.draw_static_objects(m_pipeline_state);
+        c.draw_regular_objects(m_pipeline_state);
         c.draw_two_sided_objects(m_pipeline_state_two_sided);
         c.draw_alpha_cut_out_objects(m_pipeline_state_alpha_cut_out);
         c.draw_transparent_objects(m_pipeline_state_transparency);

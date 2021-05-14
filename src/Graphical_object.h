@@ -21,11 +21,15 @@ class Graphical_object
 {
 public:
     Graphical_object(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
-        Primitive_type primitive_type, int id, int material_id, int instances = 1);
+        Primitive_type primitive_type, int id, int material_id,
+        int dynamic_transform_ref, // Set to negative number for static object. 
+        int instances = 1);
 
     Graphical_object(std::shared_ptr<Mesh> mesh,
         const std::vector<std::shared_ptr<Texture>>& textures,
-        int id, int material_id, int instances = 1,
+        int id, int material_id,
+        int dynamic_transform_ref, // Set to negative number for static object.
+        int instances = 1,
         int triangle_index = 0);
 
     void draw(ID3D12GraphicsCommandList& command_list, const Input_layout& input_layout) const;
@@ -34,6 +38,7 @@ public:
     size_t vertices_count() const;
     int instances() const { return m_instances; }
     int id() const { return m_id; }
+    int dynamic_transform_ref() const { return m_dynamic_transform_ref; }
     int material_id() const { return m_material_id; }
     DirectX::XMVECTOR center() const;
     void transform_center(DirectX::XMMATRIX model_view);
@@ -43,6 +48,7 @@ private:
     std::shared_ptr<Mesh> m_mesh;
     std::vector<std::shared_ptr<Texture>> m_textures;
     int m_id;
+    int m_dynamic_transform_ref;
     int m_instances;
     int m_material_settings;
     int m_material_id;

@@ -8,6 +8,7 @@
 struct values_struct
 {
     uint object_id;
+    int dynamic_transform_ref;
     uint material_id;
     uint render_settings;
 };
@@ -74,7 +75,7 @@ struct Materials
 };
 ConstantBuffer<Materials> materials : register(b4);
 
-static const int max_textures = 112;
+static const int max_textures = 111;
 Texture2D<float4> tex[max_textures]: register(t0, space1);
 static const int max_shadow_maps = 16;
 Texture2D<float> shadow_map[max_shadow_maps] : register(t1, space2);
@@ -84,7 +85,8 @@ struct instance_trans_rot_struct
     uint4 value;
 };
 
-StructuredBuffer<instance_trans_rot_struct> instance : register(t2);
+StructuredBuffer<instance_trans_rot_struct> static_instance : register(t2);
+StructuredBuffer<instance_trans_rot_struct> dynamic_instance : register(t3);
 
 
 sampler texture_sampler : register(s0);
@@ -235,7 +237,9 @@ Trans_rot get_trans_rot(uint instance_id)
 {
     Trans_rot result;
     const uint index = values.object_id + instance_id;
-    uint4 v = instance[index].value;
+    const uint dynamic_index = values.dynamic_transform_ref + instance_id;
+    bool dynamic_object = values.dynamic_transform_ref >= 0; 
+    uint4 v = dynamic_object ? dynamic_instance[dynamic_index].value : static_instance[index].value;
     result.translation = float4(f16tof32(v.x), f16tof32(v.x >> 16), f16tof32(v.y), f16tof32(v.y >> 16));
     result.rotation = float4(f16tof32(v.z), f16tof32(v.z >> 16), f16tof32(v.w), f16tof32(v.w >> 16));
     return result;
@@ -587,15 +591,29 @@ int pixel_shader_object_ids(object_ids_vertex_shader_output input) : SV_TARGET
 }
 
 
+float4 calculate_sv_position(float4 position : POSITION, half4 translation : TRANSLATION,
+    half4 rotation : ROTATION)
+{
+    half4x4 model = to_scaled_model_matrix(translation, rotation);
+    float4x4 model_view_projection = mul(matrices.view_projection, model);
+    return mul(model_view_projection, position);
+}
+
+
 object_ids_vertex_shader_output object_ids_vertex_shader_model_trans_rot(float4 position : POSITION,
     half4 translation : TRANSLATION, half4 rotation : ROTATION, int object_id)
 {
     object_ids_vertex_shader_output result;
-    half4x4 model = to_scaled_model_matrix(translation, rotation);
-    float4x4 model_view_projection = mul(matrices.view_projection, model);
-    result.sv_position = mul(model_view_projection, position);
+    result.sv_position = calculate_sv_position(position, translation, rotation);
     result.object_id = object_id;
     return result;
+}
+
+
+int get_index(uint instance_id)
+{
+    bool dynamic_object = values.dynamic_transform_ref >= 0;
+    return dynamic_object ? values.object_id + instance_id : -1;
 }
 
 
@@ -603,16 +621,57 @@ object_ids_vertex_shader_output object_ids_vertex_shader_srv_instance_data(
     uint instance_id : SV_InstanceID, float3 position : POSITION)
 {
     Trans_rot trans_rot = get_trans_rot(instance_id);
-    const uint index = values.object_id + instance_id;
+    const int index = get_index(instance_id);
     return object_ids_vertex_shader_model_trans_rot(float4(position, 1), trans_rot.translation,
         trans_rot.rotation, index);
 }
 
 
-object_ids_vertex_shader_output object_ids_vertex_shader_srv_instance_data_static_objects(
-    uint instance_id : SV_InstanceID, float3 position : POSITION)
+struct object_ids_alpha_cut_out_vertex_shader_output
+{
+    float4 sv_position : SV_POSITION;
+    half2 texcoord : TEXCOORD;
+    int object_id : OBJECT_ID;
+};
+
+
+int pixel_shader_object_ids_alpha_cut_out(object_ids_alpha_cut_out_vertex_shader_output input)
+ : SV_TARGET
+{
+    float4 color;
+    Material m = materials.m[values.material_id];
+    uint texture_index = m.diff_tex;
+    if (m.material_settings & mirror_texture_addressing)
+        color = tex[texture_index].Sample(texture_mirror_sampler, input.texcoord);
+    else
+        color = tex[texture_index].Sample(texture_sampler, input.texcoord);
+    if (color.a < 0.8)
+        discard;
+    
+    return input.object_id;
+}
+
+
+object_ids_alpha_cut_out_vertex_shader_output
+    object_ids_alpha_cut_out_vertex_shader_model_trans_rot(float4 position : POSITION,
+        float2 texcoord : TEXCOORD, half4 translation : TRANSLATION,
+        half4 rotation : ROTATION, int object_id)
+{
+    object_ids_alpha_cut_out_vertex_shader_output result;
+    result.sv_position = calculate_sv_position(position, translation, rotation);
+    result.object_id = object_id;
+    result.texcoord = texcoord;
+    return result;
+}
+
+
+object_ids_alpha_cut_out_vertex_shader_output
+    object_ids_alpha_cut_out_vertex_shader_srv_instance_data(uint instance_id : SV_InstanceID,
+        float4 position : POSITION, float4 normal : NORMAL)
 {
     Trans_rot trans_rot = get_trans_rot(instance_id);
-    return object_ids_vertex_shader_model_trans_rot(float4(position, 1), trans_rot.translation,
-        trans_rot.rotation, -1);
+    const int index = get_index(instance_id);
+    float2 texcoord = float2(position.w, normal.w);
+    return object_ids_alpha_cut_out_vertex_shader_model_trans_rot(float4(position.xyz, 1),
+        texcoord, trans_rot.translation, trans_rot.rotation, index);
 }

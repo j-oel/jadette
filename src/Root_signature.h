@@ -45,8 +45,9 @@ public:
     const int m_root_param_index_of_materials = 3;
     const int m_root_param_index_of_vectors = 4;
     const int m_root_param_index_of_shadow_map = 5;
-    const int m_root_param_index_of_instance_data = 6;
-    const int m_root_param_index_of_lights_data = 7;
+    const int m_root_param_index_of_static_instance_data = 6;
+    const int m_root_param_index_of_dynamic_instance_data = 7;
+    const int m_root_param_index_of_lights_data = 8;
 private:
     UINT* m_render_settings;
     void create(ComPtr<ID3D12Device> device, const CD3DX12_ROOT_PARAMETER1* root_parameters,

@@ -93,9 +93,7 @@ public:
         UINT swap_chain_buffer_count, ID3D12DescriptorHeap& descriptor_heap);
     void update();
 
-    void draw_static_objects(ID3D12GraphicsCommandList& command_list,
-        Texture_mapping texture_mapping, Input_layout input_layout) const;
-    void draw_dynamic_objects(ID3D12GraphicsCommandList& command_list,
+    void draw_regular_objects(ID3D12GraphicsCommandList& command_list,
         Texture_mapping texture_mapping, Input_layout input_layout) const;
     void sort_transparent_objects_back_to_front(const View& view);
     void draw_transparent_objects(ID3D12GraphicsCommandList& command_list,
@@ -137,8 +135,7 @@ private:
     void upload_static_instance_data(ID3D12GraphicsCommandList& command_list);
     void draw_objects(ID3D12GraphicsCommandList& command_list,
         const std::vector<std::shared_ptr<Graphical_object> >& objects,
-        Texture_mapping texture_mapping, Input_layout input_layout,
-        bool dynamic) const;
+        Texture_mapping texture_mapping, Input_layout input_layout) const;
 
     Scene_components m;
 
@@ -185,16 +182,10 @@ void Scene::update()
     impl->update();
 }
 
-void Scene::draw_static_objects(ID3D12GraphicsCommandList& command_list,
+void Scene::draw_regular_objects(ID3D12GraphicsCommandList& command_list,
     Texture_mapping texture_mapping, Input_layout input_layout) const
 {
-    impl->draw_static_objects(command_list, texture_mapping, input_layout);
-}
-
-void Scene::draw_dynamic_objects(ID3D12GraphicsCommandList& command_list,
-    Texture_mapping texture_mapping, Input_layout input_layout) const
-{
-    impl->draw_dynamic_objects(command_list, texture_mapping, input_layout);
+    impl->draw_regular_objects(command_list, texture_mapping, input_layout);
 }
 
 void Scene::sort_transparent_objects_back_to_front(const View& view)
@@ -451,8 +442,7 @@ Scene_impl::Scene_impl(ID3D12Device& device, UINT swap_chain_buffer_count,
         // Release all objects so that we can continue and show the screen without graphics
         // driver errors/violations.
         m.graphical_objects.clear();
-        m.static_objects.clear();
-        m.dynamic_objects.clear();
+        m.regular_objects.clear();
         m.transparent_objects.clear();
         m.alpha_cut_out_objects.clear();
         m.two_sided_objects.clear();
@@ -504,7 +494,7 @@ void Scene_impl::init(ID3D12Device& device, ID3D12GraphicsCommandList& command_l
     for (UINT i = 0; i < swap_chain_buffer_count; ++i)
     {
         m_dynamic_instance_data.push_back(std::make_unique<Instance_data>(device,
-            static_cast<UINT>(m.dynamic_objects.size()), descriptor_heap,
+            static_cast<UINT>(m.dynamic_model_transforms.size()), descriptor_heap,
             descriptor_start_index_of_dynamic_instance_data() + i));
 
         m_lights_data.push_back(std::make_unique<Constant_buffer<Light>>(device,
@@ -513,10 +503,7 @@ void Scene_impl::init(ID3D12Device& device, ID3D12GraphicsCommandList& command_l
     }
 
     m_static_instance_data = std::make_unique<Instance_data>(device,
-        // It's graphical_objects here because every graphical_object has a an entry in
-        // m_static_model_transforms. This is mainly (only?) because the fly_around_in_circle
-        // function requires that currently. This is all quite messy and should be fixed.
-        static_cast<UINT>(m.graphical_objects.size()), descriptor_heap,
+        static_cast<UINT>(m.static_model_transforms.size()), descriptor_heap,
         descriptor_index_of_static_instance_data());
 
     upload_resources_to_gpu(device, command_list);
@@ -541,9 +528,9 @@ void create_tiny_scene(Scene_components& sc, ID3D12Device& device,
                                          convert_vector_to_half4(DirectX::XMQuaternionIdentity())};
     sc.static_model_transforms.push_back(transform);
     auto object = std::make_shared<Graphical_object>(device, command_list,
-        Primitive_type::Cube, 0, 0);
+        Primitive_type::Cube, 0, 0, 0);
     sc.graphical_objects.push_back(object);
-    sc.dynamic_objects.push_back(object);
+    sc.regular_objects.push_back(object);
     sc.dynamic_model_transforms.push_back(transform);
 
     Shader_material shader_material{};
@@ -652,7 +639,7 @@ void Scene_impl::update()
 
 void Scene_impl::draw_objects(ID3D12GraphicsCommandList& command_list,
     const std::vector<std::shared_ptr<Graphical_object> >& objects,
-    Texture_mapping texture_mapping, Input_layout input_layout, bool dynamic) const
+    Texture_mapping texture_mapping, Input_layout input_layout) const
 {
     command_list.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -660,14 +647,16 @@ void Scene_impl::draw_objects(ID3D12GraphicsCommandList& command_list,
     {
         auto& graphical_object = objects[i];
 
-        constexpr UINT offset = value_offset_for_object_id();
         constexpr UINT size_in_words_of_value = 1;
-        int object_id = static_cast<int>(dynamic ? i : graphical_object->id());
-        // It's graphical_object->id for static objects here because every graphical_object 
-        // has a an entry in m_static_model_transforms. 
+        int object_id = graphical_object->id();
         command_list.SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
-            size_in_words_of_value, &object_id, offset);
-
+            size_in_words_of_value, &object_id, value_offset_for_object_id());
+        
+        auto dynamic_transform_ref = graphical_object->dynamic_transform_ref();
+        command_list.SetGraphicsRoot32BitConstants(m_root_param_index_of_values,
+            size_in_words_of_value, &dynamic_transform_ref,
+            value_offset_for_dynamic_transform_ref());
+         
         if (texture_mapping == Texture_mapping::enabled)
         {
             auto material_id = graphical_object->material_id();
@@ -683,18 +672,11 @@ void Scene_impl::draw_objects(ID3D12GraphicsCommandList& command_list,
     }
 }
 
-void Scene_impl::draw_static_objects(ID3D12GraphicsCommandList& command_list,
+void Scene_impl::draw_regular_objects(ID3D12GraphicsCommandList& command_list,
     Texture_mapping texture_mapping, Input_layout input_layout) const
 {
-    draw_objects(command_list, m.static_objects, texture_mapping, input_layout, false);
+    draw_objects(command_list, m.regular_objects, texture_mapping, input_layout);
 }
-
-void Scene_impl::draw_dynamic_objects(ID3D12GraphicsCommandList& command_list,
-    Texture_mapping texture_mapping, Input_layout input_layout) const
-{
-    draw_objects(command_list, m.dynamic_objects, texture_mapping, input_layout, true);
-}
-
 
 struct Graphical_object_z_of_center_less
 {
@@ -739,19 +721,19 @@ void Scene_impl::sort_transparent_objects_back_to_front(const View& view)
 void Scene_impl::draw_transparent_objects(ID3D12GraphicsCommandList& command_list,
     Texture_mapping texture_mapping, Input_layout input_layout) const
 {
-    draw_objects(command_list, m.transparent_objects, texture_mapping, input_layout, false);
+    draw_objects(command_list, m.transparent_objects, texture_mapping, input_layout);
 }
 
 void Scene_impl::draw_alpha_cut_out_objects(ID3D12GraphicsCommandList& command_list,
     Texture_mapping texture_mapping, Input_layout input_layout) const
 {
-    draw_objects(command_list, m.alpha_cut_out_objects, texture_mapping, input_layout, false);
+    draw_objects(command_list, m.alpha_cut_out_objects, texture_mapping, input_layout);
 }
 
 void Scene_impl::draw_two_sided_objects(ID3D12GraphicsCommandList& command_list,
     Texture_mapping texture_mapping, Input_layout input_layout) const
 {
-    draw_objects(command_list, m.two_sided_objects, texture_mapping, input_layout, false);
+    draw_objects(command_list, m.two_sided_objects, texture_mapping, input_layout);
 }
 
 void Scene_impl::upload_data_to_gpu(ID3D12GraphicsCommandList& command_list,
@@ -765,7 +747,7 @@ void Scene_impl::upload_data_to_gpu(ID3D12GraphicsCommandList& command_list,
 
     if (!m.graphical_objects.empty())
         upload_static_instance_data(command_list);
-    if (!m.dynamic_objects.empty())
+    if (!m.dynamic_model_transforms.empty())
         m_dynamic_instance_data[back_buf_index]->upload_new_data_to_gpu(command_list,
             m.dynamic_model_transforms);
 }
@@ -790,7 +772,7 @@ void Scene_impl::upload_static_instance_data(ID3D12GraphicsCommandList& command_
 void Scene_impl::set_static_instance_data_shader_constant(ID3D12GraphicsCommandList& command_list,
     int root_param_index_of_instance_data) const
 {
-    if (!m.graphical_objects.empty())
+    if (!m.static_model_transforms.empty())
         command_list.SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
             m_static_instance_data->srv_gpu_handle());
 }
@@ -798,7 +780,7 @@ void Scene_impl::set_static_instance_data_shader_constant(ID3D12GraphicsCommandL
 void Scene_impl::set_dynamic_instance_data_shader_constant(ID3D12GraphicsCommandList& command_list,
     UINT back_buf_index, int root_param_index_of_instance_data) const
 {
-    if (!m.dynamic_objects.empty())
+    if (!m.dynamic_model_transforms.empty())
         command_list.SetGraphicsRootDescriptorTable(root_param_index_of_instance_data,
             m_dynamic_instance_data[back_buf_index]->srv_gpu_handle());
 }
@@ -839,14 +821,18 @@ void Scene_impl::manipulate_object(DirectX::XMFLOAT3& delta_pos, DirectX::XMFLOA
 {
     if (m_object_selected)
     {
-        auto& selected_object_translation =
-                m.static_model_transforms[m.dynamic_objects[m_selected_object_id]->id()].translation;
+        const int static_transform_ref = m.graphical_objects[m_selected_object_id]->id();
+        auto& selected_object_translation = 
+            m.static_model_transforms[static_transform_ref].translation;
         XMVECTOR translation = convert_half4_to_vector(selected_object_translation);
         translation += XMLoadFloat3(&delta_pos);
         convert_vector_to_half4(selected_object_translation, translation);
-        m.dynamic_model_transforms[m_selected_object_id].translation = selected_object_translation;
+        const int dynamic_transform_ref = 
+            m.graphical_objects[m_selected_object_id]->dynamic_transform_ref();
 
-        auto& selected_object_rotation = m.dynamic_model_transforms[m_selected_object_id].rotation;
+        m.dynamic_model_transforms[dynamic_transform_ref].translation = selected_object_translation;
+
+        auto& selected_object_rotation = m.dynamic_model_transforms[dynamic_transform_ref].rotation;
         XMVECTOR rotation = convert_half4_to_vector(selected_object_rotation);
         convert_vector_to_half4(selected_object_rotation,
             XMQuaternionMultiply(rotation, XMLoadFloat4(&delta_rotation)));

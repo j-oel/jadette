@@ -236,8 +236,9 @@ void read_scene_file_stream(std::istream& file, Scene_components& sc,
         Per_instance_transform transform = { convert_float4_to_half4(position),
         convert_vector_to_half4(DirectX::XMQuaternionIdentity()) };
         sc.static_model_transforms.push_back(transform);
-        auto object = std::make_shared<Graphical_object>(mesh, used_textures,
-            object_id++, material_id, instances, triangle_start_index);
+        int dynamic_transform_ref = dynamic ? transform_ref : -1;
+        auto object = std::make_shared<Graphical_object>(mesh, used_textures, object_id++,
+            material_id, dynamic_transform_ref, instances, triangle_start_index);
 
         sc.graphical_objects.push_back(object);
 
@@ -247,19 +248,21 @@ void read_scene_file_stream(std::istream& file, Scene_components& sc,
             sc.alpha_cut_out_objects.push_back(object);
         else if (material_settings & two_sided)
             sc.two_sided_objects.push_back(object);
-        else if (dynamic)
+        else
+            sc.regular_objects.push_back(object);
+
+        if (dynamic)
         {
-            sc.dynamic_objects.push_back(object);
             sc.dynamic_model_transforms.push_back(transform);
-            Dynamic_object dynamic_object{ object, transform_ref };
+            Dynamic_object dynamic_object { object, transform_ref };
             if (rotating)
                 sc.rotating_objects.push_back(dynamic_object);
             if (!name.empty())
                 objects[name] = dynamic_object;
+
             ++transform_ref;
         }
-        else
-            sc.static_objects.push_back(object);
+
     };
 
 
@@ -376,10 +379,7 @@ void read_scene_file_stream(std::istream& file, Scene_components& sc,
             int instances = count.x * count.y * count.z;
             bool dynamic = static_dynamic == "dynamic" ? true : false;
             sc.graphical_objects.reserve(sc.graphical_objects.size() + instances);
-            if (dynamic)
-                sc.dynamic_objects.reserve(sc.dynamic_objects.size() + instances);
-            else
-                sc.static_objects.reserve(sc.static_objects.size() + instances);
+            sc.regular_objects.reserve(sc.regular_objects.size() + instances);
 
             shared_ptr<Mesh> mesh;
             if (meshes.find(model) != meshes.end())

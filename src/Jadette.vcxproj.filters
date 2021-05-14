@@ -220,7 +220,10 @@
     <FxCompile Include="shaders\pixel_shader_object_ids.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="shaders\object_ids_vertex_shader_srv_instance_data_static_objects.hlsl">
+    <FxCompile Include="shaders\object_ids_alpha_cut_out_vertex_shader_srv_instance_data.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\pixel_shader_object_ids_alpha_cut_out.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
   </ItemGroup>

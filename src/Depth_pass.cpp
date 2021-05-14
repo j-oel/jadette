@@ -106,9 +106,8 @@ void Depth_pass::record_commands(UINT back_buf_index, Scene& scene, const View& 
 
     set_render_target(command_list, depth_stencil);
     Commands c(command_list, back_buf_index, &depth_stencil, Texture_mapping::disabled,
-        Input_layout::position, &view, &scene, this, m_root_signature,
-        m_root_signature->m_root_param_index_of_instance_data);
-    c.simple_render_pass(m_pipeline_state, m_pipeline_state, m_pipeline_state_two_sided);
+        Input_layout::position, &view, &scene, this, m_root_signature);
+    c.simple_render_pass(m_pipeline_state, m_pipeline_state_two_sided);
     c.set_input_layout(Input_layout::position_normal);
     c.draw_alpha_cut_out_objects(m_pipeline_state_alpha_cut_out);
 }
