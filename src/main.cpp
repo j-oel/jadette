@@ -80,6 +80,10 @@ Config read_config(const std::string& config_file)
         {
             file >> config.mouse_sensitivity;
         }
+        else if (input == "max_speed")
+        {
+            file >> config.max_speed;
+        }
         else if (input == "fov")
         {
             file >> config.fov;

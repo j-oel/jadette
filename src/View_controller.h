@@ -16,7 +16,7 @@ class View_controller
 {
 public:
     View_controller(Input& input, HWND window, bool edit_mode, bool invert_mouse,
-        float mouse_sensitivity);
+        float mouse_sensitivity, float max_speed);
     void update(View& view);
     bool is_edit_mode() const { return m_edit_mode; }
     bool is_mouse_inverted() const { return m_invert_mouse; }
@@ -34,9 +34,10 @@ private:
     bool m_invert_mouse;
     float m_mouse_look_sensitivity;
 
-    double m_acceleration_x;
-    double m_acceleration_y;
-    double m_acceleration_z;
+    double m_max_speed;
+    double m_side_speed;
+    double m_vertical_speed;
+    double m_forward_speed;
 
     POINT m_mouse_initial_position;
 

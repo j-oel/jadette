@@ -16,7 +16,7 @@ struct Config
     Config() : width(800), height(600), monitor(1), swap_chain_buffer_count(2),
         borderless_windowed_fullscreen(false), vsync(false), use_vertex_colors(false),
         backface_culling(true), early_z_pass(false), edit_mode(true),
-        invert_mouse(false), mouse_sensitivity(0.3f), fov(70.0f) {}
+        invert_mouse(false), mouse_sensitivity(0.3f), max_speed(1.5), fov(70.0f) {}
     int width;
     int height;
 #ifndef NO_SCENE_FILE
@@ -32,6 +32,7 @@ struct Config
     bool edit_mode;
     bool invert_mouse;
     float mouse_sensitivity;
+    float max_speed;
     float fov;
 };
 

@@ -16,14 +16,15 @@ using namespace DirectX;
 
 
 View_controller::View_controller(Input& input, HWND window, bool edit_mode, bool invert_mouse,
-    float mouse_sensitivity) :
+    float mouse_sensitivity, float max_speed) :
 m_input(input),
 m_edit_mode(edit_mode),
 m_invert_mouse(invert_mouse),
 m_mouse_look_sensitivity(mouse_sensitivity),
-m_acceleration_x(0.0f),
-m_acceleration_y(0.0f),
-m_acceleration_z(0.0f),
+m_max_speed(max_speed),
+m_side_speed(0.0f),
+m_vertical_speed(0.0f),
+m_forward_speed(0.0f),
 m_mouse_initial_position(m_input.mouse_position()),
 m_window(window),
 m_window_center(POINT())
@@ -158,68 +159,66 @@ void View_controller::first_person_view_update(View& view)
 
     double delta_time = time.seconds_since_last_call();
 
-    const double max_acceleration = 1.5;
-    const double acceleration_speed = 5;
+    const double acceleration = m_max_speed * 3.5;
 
-    auto accelerate_positive = [=](double& acceleration)
+    auto accelerate_positive = [=](double& speed)
     {
-        if (acceleration < max_acceleration)
-            acceleration += acceleration_speed * delta_time;
+        if (speed < m_max_speed)
+            speed += acceleration * delta_time;
     };
 
-    auto decelerate_positive = [=](double& acceleration)
+    auto decelerate_positive = [=](double& speed)
     {
-        if (acceleration > 0.0)
-            acceleration = std::max(acceleration - acceleration_speed * delta_time, 0.0);
+        if (speed > 0.0)
+            speed = std::max(speed - acceleration * delta_time, 0.0);
     };
 
-    auto accelerate_negative = [=](double& acceleration)
+    auto accelerate_negative = [=](double& speed)
     {
-        if (acceleration > -max_acceleration)
-            acceleration -= acceleration_speed * delta_time;
+        if (speed > -m_max_speed)
+            speed -= acceleration * delta_time;
     };
 
-    auto decelerate_negative = [=](double& acceleration)
+    auto decelerate_negative = [=](double& speed)
     {
-        if (acceleration < 0.0)
-            acceleration = std::min(acceleration + acceleration_speed * delta_time, 0.0);
+        if (speed < 0.0)
+            speed = std::min(speed + acceleration * delta_time, 0.0);
     };
 
     if (m_input.forward())
-        accelerate_positive(m_acceleration_z);
+        accelerate_positive(m_forward_speed);
     else
-        decelerate_positive(m_acceleration_z);
+        decelerate_positive(m_forward_speed);
 
     if (m_input.backward())
-        accelerate_negative(m_acceleration_z);
+        accelerate_negative(m_forward_speed);
     else
-        decelerate_negative(m_acceleration_z);
+        decelerate_negative(m_forward_speed);
 
     if (m_input.right()) // Strafe right
-        accelerate_positive(m_acceleration_x);
+        accelerate_positive(m_side_speed);
     else
-        decelerate_positive(m_acceleration_x);
+        decelerate_positive(m_side_speed);
 
     if (m_input.left()) // Strafe left
-        accelerate_negative(m_acceleration_x);
+        accelerate_negative(m_side_speed);
     else
-        decelerate_negative(m_acceleration_x);
+        decelerate_negative(m_side_speed);
 
     if (m_input.up()) // Fly up
-        accelerate_positive(m_acceleration_y);
+        accelerate_positive(m_vertical_speed);
     else
-        decelerate_positive(m_acceleration_y);
+        decelerate_positive(m_vertical_speed);
 
     if (m_input.down()) // Fly down
-        accelerate_negative(m_acceleration_y);
+        accelerate_negative(m_vertical_speed);
     else
-        decelerate_negative(m_acceleration_y);
+        decelerate_negative(m_vertical_speed);
 
-    // Physically incorrect, but feels quite good in practice:
     const double speed_constant = 5.0 * 2.0;
-    const float forward_speed = static_cast<float>(m_acceleration_z * speed_constant * delta_time);
-    const float side_speed = static_cast<float>(m_acceleration_x * speed_constant * delta_time);
-    const float vertical_speed = static_cast<float>(m_acceleration_y * speed_constant * delta_time);
+    const float forward_delta = static_cast<float>(m_forward_speed * speed_constant * delta_time);
+    const float side_delta = static_cast<float>(m_side_speed * speed_constant * delta_time);
+    const float vertical_delta = static_cast<float>(m_vertical_speed * speed_constant * delta_time);
 
     XMVECTOR forward_direction = view.focus_point() - view.eye_position();
     forward_direction = XMVector3Normalize(forward_direction);
@@ -227,8 +226,8 @@ void View_controller::first_person_view_update(View& view)
     const XMVECTOR vertical_direction = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
     XMVECTOR side_direction = XMVector3Cross(forward_direction, vertical_direction);
 
-    const XMVECTOR delta_pos = forward_direction * forward_speed + side_direction * side_speed + 
-        vertical_direction * vertical_speed;
+    const XMVECTOR delta_pos = forward_direction * forward_delta + side_direction * side_delta + 
+        vertical_direction * vertical_delta;
 
     auto new_eye_position = view.eye_position() + delta_pos;
     view.set_eye_position(new_eye_position);
