@@ -391,10 +391,11 @@ float4 direct_lighting(pixel_shader_input input, Material m,
                 const float inverted_light_size = 30;
                 const float specular_exponent = (1.0f - roughness) * inverted_light_size;
 
+                // Phong specular reflection
+                const float3 r = 2 * normal_dot_light * normal - light;
+                const float3 v = normalize(eye - input.position.xyz);
                 const float4 specular = lights.l[i].color * specular_intensity *
-                    specularity * saturate(pow(saturate(
-                    dot(2 * dot(normal, -light) * normal + light,
-                    normalize(input.position.xyz - eye))), specular_exponent));
+                    specularity * saturate(pow(saturate(dot(r, v)), specular_exponent));
 
                 float shadow = 1.0f;
                 if (values.render_settings & shadow_mapping_enabled && cast_shadow)
