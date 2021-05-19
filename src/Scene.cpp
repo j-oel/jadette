@@ -521,26 +521,39 @@ void Scene_impl::init(ID3D12Device& device, ID3D12GraphicsCommandList& command_l
 }
 
 void create_tiny_scene(Scene_components& sc, ID3D12Device& device,
-    ID3D12GraphicsCommandList& command_list)
+    ID3D12GraphicsCommandList& command_list, ID3D12DescriptorHeap& descriptor_heap,
+    int& texture_index)
 {
-    XMFLOAT4 position(0.0f, 0.0f, 0.0f, 5.0f);
+    XMFLOAT4 position(0.0f, 0.0f, 0.0f, 10.0f);
     Per_instance_transform transform = { convert_float4_to_half4(position),
                                          convert_vector_to_half4(DirectX::XMQuaternionIdentity())};
     sc.static_model_transforms.push_back(transform);
+    UINT tex_size = 512;
+    auto texture = std::make_shared<Texture>(device, command_list, descriptor_heap, texture_index++,
+        tex_size, tex_size);
+    std::vector<std::shared_ptr<Texture>> textures;
+    auto normalmap = std::make_shared<Texture>(device, command_list, descriptor_heap, texture_index++,
+        tex_size, tex_size);
+    textures.push_back(texture);
+    textures.push_back(normalmap);
     auto object = std::make_shared<Graphical_object>(device, command_list,
-        Primitive_type::Cube, 0, 0, 0);
+        Primitive_type::Cube, textures, 0, 0, 0);
     sc.graphical_objects.push_back(object);
     sc.regular_objects.push_back(object);
     sc.dynamic_model_transforms.push_back(transform);
+    Dynamic_object dyn { object, 0 };
+    sc.rotating_objects.push_back(dyn);
 
-    Shader_material shader_material{};
+    UINT material_settings = Material_settings::diffuse_map_exists;
+    material_settings |= Material_settings::normal_map_exists;
+    Shader_material shader_material { 0, 1, 0, material_settings};
     sc.materials.push_back(shader_material);
 
     float diffuse_intensity = 3;
     float diffuse_reach = 20;
     float specular_intensity = 3;
     float specular_reach = 20;
-    auto light_position = XMFLOAT4(10, 7, -5, 1);
+    auto light_position = XMFLOAT4(10, 7, -10, 1);
     auto focus_point = XMFLOAT4(0, 0, 0, 1);
     auto color = XMFLOAT4(1, 1, 1, 1);
 
@@ -561,10 +574,11 @@ Scene_impl::Scene_impl(ID3D12Device& device, UINT swap_chain_buffer_count,
     auto c = create_cmd_list_and_allocator(device);
     auto& command_list = *c.command_list.Get();
 
-    create_tiny_scene(m, device, command_list);
-
     int texture_start_index = texture_index_of_textures(swap_chain_buffer_count);
     int texture_index = texture_start_index;
+
+    create_tiny_scene(m, device, command_list, descriptor_heap, texture_index);
+
     create_texture_null_descriptors(device, max_textures, descriptor_heap, texture_index,
         texture_start_index);
 

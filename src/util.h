@@ -106,3 +106,17 @@ constexpr To bit_cast(const From& source)
     memcpy(&destination, &source, sizeof(destination));
     return destination;
 }
+
+class Value_noise
+{
+public:
+    Value_noise(UINT domain_width, UINT domain_height, int lattice_width, int lattice_height,
+        UINT random_seed);
+    float operator()(UINT x, UINT y);
+private:
+    std::vector<std::vector<float>> m_lattice;
+    UINT m_domain_width;
+    UINT m_domain_height;
+    int m_lattice_width;
+    int m_lattice_height;
+};

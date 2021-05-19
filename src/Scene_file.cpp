@@ -169,11 +169,14 @@ shared_ptr<Texture> Parse_state::get_texture(const string& name)
     bool texture_not_already_created = textures.find(name) == textures.end();
     if (texture_not_already_created)
     {
-        if (texture_files.find(name) == texture_files.end())
+        if (name == "procedural")
+            texture = std::make_shared<Texture>(device, command_list,
+                texture_descriptor_heap, m_texture_index++, 512, 512);
+        else if (texture_files.find(name) == texture_files.end())
             throw Texture_not_defined(name);
-
-        texture = std::make_shared<Texture>(device, command_list,
-            texture_descriptor_heap, texture_files[name], m_texture_index++);
+        else
+            texture = std::make_shared<Texture>(device, command_list,
+                texture_descriptor_heap, texture_files[name], m_texture_index++);
         textures[name] = texture;
     }
     else

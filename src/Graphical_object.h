@@ -21,7 +21,9 @@ class Graphical_object
 {
 public:
     Graphical_object(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
-        Primitive_type primitive_type, int id, int material_id,
+        Primitive_type primitive_type, 
+        const std::vector<std::shared_ptr<Texture>>& textures,
+        int id, int material_id,
         int dynamic_transform_ref, // Set to negative number for static object. 
         int instances = 1);
 

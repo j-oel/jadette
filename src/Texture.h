@@ -16,11 +16,17 @@ public:
     Texture(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
         ID3D12DescriptorHeap& texture_descriptor_heap,
         const std::string& texture_filename, UINT texture_index);
+    Texture(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
+        ID3D12DescriptorHeap& texture_descriptor_heap, UINT texture_index,
+        UINT width, UINT height);
     void set_texture_for_shader(ID3D12GraphicsCommandList& command_list,
         int root_param_index_of_textures) const;
     void release_temp_resources();
     UINT index() const { return m_texture_index; }
 private:
+    void init(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
+        ID3D12DescriptorHeap& texture_descriptor_heap, UINT texture_index,
+        std::vector<D3D12_SUBRESOURCE_DATA> subresource);
     ComPtr<ID3D12Resource> m_texture;
     ComPtr<ID3D12Resource> m_temp_upload_resource;
     CD3DX12_GPU_DESCRIPTOR_HANDLE m_texture_gpu_descriptor_handle;

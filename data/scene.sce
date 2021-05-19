@@ -14,7 +14,8 @@
 #
 # where <model_name> and <texture_name> should refer to an already defined model
 # and texture respectively. If no texture is available, <texture_name> can be
-# set to "none" (without the quotes).
+# set to "none" (without the quotes), or "procedural" for a procedurally generated
+# texture.
 # Use "static" for objects that shouldn't be able to move and "dynamic" for
 # objects that can move.
 # <x> <y> <z> are three floating point numbers that define the position of the object.
@@ -30,6 +31,7 @@ model plane_model plane.obj
 model plane_model_two_sided plane_two_sided.obj
 model cube_from_file cube.obj
 
+object proc_cube dynamic cube_from_file procedural -22 -7 10 0.8
 
 # The syntax for a graphical object that has a normal map defined is the same
 # as for object above, except that it's "normal_mapped_object" instead of 

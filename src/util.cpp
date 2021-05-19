@@ -10,6 +10,7 @@
 
 #include <stringapiset.h>
 #include <profileapi.h>
+#include <stdlib.h>
 
 
 LARGE_INTEGER get_frequency()
@@ -141,4 +142,69 @@ Time::~Time()
 double Time::seconds_since_last_call()
 {
     return impl->seconds_since_last_call();
+}
+
+
+float bilinear_interpolation(float value_for_x1_y1, float value_for_x2_y1,
+    float value_for_x1_y2, float value_for_x2_y2,
+    float x, float y)
+{
+    float& v1 = value_for_x1_y1;
+    float& v2 = value_for_x2_y1;
+    float& v3 = value_for_x1_y2;
+    float& v4 = value_for_x2_y2;
+
+    return v1 * (1.0f - x) * (1.0f - y) + v2 * x * (1.0f - y) + v3 * (1.0f - x) * y + v4 * x * y;
+}
+
+
+using std::vector;
+
+vector<vector<float>> lattice(UINT width, UINT height, UINT random_seed)
+{
+    srand(random_seed);
+    vector<vector<float>> matrix;
+    for (UINT x = 0; x < width; ++x)
+    {
+        vector<float> column;
+        for (UINT y = 0; y < height; ++y)
+        {
+            float random_value = static_cast<float>(rand()) / RAND_MAX;
+            column.push_back(random_value);
+        }
+        matrix.push_back(column);
+    }
+
+    return matrix;
+}
+
+Value_noise::Value_noise(UINT domain_width, UINT domain_height, int lattice_width, int lattice_height,
+    UINT random_seed) :
+    m_lattice(lattice(lattice_width, lattice_height, random_seed)),
+    m_domain_width(domain_width), m_domain_height(domain_height),
+    m_lattice_width(lattice_width), m_lattice_height(lattice_height)
+{
+}
+
+float Value_noise::operator()(UINT x, UINT y)
+{
+    float x_f = static_cast<float>(x) / m_domain_width;
+    float y_f = static_cast<float>(y) / m_domain_height;
+
+    float pos_x_in_lattice = x_f * (m_lattice_width - 1);
+    int x1 = static_cast<int>(floorf(pos_x_in_lattice));
+    int x2 = static_cast<int>(ceilf(pos_x_in_lattice));
+
+    float pos_y_in_lattice = y_f * (m_lattice_height - 1);
+    int y1 = static_cast<int>(floorf(pos_y_in_lattice));
+    int y2 = static_cast<int>(ceilf(pos_y_in_lattice));
+
+    // Normalized coordinates between two lattice points
+    float x_normalized = pos_x_in_lattice - x1;
+    float y_normalized = pos_y_in_lattice - y1;
+
+    const auto& l = m_lattice;
+
+    return bilinear_interpolation(l[x1][y1], l[x2][y1], l[x1][y2], l[x2][y2],
+        x_normalized, y_normalized);
 }
