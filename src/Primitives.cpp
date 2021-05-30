@@ -84,14 +84,13 @@ Vertices convert_to_packed_vertices(const std::vector<Float_vertex>& input_verti
     Vertices vertices;
     for (const auto& i_v : input_vertices)
     {
-        Vertex_position v;
-        Vertex_normal n;
-        v.position = { i_v.position.x, i_v.position.y, i_v.position.z,
+        Vertex_position position = { i_v.position.x, i_v.position.y, i_v.position.z,
             XMConvertHalfToFloat(i_v.uv.x) };
-        vertices.positions.push_back(v);
-        n.normal = { XMConvertFloatToHalf(i_v.normal.x), XMConvertFloatToHalf(i_v.normal.y),
+        vertices.positions.push_back(position);
+        Vertex_normal normal =
+            { XMConvertFloatToHalf(i_v.normal.x), XMConvertFloatToHalf(i_v.normal.y),
         XMConvertFloatToHalf(i_v.normal.z), i_v.uv.y };
-        vertices.normals.push_back(n);
+        vertices.normals.push_back(normal);
     }
 
     for (size_t i = 0; i < indices.size(); i += vertex_count_per_face)

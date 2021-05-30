@@ -47,7 +47,7 @@ SCENARIO("The Obj parser works")
             {
                 REQUIRE(vertices.positions.size() == 1);
                 
-                auto position = XMLoadFloat4(&vertices.positions[0].position);
+                auto position = XMLoadFloat4(&vertices.positions[0]);
                 
                 REQUIRE(position.m128_f32[0] == 1.0f);
                 REQUIRE(position.m128_f32[1] == 2.0f);
@@ -75,7 +75,7 @@ SCENARIO("The Obj parser works")
             {
                 REQUIRE(vertices.positions.size() == 1);
 
-                auto position = XMLoadFloat4(&vertices.positions[0].position);
+                auto position = XMLoadFloat4(&vertices.positions[0]);
 
                 REQUIRE(position.m128_f32[0] == 3.0f);
                 REQUIRE(position.m128_f32[1] == 6.0f);
@@ -86,7 +86,7 @@ SCENARIO("The Obj parser works")
             {
                 REQUIRE(vertices.normals.size() == 1);
 
-                auto normal = convert_half4_to_vector(vertices.normals[0].normal);
+                auto normal = convert_half4_to_vector(vertices.normals[0]);
 
                 REQUIRE(normal.m128_f32[0] == Approx(0.3f).epsilon(0.001));
                 REQUIRE(normal.m128_f32[1] == Approx(0.1f).epsilon(0.001));
@@ -98,8 +98,8 @@ SCENARIO("The Obj parser works")
                 REQUIRE(vertices.positions.size() == 1);
                 REQUIRE(vertices.normals.size() == 1);
 
-                auto position = XMLoadFloat4(&vertices.positions[0].position);
-                auto normal = convert_half4_to_vector(vertices.normals[0].normal);
+                auto position = XMLoadFloat4(&vertices.positions[0]);
+                auto normal = convert_half4_to_vector(vertices.normals[0]);
 
                 REQUIRE(position.m128_f32[3] == Approx(0.2f).epsilon(0.001));
                 // obj files use an inverted v-axis
@@ -126,7 +126,7 @@ SCENARIO("The Obj parser works")
             {
                 REQUIRE(vertices.positions.size() == 1);
 
-                auto position = XMLoadFloat4(&vertices.positions[0].position);
+                auto position = XMLoadFloat4(&vertices.positions[0]);
 
                 REQUIRE(position.m128_f32[0] == 1.0f);
                 REQUIRE(position.m128_f32[1] == 2.0f);
@@ -137,7 +137,7 @@ SCENARIO("The Obj parser works")
             {
                 REQUIRE(vertices.colors.size() == 1);
 
-                auto color = convert_half4_to_vector(vertices.colors[0].color);
+                auto color = convert_half4_to_vector(vertices.colors[0]);
 
                 REQUIRE(color.m128_f32[0] == Approx(0.3f).epsilon(0.001));
                 REQUIRE(color.m128_f32[1] == Approx(0.8f).epsilon(0.001));
@@ -164,7 +164,7 @@ SCENARIO("The Obj parser works")
             {
                 REQUIRE(vertices.positions.size() == 1);
 
-                auto position = XMLoadFloat4(&vertices.positions[0].position);
+                auto position = XMLoadFloat4(&vertices.positions[0]);
 
                 REQUIRE(position.m128_f32[0] == 1.0f);
                 REQUIRE(position.m128_f32[1] == 2.0f);
@@ -175,7 +175,7 @@ SCENARIO("The Obj parser works")
             {
                 REQUIRE(vertices.colors.size() == 1);
 
-                auto color = convert_half4_to_vector(vertices.colors[0].color);
+                auto color = convert_half4_to_vector(vertices.colors[0]);
 
                 REQUIRE(color.m128_f32[0] == Approx(0.3f).epsilon(0.001));
                 REQUIRE(color.m128_f32[1] == Approx(0.8f).epsilon(0.001));

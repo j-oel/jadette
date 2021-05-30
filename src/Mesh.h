@@ -11,32 +11,18 @@
 using Microsoft::WRL::ComPtr;
 
 
-struct Vertex_position
-{
-    DirectX::XMFLOAT4 position;
-};
+typedef DirectX::XMFLOAT4 Vertex_position;
 
-struct Vertex_normal
-{
-    DirectX::PackedVector::XMHALF4 normal;
-};
+typedef DirectX::PackedVector::XMHALF4 Vertex_normal;
 
 // For tangent space normal mapping
-struct Vertex_tangent
-{
-    DirectX::PackedVector::XMHALF4 tangent;
-};
+typedef DirectX::PackedVector::XMHALF4 Vertex_tangent;
 
 // For tangent space normal mapping
-struct Vertex_bitangent
-{
-    DirectX::PackedVector::XMHALF4 bitangent;
-};
+typedef DirectX::PackedVector::XMHALF4 Vertex_bitangent;
 
-struct Vertex_color
-{
-    DirectX::PackedVector::XMHALF4 color;
-};
+typedef DirectX::PackedVector::XMHALF4 Vertex_color;
+
 
 // The depth passes (which includes the shadow map generation) becomes
 // about 10-20% faster when run with vertex buffers with only positions.
