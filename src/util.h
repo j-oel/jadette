@@ -120,3 +120,14 @@ private:
     int m_lattice_width;
     int m_lattice_height;
 };
+
+
+class Perlin_noise
+{
+public:
+    Perlin_noise();
+    float operator()(float x, float y, float z);
+private:
+    static constexpr int size = 256;
+    uint8_t m_permutation_table[size];
+};

@@ -178,6 +178,31 @@ vector<vector<float>> lattice(UINT width, UINT height, UINT random_seed)
     return matrix;
 }
 
+
+namespace
+{
+    struct Vec3
+    {
+        float x;
+        float y;
+        float z;
+    };
+
+    float dot3(const Vec3& v1, const Vec3& v2) { return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z; }
+
+    float lerp(float t, float start, float stop)
+    {
+        return start + t * (stop - start);
+    }
+
+    float polynomial(float t)
+    {
+        return t * t * t * (10.0f - 15.0f * t + 6.0f * t * t);
+    }
+
+}
+
+
 Value_noise::Value_noise(UINT domain_width, UINT domain_height, int lattice_width, int lattice_height,
     UINT random_seed) :
     m_lattice(lattice(lattice_width, lattice_height, random_seed)),
@@ -207,4 +232,89 @@ float Value_noise::operator()(UINT x, UINT y)
 
     return bilinear_interpolation(l[x1][y1], l[x2][y1], l[x1][y2], l[x2][y2],
         x_normalized, y_normalized);
+}
+
+
+void fill_permutation_table(uint8_t* table)
+{
+    // Ensure that all numbers are present in the table
+    for (int i = 0; i < 256; ++i)
+        table[i] = static_cast<uint8_t>(i);
+
+    // Shuffle the table
+    for (int i = 0; i < 256; ++i)
+    {
+        uint8_t swap_index = static_cast<uint8_t>(rand() % 255);
+
+        uint8_t temp = table[i];
+        table[i] = table[swap_index];
+        table[swap_index] = temp;
+    }
+}
+
+Perlin_noise::Perlin_noise()
+{
+    srand(1);
+    fill_permutation_table(m_permutation_table);
+}
+
+float interpolate_gradients(float t, int hash1, int hash2, Vec3 r1, Vec3 r2)
+{
+    Vec3 gradients[] = { {1.0f, 1.0f,  0.0f }, { -1.0f, 1.0f,  0.0f },
+                         {1.0f, -1.0f, 0.0f},  { -1.0f, -1.0f, 0.0f },
+                         {1.0f, 0.0f,  1.0f }, { -1.0f, 0.0f,  1.0f },
+                         {1.0f, 0.0f, -1.0f},  { -1.0f, 0.0f, -1.0f },
+                         {0.0f, 1.0f,  1.0f }, { 0.0f, -1.0f,  1.0f },
+                         {0.0f, 1.0f, -1.0f},  { 0.0f, -1.0f, -1.0f } };
+
+    return lerp(t, dot3(gradients[hash1 % 12], r1), dot3(gradients[hash2 % 12], r2));
+}
+
+
+// This is my implementation of improved 3D Perlin Noise. More or less as described in:
+// Ken Perlin. 2002. Improving noise. ACM Transactions on Graphics , Vol. 21, 3 (2002), 681-682.
+// Pre-print, open access version can be found at https://mrl.cs.nyu.edu/~perlin/paper445.pdf
+float Perlin_noise::operator()(float x, float y, float z)
+{
+    int x1 = static_cast<int>(x);
+    float pos_x_in_lattice = x - x1;
+
+    int y1 = static_cast<int>(y);
+    float pos_y_in_lattice = y - y1;
+
+    int z1 = static_cast<int>(z);
+    float pos_z_in_lattice = z - z1;
+
+    float rx = pos_x_in_lattice, ry = pos_y_in_lattice, rz = pos_z_in_lattice;
+
+    Vec3 points[] = { {rx, ry, rz },               {rx - 1.0f, ry, rz },
+                      {rx, ry - 1.0f, rz },        {rx - 1.0f, ry - 1.0f, rz },
+                      {rx, ry, rz - 1.0f },        {rx - 1.0f, ry, rz - 1.0f },
+                      {rx, ry - 1.0f, rz - 1.0f }, {rx - 1.0f, ry - 1.0f, rz - 1.0f }};
+
+    uint8_t* p = m_permutation_table;
+
+    constexpr int hash_values_count = 8;
+    uint8_t hash_values[hash_values_count];
+
+    for (int k = 0; k < 2; ++k)
+        for (int j = 0; j < 2; ++j)
+            for (int i = 0; i < 2; ++i)
+                hash_values[i + 2 * j + 4 * k] = 
+                p[(p[(p[(x1 + i) % size] + y1 + j) % size] + z1 + k) % size];
+
+    auto xp = polynomial(pos_x_in_lattice);
+
+    constexpr int values_count = hash_values_count / 2;
+    float values[values_count];
+
+    for (int i = 0; i < hash_values_count - 1; i += 2)
+        values[i / 2] = interpolate_gradients(xp, hash_values[i], hash_values[i + 1],
+                                              points[i], points[i + 1]);
+
+    auto yp = polynomial(pos_y_in_lattice);
+    auto zp = polynomial(pos_z_in_lattice);
+
+    return 0.5f * (lerp(zp, lerp(yp, values[0], values[1]),
+                            lerp(yp, values[2], values[3])) + 1.0f);
 }

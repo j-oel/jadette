@@ -113,7 +113,7 @@ private:
     UINT m_pitch;
 };
 
-void generate_texture(D3D12_SUBRESOURCE_DATA& data, UINT width, UINT height)
+void generate_value_noise_texture(D3D12_SUBRESOURCE_DATA& data, UINT width, UINT height)
 {
     int lattice_width = 5;
     int lattice_height = 7;
@@ -133,6 +133,30 @@ void generate_texture(D3D12_SUBRESOURCE_DATA& data, UINT width, UINT height)
     }
 }
 
+void generate_perlin_noise_texture(D3D12_SUBRESOURCE_DATA& data, UINT width, UINT height)
+{
+    Perlin_noise noise;
+    UINT pitch = width * 4;
+    Texture_data<uint8_t> t(data, pitch);
+    for (UINT y = 0; y < height; ++y)
+    {
+        for (UINT x = 0; x < pitch; x += 4)
+        {
+            float xf = 0.01f * x / 4.0f;
+            float yf = 0.01f * y;
+
+            float z_slice = 7.0f;
+            float color = 255 * noise(xf, yf, z_slice);
+
+            t.set(x, y, color);
+            t.set(x + 1, y, color);
+            t.set(x + 2, y, color);
+
+            t.set(x + 3, y, 255);
+        }
+    }
+}
+
 Texture::Texture(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
     ID3D12DescriptorHeap& texture_descriptor_heap, UINT texture_index,
     UINT width, UINT height) : m_texture_index(texture_index)
@@ -147,7 +171,7 @@ Texture::Texture(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
     data.RowPitch = width * bytes_per_texel;
     data.SlicePitch = 1;
 
-    generate_texture(data, width, height);
+    generate_perlin_noise_texture(data, width, height);
 
     subresource.push_back(data);
 

@@ -532,36 +532,18 @@ void create_tiny_scene(Scene_components& sc, ID3D12Device& device,
     auto texture = std::make_shared<Texture>(device, command_list, descriptor_heap, texture_index++,
         tex_size, tex_size);
     std::vector<std::shared_ptr<Texture>> textures;
-    auto normalmap = std::make_shared<Texture>(device, command_list, descriptor_heap, texture_index++,
-        tex_size, tex_size);
     textures.push_back(texture);
-    textures.push_back(normalmap);
     auto object = std::make_shared<Graphical_object>(device, command_list,
         Primitive_type::Cube, textures, 0, 0, 0);
     sc.graphical_objects.push_back(object);
     sc.regular_objects.push_back(object);
     sc.dynamic_model_transforms.push_back(transform);
-    Dynamic_object dyn { object, 0 };
-    sc.rotating_objects.push_back(dyn);
 
     UINT material_settings = Material_settings::diffuse_map_exists;
-    material_settings |= Material_settings::normal_map_exists;
     Shader_material shader_material { 0, 1, 0, material_settings};
     sc.materials.push_back(shader_material);
 
-    float diffuse_intensity = 3;
-    float diffuse_reach = 20;
-    float specular_intensity = 3;
-    float specular_reach = 20;
-    auto light_position = XMFLOAT4(10, 7, -10, 1);
-    auto focus_point = XMFLOAT4(0, 0, 0, 1);
-    auto color = XMFLOAT4(1, 1, 1, 1);
-
-    Light light = { XMFLOAT4X4(), light_position, focus_point, color,
-    diffuse_intensity, diffuse_reach, specular_intensity, specular_reach };
-    sc.lights.push_back(light);
-
-    sc.shadow_casting_lights_count = 1;
+    sc.ambient_light = { 1.0, 1.0f, 1.0f, 1.0f };
 }
 
 Scene_impl::Scene_impl(ID3D12Device& device, UINT swap_chain_buffer_count,
