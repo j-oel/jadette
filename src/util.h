@@ -131,3 +131,12 @@ private:
     static constexpr int size = 256;
     uint8_t m_permutation_table[size];
 };
+
+class Turbulence
+{
+public:
+    Turbulence() {}
+    float operator()(float x, float y);
+private:
+    Perlin_noise m_noise;
+};

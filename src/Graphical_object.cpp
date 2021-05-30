@@ -21,6 +21,8 @@ Mesh* new_primitive(ID3D12Device& device, ID3D12GraphicsCommandList& command_lis
     {
         case Primitive_type::Cube:
             return new Cube(device, command_list);
+        case Primitive_type::Terrain:
+            return new Terrain(device, command_list, 20.0f, 20.0f, 3.0f, 200, 200);
         case Primitive_type::Plane:
         default:
             return new Plane(device, command_list);

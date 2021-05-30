@@ -14,7 +14,7 @@
 
 using Microsoft::WRL::ComPtr;
 
-enum class Primitive_type { Plane, Cube };
+enum class Primitive_type { Plane, Cube, Terrain };
 enum class Input_layout;
 
 class Graphical_object

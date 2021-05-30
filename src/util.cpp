@@ -213,8 +213,8 @@ Value_noise::Value_noise(UINT domain_width, UINT domain_height, int lattice_widt
 
 float Value_noise::operator()(UINT x, UINT y)
 {
-    float x_f = static_cast<float>(x) / m_domain_width;
-    float y_f = static_cast<float>(y) / m_domain_height;
+    float x_f = static_cast<float>(x % m_domain_width) / m_domain_width;
+    float y_f = static_cast<float>(y % m_domain_height) / m_domain_height;
 
     float pos_x_in_lattice = x_f * (m_lattice_width - 1);
     int x1 = static_cast<int>(floorf(pos_x_in_lattice));
@@ -317,4 +317,17 @@ float Perlin_noise::operator()(float x, float y, float z)
 
     return 0.5f * (lerp(zp, lerp(yp, values[0], values[1]),
                             lerp(yp, values[2], values[3])) + 1.0f);
+}
+
+float Turbulence::operator()(float x, float y)
+{
+    float sum = 0.0f;
+    constexpr int k = 7;
+    float z = 3.0f;
+    for (int i = 0; i < k; ++i)
+    {
+        auto power = powf(2.0f, static_cast<float>(i));
+        sum += m_noise(power * x, power * y, power * z) / power;
+    }
+    return sum;
 }

@@ -25,3 +25,10 @@ class Plane : public Mesh
 public:
     Plane(ID3D12Device& device, ID3D12GraphicsCommandList& command_list);
 };
+
+class Terrain : public Mesh
+{
+public:
+    Terrain(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
+        float width, float length, float height, int x_dim, int y_dim);
+};

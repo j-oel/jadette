@@ -148,9 +148,9 @@ void generate_perlin_noise_texture(D3D12_SUBRESOURCE_DATA& data, UINT width, UIN
             float z_slice = 7.0f;
             float color = 255 * noise(xf, yf, z_slice);
 
-            t.set(x, y, color);
-            t.set(x + 1, y, color);
-            t.set(x + 2, y, color);
+            t.set(x, y, color*0.3f);
+            t.set(x + 1, y, color*0.2f);
+            t.set(x + 2, y, color* 0.05f);
 
             t.set(x + 3, y, 255);
         }

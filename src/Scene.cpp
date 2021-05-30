@@ -524,7 +524,8 @@ void create_tiny_scene(Scene_components& sc, ID3D12Device& device,
     ID3D12GraphicsCommandList& command_list, ID3D12DescriptorHeap& descriptor_heap,
     int& texture_index)
 {
-    XMFLOAT4 position(0.0f, 0.0f, 0.0f, 10.0f);
+    XMFLOAT4 position(-10.0f, -5.0f, -18.0f, 1.0f);
+    
     Per_instance_transform transform = { convert_float4_to_half4(position),
                                          convert_vector_to_half4(DirectX::XMQuaternionIdentity())};
     sc.static_model_transforms.push_back(transform);
@@ -534,16 +535,29 @@ void create_tiny_scene(Scene_components& sc, ID3D12Device& device,
     std::vector<std::shared_ptr<Texture>> textures;
     textures.push_back(texture);
     auto object = std::make_shared<Graphical_object>(device, command_list,
-        Primitive_type::Cube, textures, 0, 0, 0);
+        Primitive_type::Terrain, textures, 0, 0, 0);
     sc.graphical_objects.push_back(object);
     sc.regular_objects.push_back(object);
+
     sc.dynamic_model_transforms.push_back(transform);
 
     UINT material_settings = Material_settings::diffuse_map_exists;
     Shader_material shader_material { 0, 1, 0, material_settings};
     sc.materials.push_back(shader_material);
 
-    sc.ambient_light = { 1.0, 1.0f, 1.0f, 1.0f };
+    float diffuse_intensity = 2.0f;
+    float diffuse_reach = 200.0f;
+    float specular_intensity = 0.5f;
+    float specular_reach = 200.0f;
+    auto light_position = XMFLOAT4(15.0f, 7.0f, -30.0f, 1.0f);
+    auto focus_point = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+    auto color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+
+    Light light = { XMFLOAT4X4(), light_position, focus_point, color,
+    diffuse_intensity, diffuse_reach, specular_intensity, specular_reach };
+    sc.lights.push_back(light);
+
+    sc.shadow_casting_lights_count = 1;
 }
 
 Scene_impl::Scene_impl(ID3D12Device& device, UINT swap_chain_buffer_count,
