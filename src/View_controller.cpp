@@ -269,7 +269,7 @@ XMVECTOR find_point_on_sphere(POINT mouse, POINT center, const View& view, float
 // Adapted from the article:
 // ARCBALL: a user interface for specifying three-dimensional orientation using a mouse
 // By Ken Shoemake
-// Proceedings of the conference on Graphics interface '92 September 1992 Pages 151–156
+// Proceedings of the conference on Graphics interface '92 September 1992 Pages 151-156
 //
 void arcball(POINT mouse_initial, POINT mouse_current, POINT center, const View& view,
     float radius, XMVECTOR& resulting_rotation_quaternion)
