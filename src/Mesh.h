@@ -48,7 +48,7 @@ public:
     void release_temp_resources();
 
     void draw(ID3D12GraphicsCommandList& command_list, int draw_instances_count,
-        const Input_layout& input_layout, int triangle_index) const;
+        Input_layout input_layout, int triangle_index) const;
 
     int triangles_count() const;
     size_t vertices_count() const;

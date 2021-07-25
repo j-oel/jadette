@@ -47,7 +47,6 @@ private:
     void calculate_shadow_transform(const View& view);
     View m_view;
     std::vector<Depth_stencil> m_depth_stencil;
-    const int m_root_param_index_of_matrices = 0;
     DirectX::XMMATRIX m_shadow_transform;
     int32_t m_size;
 };

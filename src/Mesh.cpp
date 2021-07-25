@@ -37,7 +37,7 @@ void Mesh::release_temp_resources()
 
 
 void Mesh::draw(ID3D12GraphicsCommandList& command_list, int draw_instances_count,
-    const Input_layout& input_layout, int triangle_index) const
+    Input_layout input_layout, int triangle_index) const
 {
     switch (input_layout)
     {

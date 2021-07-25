@@ -60,7 +60,7 @@ Graphical_object::Graphical_object(std::shared_ptr<Mesh> mesh,
 }
 
 void Graphical_object::draw(ID3D12GraphicsCommandList& command_list,
-    const Input_layout& input_layout) const
+    Input_layout input_layout) const
 {
     m_mesh->draw(command_list, m_instances, input_layout, m_triangle_index);
 }

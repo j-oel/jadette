@@ -34,7 +34,7 @@ public:
         int instances = 1,
         int triangle_index = 0);
 
-    void draw(ID3D12GraphicsCommandList& command_list, const Input_layout& input_layout) const;
+    void draw(ID3D12GraphicsCommandList& command_list, Input_layout input_layout) const;
     void release_temp_resources();
     int triangles_count() const;
     size_t vertices_count() const;
