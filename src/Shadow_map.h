@@ -34,8 +34,8 @@ class Shadow_map
 public:
     Shadow_map(ID3D12Device& device, UINT swap_chain_buffer_count,
         ID3D12DescriptorHeap& texture_descriptor_heap,
-        UINT texture_index, UINT texture_index_increment, Bit_depth bit_depth = Bit_depth::bpp16,
-        int size = 1024);
+        UINT texture_index, UINT texture_index_increment, int size = 1024,
+        Bit_depth bit_depth = default_bit_depth);
     void update(Light& light);
     void generate(UINT back_buf_index, Scene& scene,
         Depth_pass& depth_pass, ID3D12GraphicsCommandList& command_list);
@@ -43,6 +43,7 @@ public:
         UINT back_buf_index, int root_param_index_of_shadow_map) const;
     static D3D12_STATIC_SAMPLER_DESC shadow_map_sampler(UINT sampler_shader_register);
     static constexpr UINT max_shadow_maps_count = 16;
+    static constexpr Bit_depth default_bit_depth = Bit_depth::bpp16;
 private:
     void calculate_shadow_transform(const View& view);
     View m_view;

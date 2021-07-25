@@ -24,8 +24,8 @@ namespace
 
 Shadow_map::Shadow_map(ID3D12Device& device, UINT swap_chain_buffer_count,
     ID3D12DescriptorHeap& texture_descriptor_heap, UINT texture_index,
-    UINT texture_index_increment,
-    Bit_depth bit_depth/* = Bit_depth::bpp16*/, int size/* = 1024*/) :
+    UINT texture_index_increment, int size/* = 1024*/,
+    Bit_depth bit_depth/* = default_bit_depth*/) :
     m_view(size, size, XMVectorSet(0.0f, 0.0f, 1.0f, 1.0f), XMVectorZero(), near_z, far_z, fov),
     m_shadow_transform(XMMatrixIdentity()),
     m_size(size)

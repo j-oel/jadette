@@ -318,6 +318,8 @@ void create_pipeline_state(ComPtr<ID3D12Device> device,
     s.RasterizerState.FrontCounterClockwise = TRUE;
     if (backface_culling == Backface_culling::disabled)
         s.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+    else if (backface_culling == Backface_culling::draw_only_backfaces)
+        s.RasterizerState.CullMode = D3D12_CULL_MODE_FRONT;
     auto d = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
     if (depth_write == Depth_write::disabled)
     {

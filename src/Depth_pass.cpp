@@ -20,7 +20,7 @@
 #endif
 
 Depth_pass::Depth_pass(ComPtr<ID3D12Device> device, DXGI_FORMAT dsv_format, 
-    Root_signature* root_signature, bool backface_culling) :
+    Root_signature* root_signature, Backface_culling backface_culling) :
     m_root_signature(root_signature), m_dsv_format(dsv_format)
 {
     create_pipeline_states(device, backface_culling);
@@ -75,10 +75,10 @@ void Depth_pass::create_pipeline_state(ComPtr<ID3D12Device> device,
     SET_DEBUG_NAME(pipeline_state, debug_name);
 }
 
-void Depth_pass::create_pipeline_states(ComPtr<ID3D12Device> device, bool backface_culling)
+void Depth_pass::create_pipeline_states(ComPtr<ID3D12Device> device, Backface_culling backface_culling)
 {
     create_pipeline_state(device, m_pipeline_state, false, L"Depths Pipeline State Object",
-        backface_culling ? Backface_culling::enabled : Backface_culling::disabled);
+        backface_culling);
 
     create_pipeline_state(device, m_pipeline_state_two_sided, false,
         L"Depths Pipeline State Object Two Sided", Backface_culling::disabled);
@@ -112,7 +112,7 @@ void Depth_pass::record_commands(UINT back_buf_index, Scene& scene, const View& 
     c.draw_alpha_cut_out_objects(m_pipeline_state_alpha_cut_out);
 }
 
-void Depth_pass::reload_shaders(ComPtr<ID3D12Device> device, bool backface_culling)
+void Depth_pass::reload_shaders(ComPtr<ID3D12Device> device, Backface_culling backface_culling)
 {
     create_pipeline_states(device, backface_culling);
 }

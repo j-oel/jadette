@@ -53,3 +53,12 @@ public:
 private:
     ComPtr<ID3D12Resource> m_render_target_read_back_buffer;
 };
+
+
+inline DXGI_FORMAT get_dsv_format(Bit_depth bit_depth)
+{
+    if (bit_depth == Bit_depth::bpp16)
+        return DXGI_FORMAT_D16_UNORM;
+    else
+        return DXGI_FORMAT_D32_FLOAT;
+}

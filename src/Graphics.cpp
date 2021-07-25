@@ -15,6 +15,7 @@
 #include "Scene.h"
 #include "Depth_stencil.h"
 #include "Depth_pass.h"
+#include "Shadow_map.h"
 #include "View_controller.h"
 #include "View.h"
 #include "Root_signature.h"
@@ -79,6 +80,7 @@ private:
 
     Root_signature m_root_signature;
     Depth_pass m_depth_pass;
+    Depth_pass m_depth_pass_for_shadow_mapping;
     std::unique_ptr<Scene> m_scene;
     View m_view;
     Input& m_input;
@@ -145,7 +147,9 @@ Graphics_impl::Graphics_impl(HWND window, const Config& config, Input& input) :
         *m_texture_descriptor_heap.Get(), texture_index_of_depth_buffer())),
     m_root_signature(m_device, &m_render_settings),
     m_depth_pass(m_device, m_depth_stencil[0].dsv_format(), &m_root_signature,
-        config.backface_culling),
+        config.backface_culling? Backface_culling::enabled : Backface_culling::disabled),
+    m_depth_pass_for_shadow_mapping(m_device, get_dsv_format(Shadow_map::default_bit_depth), &m_root_signature,
+        Backface_culling::draw_only_backfaces),
     m_view(config.width, config.height, XMVectorSet(0.0, 0.0f, 1.0f, 1.0f),
         XMVectorZero(), 0.1f, 4000.0f, config.fov),
     m_input(input),
@@ -321,7 +325,9 @@ void Graphics_impl::reload_shaders_if_requested()
         if (m_user_interface.reload_shaders_requested())
         {
             create_pipeline_states(m_config);
-            m_depth_pass.reload_shaders(m_device, m_config.backface_culling);
+            m_depth_pass.reload_shaders(m_device, m_config.backface_culling ? Backface_culling::enabled : 
+                Backface_culling::disabled);
+            m_depth_pass_for_shadow_mapping.reload_shaders(m_device, Backface_culling::draw_only_backfaces);
             m_user_interface.reload_shaders(m_device, m_config.backface_culling);
         }
     }
@@ -457,7 +463,8 @@ Commands Graphics_impl::commands()
         &m_depth_stencil[m_dx12_display->back_buf_index()], Texture_mapping::enabled,
         m_use_vertex_colors ? Input_layout::position_normal_tangents_color
                             : Input_layout::position_normal_tangents,
-        &m_view, m_scene.get(), &m_depth_pass, &m_root_signature);
+        &m_view, m_scene.get(), &m_depth_pass, &m_root_signature,
+        &m_depth_pass_for_shadow_mapping);
 
     return c;
 }

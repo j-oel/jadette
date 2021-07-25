@@ -27,7 +27,8 @@ class Commands
 public:
     Commands(ID3D12GraphicsCommandList& command_list, UINT back_buf_index,
         Depth_stencil* depth_stencil, Texture_mapping texture_mapping, Input_layout input_layout,
-        const View* view, Scene* scene, Depth_pass* depth_pass, Root_signature* root_signature);
+        const View* view, Scene* scene, Depth_pass* depth_pass, Root_signature* root_signature,
+        Depth_pass* depth_pass_for_shadow_mapping = nullptr);
 
     void set_input_layout(Input_layout input_layout) { m_input_layout = input_layout; }
     void upload_data_to_gpu();
@@ -53,6 +54,7 @@ private:
     Scene* m_scene;
     const View* m_view;
     Depth_pass* m_depth_pass;
+    Depth_pass* m_depth_pass_for_shadow_mapping;
     Root_signature* m_root_signature;
     Depth_stencil* m_depth_stencil;
     D3D12_CPU_DESCRIPTOR_HANDLE m_dsv_handle;

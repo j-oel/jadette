@@ -18,10 +18,13 @@
 
 Commands::Commands(ID3D12GraphicsCommandList& command_list, UINT back_buf_index,
     Depth_stencil* depth_stencil, Texture_mapping texture_mapping, Input_layout input_layout,
-    const View* view, Scene* scene, Depth_pass* depth_pass, Root_signature* root_signature) :
+    const View* view, Scene* scene, Depth_pass* depth_pass, Root_signature* root_signature,
+    Depth_pass* depth_pass_for_shadow_mapping/* = nullptr*/) :
     m_command_list(command_list), m_texture_mapping(texture_mapping),
     m_input_layout(input_layout), m_depth_stencil(depth_stencil),
-    m_scene(scene), m_view(view), m_depth_pass(depth_pass), m_root_signature(root_signature),
+    m_scene(scene), m_view(view), m_depth_pass(depth_pass),
+    m_depth_pass_for_shadow_mapping(depth_pass_for_shadow_mapping),
+    m_root_signature(root_signature),
     m_dsv_handle(m_depth_stencil->cpu_handle()),
     m_back_buf_index(back_buf_index)
 {
@@ -36,7 +39,8 @@ void Commands::upload_data_to_gpu()
 void Commands::generate_shadow_maps()
 {
     assert(m_scene);
-    m_scene->generate_shadow_maps(m_back_buf_index, *m_depth_pass, m_command_list);
+    assert(m_depth_pass_for_shadow_mapping);
+    m_scene->generate_shadow_maps(m_back_buf_index, *m_depth_pass_for_shadow_mapping, m_command_list);
 }
 
 void Commands::early_z_pass()

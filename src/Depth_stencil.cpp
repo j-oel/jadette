@@ -13,23 +13,22 @@
 
 namespace
 {
-    void set_formats(Bit_depth bit_depth, DXGI_FORMAT& m_dsv_format, DXGI_FORMAT& srv_format,
-        DXGI_FORMAT& resource_format)
+    DXGI_FORMAT get_srv_format(Bit_depth bit_depth)
+    {
+        if (bit_depth == Bit_depth::bpp16)
+            return DXGI_FORMAT_R16_UNORM;
+        else
+            return DXGI_FORMAT_R32_FLOAT;
+    }
+
+    DXGI_FORMAT get_resource_format(Bit_depth bit_depth)
     {
         // The resource_format has to be typeless, because the DSV needs a "D" format and the SRV
         // needs an "R" format and a "D" format cannot be cast to an "R" format.
         if (bit_depth == Bit_depth::bpp16)
-        {
-            m_dsv_format = DXGI_FORMAT_D16_UNORM;
-            srv_format = DXGI_FORMAT_R16_UNORM;
-            resource_format = DXGI_FORMAT_R16_TYPELESS;
-        }
-        else if (bit_depth == Bit_depth::bpp32)
-        {
-            m_dsv_format = DXGI_FORMAT_D32_FLOAT;
-            srv_format = DXGI_FORMAT_R32_FLOAT;
-            resource_format = DXGI_FORMAT_R32_TYPELESS;
-        }
+            return DXGI_FORMAT_R16_TYPELESS;
+        else
+            return DXGI_FORMAT_R32_TYPELESS;
     }
 }
 
@@ -38,10 +37,9 @@ Depth_stencil::Depth_stencil(ID3D12Device& device, UINT width, UINT height,
     ID3D12DescriptorHeap& texture_descriptor_heap, UINT texture_index) :
     m_current_state(initial_state), m_width(width), m_height(height)
 {
-    m_dsv_format = DXGI_FORMAT_UNKNOWN;
-    m_srv_format = DXGI_FORMAT_UNKNOWN;
-    DXGI_FORMAT resource_format = DXGI_FORMAT_UNKNOWN;
-    set_formats(bit_depth, m_dsv_format, m_srv_format, resource_format);
+    m_dsv_format = get_dsv_format(bit_depth);
+    m_srv_format = get_srv_format(bit_depth);
+    DXGI_FORMAT resource_format = get_resource_format(bit_depth);
 
     D3D12_CLEAR_VALUE v {};
     v.Format = m_dsv_format;
