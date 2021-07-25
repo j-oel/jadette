@@ -50,6 +50,7 @@ Depth_stencil::Depth_stencil(ID3D12Device& device, UINT width, UINT height,
 
     auto resource_desc = CD3DX12_RESOURCE_DESC::Tex2D(resource_format, width, height);
     resource_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+    resource_desc.MipLevels = 1;
 
     auto heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
     throw_if_failed(device.CreateCommittedResource(
