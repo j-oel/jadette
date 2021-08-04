@@ -448,6 +448,8 @@ Scene_impl::Scene_impl(ID3D12Device& device, UINT swap_chain_buffer_count,
         // driver errors/violations.
         m.graphical_objects.clear();
         m.regular_objects.clear();
+        m.static_model_transforms.clear();
+        m.dynamic_model_transforms.clear();
         m.transparent_objects.clear();
         m.alpha_cut_out_objects.clear();
         m.two_sided_objects.clear();
