@@ -262,10 +262,10 @@ void read_obj_file(const string& filename, Vertices& vertices, vector<int>& indi
 }
 
 void create_one_model_per_triangle(std::shared_ptr<Model_collection> collection,
-    ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
+    ID3D12Device& device, ID3D12GraphicsCommandList& command_list, const string& filename,
     const Vertices& vertices, const vector<int>& indices, const string& material)
 {
-    auto mesh = std::make_shared<Mesh>(device, command_list, vertices, indices, true);
+    auto mesh = std::make_shared<Mesh>(device, command_list, vertices, indices, filename, true);
     constexpr int vertex_count_per_triangle = 3;
     const int model_count = static_cast<int>(indices.size()) / vertex_count_per_triangle;
     for (int i = 0; i < model_count; ++i)
@@ -304,11 +304,11 @@ std::shared_ptr<Model_collection> read_obj_file(const string& filename,
             material_iter->second.settings & transparency)  // reference an mtl file.
             // We do this to be able to sort the triangles and hence be able to render the
             // transparent objects with (most of the time) correct alpha blending.
-            create_one_model_per_triangle(collection, device, command_list,
+            create_one_model_per_triangle(collection, device, command_list, filename,
                 vertices, indices, material);
         else
             collection->models.push_back({ std::make_shared<Mesh>(device,
-                command_list, vertices, indices), material, triangle_start_index });
+                command_list, vertices, indices, filename), material, triangle_start_index });
     }
 
     return collection;

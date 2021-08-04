@@ -24,6 +24,28 @@ Mesh::Mesh(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
     create_and_fill_index_buffer(indices, device, command_list);
 }
 
+Mesh::Mesh(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
+    const Vertices& vertices, const std::vector<int>& indices, const std::string& name,
+    bool transparent/* = false*/) : m_transparent(transparent)
+{
+    create_and_fill_vertex_buffers(vertices, indices, device, command_list, transparent);
+    create_and_fill_index_buffer(indices, device, command_list);
+    #ifdef _DEBUG
+    set_buffer_debug_names(name);
+    #else
+    ignore_unused_variable(name);
+    #endif
+}
+
+void Mesh::set_buffer_debug_names(const std::string& name)
+{
+    SET_DEBUG_NAME(m_vertex_positions_buffer, (L"Vertex Positions Buffer " + widen(name)).c_str());
+    SET_DEBUG_NAME(m_vertex_normals_buffer, (L"Vertex Normals Buffer " + widen(name)).c_str());
+    SET_DEBUG_NAME(m_vertex_tangents_buffer, (L"Vertex Tangents Buffer " + widen(name)).c_str());
+    SET_DEBUG_NAME(m_vertex_bitangents_buffer, (L"Vertex Bitangents Buffer " + widen(name)).c_str());
+    SET_DEBUG_NAME(m_vertex_colors_buffer, (L"Vertex Colors Buffer " + widen(name)).c_str());
+    SET_DEBUG_NAME(m_index_buffer, (L"Index Buffer " + widen(name)).c_str());
+}
 
 void Mesh::release_temp_resources()
 {
@@ -161,25 +183,20 @@ void Mesh::create_and_fill_vertex_buffers(const Vertices& vertices,
 
     create_and_fill_vertex_buffer(device, command_list, m_vertex_positions_buffer,
         m_temp_upload_resource_vb_pos, vertices.positions, m_vertex_positions_buffer_view);
-    SET_DEBUG_NAME(m_vertex_positions_buffer, L"Vertex Positions Buffer");
 
     create_and_fill_vertex_buffer(device, command_list, m_vertex_normals_buffer,
         m_temp_upload_resource_vb_normals, vertices.normals, m_vertex_normals_buffer_view);
-    SET_DEBUG_NAME(m_vertex_normals_buffer, L"Vertex Normals Buffer");
 
     create_and_fill_vertex_buffer(device, command_list, m_vertex_tangents_buffer,
         m_temp_upload_resource_vb_tangents, vertices.tangents, m_vertex_tangents_buffer_view);
-    SET_DEBUG_NAME(m_vertex_tangents_buffer, L"Vertex Tangents Buffer");
 
     create_and_fill_vertex_buffer(device, command_list, m_vertex_bitangents_buffer,
         m_temp_upload_resource_vb_bitangents, vertices.bitangents, m_vertex_bitangents_buffer_view);
-    SET_DEBUG_NAME(m_vertex_bitangents_buffer, L"Vertex Bitangents Buffer");
 
     create_and_fill_vertex_buffer(device, command_list, m_vertex_colors_buffer,
         m_temp_upload_resource_vb_colors, vertices.colors.empty()?
         std::vector<Vertex_color>(vertices.positions.size()) // Create dummy colors to avoid errors
         : vertices.colors, m_vertex_colors_buffer_view);
-    SET_DEBUG_NAME(m_vertex_colors_buffer, L"Vertex Colors Buffer");
 }
 
 void Mesh::create_and_fill_index_buffer(const std::vector<int>& indices,
@@ -192,8 +209,6 @@ void Mesh::create_and_fill_index_buffer(const std::vector<int>& indices,
     create_and_fill_buffer(device, command_list, m_index_buffer, 
         m_temp_upload_resource_ib, indices.data(), index_buffer_size,
         m_index_buffer_view, index_buffer_size);
-
-    SET_DEBUG_NAME(m_index_buffer, L"Index Buffer");
 
     m_index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
 }

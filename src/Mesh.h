@@ -44,6 +44,11 @@ class Mesh
 public:
     Mesh(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
         const Vertices& vertices, const std::vector<int>& indices, bool transparent = false);
+    Mesh(ID3D12Device& device, ID3D12GraphicsCommandList& command_list,
+        const Vertices& vertices, const std::vector<int>& indices, const std::string& name,
+        bool transparent = false);
+
+    void set_buffer_debug_names(const std::string& name);
 
     void release_temp_resources();
 
