@@ -413,6 +413,11 @@ Scene_impl::Scene_impl(ID3D12Device& device, UINT swap_chain_buffer_count,
         print("Error reading file: " + scene_file + "\nModel " +
             e.model + " not defined", "Error");
     }
+    catch (Model_already_defined& e)
+    {
+        print("Error reading file: " + scene_file + "\nModel " +
+            e.model + " already defined", "Error");
+    }
     catch (Texture_not_defined& e)
     {
         print("Error reading file: " + scene_file + "\nTexture " +

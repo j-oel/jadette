@@ -274,6 +274,10 @@ namespace
         string name, model;
         file >> name >> model;
 
+        if (s.meshes.find(name) != s.meshes.end() ||
+            s.model_collections.find(name) != s.model_collections.end())
+            throw Model_already_defined(name);
+
         if (model == "cube")
             s.meshes[name] = std::make_shared<Cube>(s.device, s.command_list);
         else if (model == "plane")

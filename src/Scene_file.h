@@ -48,6 +48,12 @@ struct Model_not_defined
     std::string model;
 };
 
+struct Model_already_defined
+{
+    Model_already_defined(const std::string& model_) : model(model_) {}
+    std::string model;
+};
+
 struct Texture_not_defined
 {
     Texture_not_defined(const std::string& texture_) : texture(texture_) {}

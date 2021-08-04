@@ -61,6 +61,8 @@ SCENARIO("The scene parser works")
 
     Scene_components sc;
 
+    int texture_index = 0;
+
 
     GIVEN("Some minimal scene file data")
     {
@@ -71,10 +73,8 @@ SCENARIO("The scene parser works")
 
         WHEN("the data has been parsed")
         {
-            int texture_index = 0;
             read_scene_file_stream(scene_data, sc, device, *command_list.Get(), texture_index,
                 heap);
-
 
             THEN("the object is available")
             {
@@ -103,10 +103,8 @@ SCENARIO("The scene parser works")
 
         WHEN("the data has been parsed")
         {
-            int texture_index = 0;
             read_scene_file_stream(scene_data, sc, device, *command_list.Get(), texture_index,
                 heap);
-
 
             THEN("the objects are available")
             {
@@ -143,10 +141,8 @@ SCENARIO("The scene parser works")
 
         WHEN("the data has been parsed")
         {
-            int texture_index = 0;
             read_scene_file_stream(scene_data, sc, device, *command_list.Get(), texture_index,
                 heap);
-
 
             THEN("the objects are available")
             {
@@ -270,7 +266,6 @@ SCENARIO("The scene parser works")
 
     GIVEN("Some scene file data that has an invalid texture reference")
     {
-
         istringstream scene_data("model cube cube\n"
                                  "object name static cube pattern 94 2 76 4\n");
 
@@ -278,7 +273,6 @@ SCENARIO("The scene parser works")
         {
             THEN("the correct exception is thrown")
             {
-                int texture_index = 0;
                 REQUIRE_THROWS_AS(read_scene_file_stream(scene_data, sc, device,
                     *command_list.Get(), texture_index, heap),
                     Texture_not_defined);
@@ -288,7 +282,6 @@ SCENARIO("The scene parser works")
 
     GIVEN("Some scene file data that has an invalid model reference")
     {
-
         istringstream scene_data("model cube cube\n"
                                  "object name static sphere none 94 2 76 4\n");
 
@@ -296,7 +289,6 @@ SCENARIO("The scene parser works")
         {
             THEN("the correct exception is thrown")
             {
-                int texture_index = 0;
                 REQUIRE_THROWS_AS(read_scene_file_stream(scene_data, sc, device,
                     *command_list.Get(), texture_index, heap),
                     Model_not_defined);
@@ -306,7 +298,6 @@ SCENARIO("The scene parser works")
 
     GIVEN("Some scene file data that has an invalid object reference")
     {
-
         istringstream scene_data("model cube cube\n"
                                  "object name static cube none 94 2 76 4\n"
                                  "fly plane");
@@ -315,7 +306,6 @@ SCENARIO("The scene parser works")
         {
             THEN("the correct exception is thrown")
             {
-                int texture_index = 0;
                 REQUIRE_THROWS_AS(read_scene_file_stream(scene_data, sc, device,
                     *command_list.Get(), texture_index, heap),
                     Object_not_defined);
@@ -332,7 +322,6 @@ SCENARIO("The scene parser works")
         {
             THEN("the correct exception is thrown")
             {
-                int texture_index = 0;
                 REQUIRE_THROWS_AS(read_scene_file_stream(scene_data, sc, device,
                     *command_list.Get(), texture_index, heap),
                     File_open_error);
@@ -350,7 +339,6 @@ SCENARIO("The scene parser works")
         {
             THEN("the correct exception is thrown")
             {
-                int texture_index = 0;
                 REQUIRE_THROWS_AS(read_scene_file_stream(scene_data, sc, device,
                     *command_list.Get(), texture_index, heap),
                     File_open_error);
@@ -367,10 +355,26 @@ SCENARIO("The scene parser works")
         {
             THEN("the correct exception is thrown")
             {
-                int texture_index = 0;
                 REQUIRE_THROWS_AS(read_scene_file_stream(scene_data, sc, device,
                     *command_list.Get(), texture_index, heap),
                     Read_error);
+            }
+        }
+    }
+
+    GIVEN("Some scene file data that defines the same model twice")
+    {
+        istringstream scene_data("model model1 cube\n"
+                                 "model model1 plane\n"
+                                 "object name static model1 none 94 2 76 4\n");
+
+        WHEN("the data is parsed")
+        {
+            THEN("the correct exception is thrown")
+            {
+                REQUIRE_THROWS_AS(read_scene_file_stream(scene_data, sc, device,
+                    *command_list.Get(), texture_index, heap),
+                    Model_already_defined);
             }
         }
     }
